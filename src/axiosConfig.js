@@ -2,9 +2,11 @@
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
+import { API_URL } from './config.js';
+
 // Crea una instancia de axios
 const axiosInstance = axios.create({
-  baseURL: 'http://192.168.1.7:3000/api/',
+  baseURL: API_URL,
 });
 
 // Interceptor para manejar expiración de token

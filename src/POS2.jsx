@@ -1,6 +1,7 @@
 // src/POS.js
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import { API_URL } from './config';
 import Swal from 'sweetalert2';
 import Header from './components/Header';
 import Filters from './components/Filters';
@@ -131,7 +132,8 @@ const POS = () => {
         kar_pre_pub: item.price,
       })),
     };
-    axios.post('http://192.168.1.7:3000/api/order', payload)
+    
+    axios.post(`${API_URL}/order`, payload)
       .then(response => {
         const data = response.data;
         if (data.success) {

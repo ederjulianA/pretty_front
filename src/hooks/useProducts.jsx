@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import axiosInstance from '../axiosConfig'; // Importa la instancia configurada
 
+
 const useProducts = (filters, selectedCategory) => {
   const { filterCodigo, filterNombre, filterExistencia } = filters;
   const [products, setProducts] = useState([]);

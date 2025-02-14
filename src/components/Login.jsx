@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-
+import { API_URL } from '../config';
 const Login = ({ onLoginSuccess }) => {
   const [usuCod, setUsuCod] = useState('');
   const [usuPass, setUsuPass] = useState('');
@@ -12,7 +12,8 @@ const Login = ({ onLoginSuccess }) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await axios.post('http://192.168.1.7:3000/api/auth/login', {
+      
+      const response = await axios.post(`${API_URL}/auth/login`, {
         usu_cod: usuCod,
         usu_pass: usuPass,
       });

@@ -1,13 +1,14 @@
 // src/hooks/useCategories.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 const useCategories = () => {
   const [categories, setCategories] = useState([]);
 
   const fetchCategories = () => {
     axios
-      .get('http://192.168.1.7:3000/api/categorias')
+      .get(`${API_URL}/categorias`)
       .then((response) => {
         const data = response.data;
         if (data.success && data.result && data.result.data) {

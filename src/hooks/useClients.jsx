@@ -1,7 +1,7 @@
 // src/hooks/useClients.js
 import { useState } from 'react';
 import axios from 'axios';
-
+import { API_URL } from '../config';
 const useClients = () => {
   const [clientResults, setClientResults] = useState([]);
   const [clientPageNumber, setClientPageNumber] = useState(1);
@@ -10,7 +10,7 @@ const useClients = () => {
   const fetchClients = (clientSearch, page = 1) => {
     console.log("buscando "+clientSearch);
     axios
-      .get('http://192.168.1.7:3000/api/nits', {
+      .get(`${API_URL}/nits`, {
         params: {
           nit_nom: clientSearch,
           pageNumber: page,

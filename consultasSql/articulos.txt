@@ -1,0 +1,58 @@
+DECLARE 
+    @codigo          VARCHAR(30)  = NULL,  -- Filtro por código de artículo
+    @nombre          VARCHAR(100) = NULL,  -- Filtro por nombre (se usa LIKE)
+    @inv_gru_cod     VARCHAR(16)  = NULL,  -- Filtro por código de grupo (categoría), por ejemplo '200'
+    @inv_sub_gru_cod VARCHAR(16)  = NULL,  -- Filtro por código de subgrupo (subcategoría)
+    @tieneExistencia BIT          = NULL,  -- 1: sólo artículos con existencia > 0; 0: sin existencia; NULL: sin filtrar
+    @PageNumber      INT          = 1,     -- Número de página
+    @PageSize        INT          = 50;    -- Tamaño de página
+
+WITH ArticulosBase AS (
+    SELECT
+        a.art_sec,
+        a.art_cod,
+        a.art_nom,
+        ig.inv_gru_cod,
+        ig.inv_gru_nom AS categoria,
+        isg.inv_sub_gru_cod,
+        isg.inv_sub_gru_nom AS sub_categoria,
+        ISNULL(ad1.art_bod_pre, 0) AS precio_detal,
+        ISNULL(ad2.art_bod_pre, 0) AS precio_mayor,
+        ISNULL(e.existencia, 0) AS existencia
+    FROM dbo.articulos a
+        -- Unir para obtener la subcategoría y su código
+        INNER JOIN dbo.inventario_subgrupo isg
+            ON a.inv_sub_gru_cod = isg.inv_sub_gru_cod
+        -- Unir para obtener la categoría y su código
+        INNER JOIN dbo.inventario_grupo ig
+            ON isg.inv_gru_cod = ig.inv_gru_cod
+        -- Unir para obtener el precio detall (lista 1)
+        LEFT JOIN dbo.articulosdetalle ad1
+            ON a.art_sec = ad1.art_sec AND ad1.lis_pre_cod = 1
+        -- Unir para obtener el precio mayor (lista 2)
+        LEFT JOIN dbo.articulosdetalle ad2
+            ON a.art_sec = ad2.art_sec AND ad2.lis_pre_cod = 2
+        -- Unir con la vista indexada que precalcula la existencia
+        LEFT JOIN dbo.vwExistencias e
+            ON a.art_sec = e.art_sec
+    WHERE 1 = 1
+      -- Filtro por código de artículo
+      AND (@codigo IS NULL OR a.art_cod = @codigo)
+      -- Filtro por nombre (con LIKE)
+      AND (@nombre IS NULL OR a.art_nom LIKE '%' + @nombre + '%')
+      -- Filtro por código de categoría (grupo)
+      AND (@inv_gru_cod IS NULL OR ig.inv_gru_cod = @inv_gru_cod)
+      -- Filtro por código de subcategoría (subgrupo)
+      AND (@inv_sub_gru_cod IS NULL OR isg.inv_sub_gru_cod = @inv_sub_gru_cod)
+      -- Filtro por existencia
+      AND (
+             @tieneExistencia IS NULL 
+             OR (@tieneExistencia = 1 AND ISNULL(e.existencia, 0) > 0)
+             OR (@tieneExistencia = 0 AND ISNULL(e.existencia, 0) = 0)
+          )
+)
+SELECT *
+FROM ArticulosBase
+ORDER BY art_nom  -- Puedes ajustar el criterio de ordenación según tus necesidades
+OFFSET (@PageNumber - 1) * @PageSize ROWS
+FETCH NEXT @PageSize ROWS ONLY;

@@ -17,6 +17,7 @@ const Login = ({ onLoginSuccess }) => {
         usu_cod: usuCod,
         usu_pass: usuPass,
       });
+      console.log("APIURL "+API_URL);
       const data = response.data;
       if (data.success) {
         // Guardamos el token con una clave única para esta app

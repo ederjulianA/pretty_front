@@ -12,12 +12,12 @@ const Login = ({ onLoginSuccess }) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      
+      console.log("APIURL "+API_URL);
       const response = await axios.post(`${API_URL}/auth/login`, {
         usu_cod: usuCod,
         usu_pass: usuPass,
       });
-      console.log("APIURL "+API_URL);
+      
       const data = response.data;
       if (data.success) {
         // Guardamos el token con una clave única para esta app

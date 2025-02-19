@@ -71,9 +71,9 @@ const usePrintOrder = () => {
       const tableRows = details.map((item) => {
         const subtotal = item.kar_total; // O calcula: item.kar_pre_pub * item.kar_uni
         return [
-          item.art_sec,
+          item.art_cod,
           // Puedes incluir más detalles, aquí se usa item.art_sec o si tienes nombre
-          "Producto " + item.art_sec,
+           item.art_nom,
           item.kar_uni.toString(),
           formatValue(item.kar_pre_pub),
           formatValue(subtotal),

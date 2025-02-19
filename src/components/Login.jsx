@@ -21,6 +21,7 @@ const Login = ({ onLoginSuccess }) => {
       if (data.success) {
         // Guardamos el token con una clave única para esta app
         localStorage.setItem('pedidos_pretty_token', data.token);
+        localStorage.setItem('user_pretty',data.usuario);
         Swal.fire({
           icon: 'success',
           title: 'Login exitoso',

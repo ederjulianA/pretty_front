@@ -37,6 +37,7 @@ const useProducts = (filters, selectedCategory) => {
             id: articulo.art_sec,
             name: articulo.art_nom,
             price: articulo.precio_mayor,
+            price_detal:articulo.precio_detal,
             category: articulo.categoria + " - " + articulo.sub_categoria,
             existencia: articulo.existencia,
             imgUrl: articulo.art_url_img_servi,

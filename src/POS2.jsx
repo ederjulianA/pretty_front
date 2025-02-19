@@ -16,6 +16,7 @@ import useClients from './hooks/useClients';
 import usePersistentState from './hooks/usePersistentState';
 import { formatValue } from './utils';
 import { FaShoppingCart } from 'react-icons/fa';
+import usePrintOrder from './hooks/usePrintOrder';
 
 const POS = () => {
   // Persistimos la orden y el cliente seleccionado en localStorage
@@ -23,6 +24,7 @@ const POS = () => {
   const [selectedClient, setSelectedClient] = usePersistentState('selectedClient', null);
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  const { printOrder } = usePrintOrder();
 
   // Estados de filtros para productos y categoría
   const [filterCodigo, setFilterCodigo] = useState('');
@@ -103,7 +105,7 @@ const POS = () => {
   const handlePointerUp = () => setIsDragging(false);
   const handlePointerCancel = () => setIsDragging(false);
 
-  // Función para realizar el pedido usando SweetAlert2 para las notificaciones
+  // Función para realizar el pedido, ahora usando SweetAlert2
   const handlePlaceOrder = () => {
     if (order.length === 0) {
       Swal.fire({
@@ -111,6 +113,7 @@ const POS = () => {
         title: 'Error',
         text: 'Debe agregar al menos un artículo al pedido.',
         confirmButtonColor: '#f58ea3',
+        cursor: 'pointer',
       });
       return;
     }
@@ -120,11 +123,15 @@ const POS = () => {
         title: 'Error',
         text: 'Debe seleccionar un cliente para el pedido.',
         confirmButtonColor: '#f58ea3',
+        cursor: 'pointer',
       });
       return;
     }
+    const fac_usu_cod = localStorage.getItem('user_pretty');
+
     const payload = {
       nit_sec: selectedClient.nit_sec,
+      fac_usu_cod_cre : fac_usu_cod,
       fac_tip_cod: "COT",
       detalles: order.map(item => ({
         art_sec: item.id,
@@ -132,7 +139,6 @@ const POS = () => {
         kar_pre_pub: item.price,
       })),
     };
-    
     axios.post(`${API_URL}/order`, payload)
       .then(response => {
         const data = response.data;
@@ -140,9 +146,24 @@ const POS = () => {
           Swal.fire({
             icon: 'success',
             title: 'Orden creada exitosamente',
-            text: `Número de orden: ${data.fac_nro}`,
+            html: `<p>Número de orden: ${data.fac_nro}</p>
+                   <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
+            showConfirmButton: true,
+            confirmButtonText: 'OK',
             confirmButtonColor: '#f58ea3',
+            allowOutsideClick: false,
+          }).then((result) => {
+            // Cuando el usuario presione OK, no se hace nada extra.
           });
+          // Agregar el listener para el botón de imprimir PDF
+          const printButton = Swal.getHtmlContainer()?.querySelector('#printOrder');
+          if (printButton) {
+            printButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              printOrder(data.fac_nro);
+            });
+          }
+          // Limpiar el pedido y el cliente seleccionado para iniciar una nueva orden
           setOrder([]);
           setSelectedClient(null);
           setShowOrderDrawer(false);
@@ -152,6 +173,7 @@ const POS = () => {
             title: 'Error al crear la orden',
             text: data.message,
             confirmButtonColor: '#f58ea3',
+            cursor: 'pointer',
           });
         }
       })
@@ -162,6 +184,7 @@ const POS = () => {
           title: 'Error',
           text: 'Error al crear la orden, por favor intente nuevamente.',
           confirmButtonColor: '#f58ea3',
+          cursor: 'pointer',
         });
       });
   };

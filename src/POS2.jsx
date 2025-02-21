@@ -17,6 +17,7 @@ import usePersistentState from './hooks/usePersistentState';
 import { formatValue } from './utils';
 import { FaShoppingCart } from 'react-icons/fa';
 import usePrintOrder from './hooks/usePrintOrder';
+import LoadingSpinner from './components/LoadingSpinner';
 
 const POS = () => {
   // Persistimos la orden y el cliente seleccionado en localStorage
@@ -34,6 +35,8 @@ const POS = () => {
 
   // Estado para mostrar el drawer del resumen en mobile
   const [showOrderDrawer, setShowOrderDrawer] = useState(false);
+  // Estado para mostrar el overlay de carga mientras se guarda la orden
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Referencias para scroll
   const containerRef = useRef(null);
@@ -86,7 +89,7 @@ const POS = () => {
   // Funciones para el drag horizontal en el listado de categorías usando pointer events
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+  const [scrollLeftValue, setScrollLeft] = useState(0);
 
   const handlePointerDown = (e) => {
     setIsDragging(true);
@@ -99,13 +102,13 @@ const POS = () => {
     e.preventDefault();
     const x = e.clientX - categoriesRef.current.offsetLeft;
     const walk = (x - startX) * 2;
-    categoriesRef.current.scrollLeft = scrollLeft - walk;
+    categoriesRef.current.scrollLeft = scrollLeftValue - walk;
   };
 
   const handlePointerUp = () => setIsDragging(false);
   const handlePointerCancel = () => setIsDragging(false);
 
-  // Función para realizar el pedido, ahora usando SweetAlert2
+  // Función para realizar el pedido, ahora mostrando un overlay de carga
   const handlePlaceOrder = () => {
     if (order.length === 0) {
       Swal.fire({
@@ -128,10 +131,9 @@ const POS = () => {
       return;
     }
     const fac_usu_cod = localStorage.getItem('user_pretty');
-
     const payload = {
       nit_sec: selectedClient.nit_sec,
-      fac_usu_cod_cre : fac_usu_cod,
+      fac_usu_cod_cre: fac_usu_cod,
       fac_tip_cod: "COT",
       detalles: order.map(item => ({
         art_sec: item.id,
@@ -139,6 +141,7 @@ const POS = () => {
         kar_pre_pub: item.price,
       })),
     };
+    setIsSubmitting(true);
     axios.post(`${API_URL}/order`, payload)
       .then(response => {
         const data = response.data;
@@ -152,10 +155,9 @@ const POS = () => {
             confirmButtonText: 'OK',
             confirmButtonColor: '#f58ea3',
             allowOutsideClick: false,
-          }).then((result) => {
-            // Cuando el usuario presione OK, no se hace nada extra.
+          }).then(() => {
+            // Acción cuando se cierra el mensaje (si se desea)
           });
-          // Agregar el listener para el botón de imprimir PDF
           const printButton = Swal.getHtmlContainer()?.querySelector('#printOrder');
           if (printButton) {
             printButton.addEventListener('click', (e) => {
@@ -163,7 +165,6 @@ const POS = () => {
               printOrder(data.fac_nro);
             });
           }
-          // Limpiar el pedido y el cliente seleccionado para iniciar una nueva orden
           setOrder([]);
           setSelectedClient(null);
           setShowOrderDrawer(false);
@@ -186,101 +187,111 @@ const POS = () => {
           confirmButtonColor: '#f58ea3',
           cursor: 'pointer',
         });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
   };
 
   return (
-    <div className="h-screen bg-[#fff9e9] flex flex-col md:flex-row">
-      <section ref={containerRef} onScroll={handleScroll} className="w-full md:w-2/3 p-6 overflow-y-auto">
-        <Header title="Pedidos Pretty" />
-        <Filters
-          filterCodigo={filterCodigo}
-          setFilterCodigo={setFilterCodigo}
-          filterNombre={filterNombre}
-          setFilterNombre={setFilterNombre}
-          filterExistencia={filterExistencia}
-          setFilterExistencia={setFilterExistencia}
-          onSearch={() => fetchProducts(1)}
-        />
-        <Categories
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          categoriesRef={categoriesRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-        />
-        <ProductsGrid products={products} onAdd={addToOrder} isLoading={isLoading} order={order} />
-      </section>
+    <>
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <LoadingSpinner />
+        </div>
+      )}
+      <div className="h-screen bg-[#fff9e9] flex flex-col md:flex-row">
+        <section ref={containerRef} onScroll={handleScroll} className="w-full md:w-2/3 p-6 overflow-y-auto">
+          <Header title="Pedidos Pretty" />
+          <Filters
+            filterCodigo={filterCodigo}
+            setFilterCodigo={setFilterCodigo}
+            filterNombre={filterNombre}
+            setFilterNombre={setFilterNombre}
+            filterExistencia={filterExistencia}
+            setFilterExistencia={setFilterExistencia}
+            onSearch={() => fetchProducts(1)}
+          />
+          <Categories
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            categoriesRef={categoriesRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+          />
+          <ProductsGrid products={products} onAdd={addToOrder} isLoading={isLoading} order={order} />
+        </section>
 
-      {/* Panel fijo para Desktop */}
-      <aside className="hidden md:block w-full md:w-1/3 bg-white rounded-l-lg shadow p-6 cursor-pointer">
-        <OrderSummary order={order} onRemove={removeFromOrder} onAdd={addToOrder} totalValue={totalValue} />
-        <div className="mb-4 p-4 border rounded-lg cursor-pointer">
-          <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
-          {selectedClient ? (
-            <div className="flex justify-between items-center cursor-pointer">
-              <div className="cursor-pointer">
-                <p className="font-medium cursor-pointer">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
-                <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
-                <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_tel}</p>
-                <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_dir}</p>
+        {/* Panel fijo para Desktop */}
+        <aside className="hidden md:block w-full md:w-1/3 bg-white rounded-l-lg shadow p-6 cursor-pointer">
+          <OrderSummary order={order} onRemove={removeFromOrder} onAdd={addToOrder} totalValue={totalValue} />
+          <div className="mb-4 p-4 border rounded-lg cursor-pointer">
+            <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
+            {selectedClient ? (
+              <div className="flex justify-between items-center cursor-pointer">
+                <div className="cursor-pointer">
+                  <p className="font-medium cursor-pointer">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
+                  <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
+                  <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_tel}</p>
+                  <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_dir}</p>
+                </div>
+                <button onClick={() => setShowClientModal(true)} className="text-blue-600 underline text-sm cursor-pointer">
+                  Cambiar
+                </button>
               </div>
-              <button onClick={() => setShowClientModal(true)} className="text-blue-600 underline text-sm cursor-pointer">
-                Cambiar
+            ) : (
+              <button onClick={() => setShowClientModal(true)} className="w-full bg-[#f7b3c2] text-white py-2 rounded-md cursor-pointer">
+                Seleccionar Cliente
               </button>
-            </div>
-          ) : (
-            <button onClick={() => setShowClientModal(true)} className="w-full bg-[#f7b3c2] text-white py-2 rounded-md cursor-pointer">
-              Seleccionar Cliente
+            )}
+          </div>
+          <div className="mt-6 border-t pt-4 cursor-pointer">
+            <p className="text-lg font-bold text-gray-800 cursor-pointer">Total: ${formatValue(totalValue)}</p>
+            <button onClick={handlePlaceOrder} className="w-full bg-[#f58ea3] text-white px-4 py-2 rounded-md shadow-lg hover:bg-[#a5762f] mt-4 cursor-pointer">
+              Realizar Pedido
             </button>
-          )}
-        </div>
-        <div className="mt-6 border-t pt-4 cursor-pointer">
-          <p className="text-lg font-bold text-gray-800 cursor-pointer">Total: ${formatValue(totalValue)}</p>
-          <button onClick={handlePlaceOrder} className="w-full bg-[#f58ea3] text-white px-4 py-2 rounded-md shadow-lg hover:bg-[#a5762f] mt-4 cursor-pointer">
-            Realizar Pedido
-          </button>
-        </div>
-      </aside>
+          </div>
+        </aside>
 
-      {/* Botón fijo para Mobile */}
-      <button
-        onClick={() => setShowOrderDrawer(true)}
-        className="fixed bottom-4 left-4 z-80 md:hidden bg-[#f58ea3] text-white p-4 rounded-full shadow-lg cursor-pointer"
-      >
-        <FaShoppingCart /> {order.length}
-      </button>
+        {/* Botón fijo para Mobile */}
+        <button
+          onClick={() => setShowOrderDrawer(true)}
+          className="fixed bottom-4 left-4 z-80 md:hidden bg-[#f58ea3] text-white p-4 rounded-full shadow-lg cursor-pointer"
+        >
+          <FaShoppingCart /> {order.length}
+        </button>
 
-      {showOrderDrawer && (
-        <OrderDrawer
-          order={order}
-          onRemove={removeFromOrder}
-          onAdd={addToOrder}
-          totalValue={totalValue}
-          onClose={() => setShowOrderDrawer(false)}
-          selectedClient={selectedClient}
-          onShowClientModal={() => setShowClientModal(true)}
-          onPlaceOrder={handlePlaceOrder}
-        />
-      )}
+        {showOrderDrawer && (
+          <OrderDrawer
+            order={order}
+            onRemove={removeFromOrder}
+            onAdd={addToOrder}
+            totalValue={totalValue}
+            onClose={() => setShowOrderDrawer(false)}
+            selectedClient={selectedClient}
+            onShowClientModal={() => setShowClientModal(true)}
+            onPlaceOrder={handlePlaceOrder}
+          />
+        )}
 
-      {showClientModal && (
-        <ClientModal
-          clientSearch={clientSearch}
-          setClientSearch={setClientSearch}
-          clientResults={clientResults}
-          onSelectClient={(client) => {
-            setSelectedClient(client);
-            setShowClientModal(false);
-          }}
-          onClose={() => setShowClientModal(false)}
-          onSearchClients={(page) => fetchClients(clientSearch, page)}
-        />
-      )}
-    </div>
+        {showClientModal && (
+          <ClientModal
+            clientSearch={clientSearch}
+            setClientSearch={setClientSearch}
+            clientResults={clientResults}
+            onSelectClient={(client) => {
+              setSelectedClient(client);
+              setShowClientModal(false);
+            }}
+            onClose={() => setShowClientModal(false)}
+            onSearchClients={(page) => fetchClients(clientSearch, page)}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

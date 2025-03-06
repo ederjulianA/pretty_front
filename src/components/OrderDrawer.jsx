@@ -12,6 +12,8 @@ const OrderDrawer = ({
   selectedClient,
   onShowClientModal,
   onPlaceOrder,
+  selectedPriceType, // [NUEVO] Se recibe el tipo de precio seleccionado
+  onPriceTypeChange  // [NUEVO] Función para cambiar el tipo de precio
 }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end cursor-pointer">
@@ -21,6 +23,20 @@ const OrderDrawer = ({
           <button onClick={onClose} className="text-2xl text-gray-600 cursor-pointer">
             <FaTimes />
           </button>
+        </div>
+        {/* [NUEVO] Combo para elegir el tipo de precio */}
+        <div className="mb-4">
+          <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
+            Seleccione tipo de precio:
+          </label>
+          <select
+            value={selectedPriceType}
+            onChange={onPriceTypeChange}
+            className="w-full p-2 border rounded cursor-pointer"
+          >
+            <option value="mayor">Precios al Mayor</option>
+            <option value="detal">Precios al Detal</option>
+          </select>
         </div>
         {/* Sección de Selección de Cliente */}
         <div className="mb-4 p-4 border rounded-lg cursor-pointer">
@@ -52,7 +68,13 @@ const OrderDrawer = ({
           )}
         </div>
         {/* Resumen de Pedidos */}
-        <OrderSummary order={order} onRemove={onRemove} onAdd={onAdd} totalValue={totalValue} />
+        <OrderSummary
+          order={order}
+          onRemove={onRemove}
+          onAdd={onAdd}
+          totalValue={totalValue}
+          selectedPriceType={selectedPriceType} // Se pasa para actualizar el precio de cada ítem
+        />
         {/* Botón para Realizar Pedido */}
         <div className="mt-6 border-t pt-4 cursor-pointer">
           <button

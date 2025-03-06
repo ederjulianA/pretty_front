@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import POS2 from './POS2';
 import Login from './components/Login';
+import Layout from './components/Layout';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,7 +21,13 @@ function App() {
 
   return (
     <>
-      {isAuthenticated ? <POS2 /> : <Login onLoginSuccess={handleLoginSuccess} />}
+      {isAuthenticated ? (
+       
+          <POS2 />
+       
+      ) : (
+        <Login onLoginSuccess={handleLoginSuccess} />
+      )}
     </>
   );
 }

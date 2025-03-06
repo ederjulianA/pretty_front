@@ -10,14 +10,7 @@ const ProductCard = ({ product, onAdd, orderQuantity }) => (
       product.existencia <= 0 ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl"
     }`}
   >
-    {/* Badge de existencias con z-index para que se muestre encima */}
-    <span
-      className={`absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded-full cursor-pointer ${
-        product.existencia > 0 ? "bg-[#f58ea3] text-white" : "bg-[#f7b3c2] text-white"
-      }`}
-    >
-      Existencias: {product.existencia > 0 ? product.existencia : "Sin stock"}
-    </span>
+
     <div className="relative h-24 bg-gray-200 rounded-md flex items-center justify-center mb-2 cursor-pointer">
       {product.imgUrl ? (
         <img
@@ -28,17 +21,26 @@ const ProductCard = ({ product, onAdd, orderQuantity }) => (
       ) : (
         <span className="text-gray-500 text-sm">Imagen</span>
       )}
+          {/* [MODIFICADO] Se usa md:z-30 en desktop y z-0 en mobile para que el badge quede debajo del OrderDrawer */}
+    <span
+      className={`absolute top-2 right-2 md:z-35
+        
+         z-0 text-xs px-2 py-1 rounded-full cursor-pointer ${
+        product.existencia > 0 ? "bg-[#f58ea3] text-white" : "bg-[#f7b3c2] text-white"
+      }`}
+    >
+      Existencias: {product.existencia > 0 ? product.existencia : "Sin stock"}
+    </span>
       {/* Botón para agregar: ubicado en la esquina inferior derecha de la imagen */}
       {product.existencia > 0 && (
-       <button
+        <button
           onClick={(e) => { e.stopPropagation(); onAdd(product); }}
           className="absolute bottom-2 right-2 bg-[#f58ea3] p-2 rounded-full shadow cursor-pointer"
         >
           <FaPlus className="text-xl text-white" />
         </button>
-     
       )}
-      {/* Indicador de cantidad en la esquina superior izquierda */}
+      {/* Indicador de cantidad: ubicado en la esquina superior izquierda */}
       {orderQuantity > 0 && (
         <div className="absolute top-2 left-2 flex items-center bg-[#f58ea3] rounded-full p-1 shadow cursor-pointer">
           <FaShoppingCart className="text-white" />
@@ -50,7 +52,7 @@ const ProductCard = ({ product, onAdd, orderQuantity }) => (
       {formatName(product.name)}
     </h2>
     <p className="text-gray-500 text-sm cursor-pointer">{product.category}</p>
-    <p className="text-[#f58ea3] font-bold cursor-pointer">
+    <p className="text-[#f58ea3] font-bold mt-auto cursor-pointer">
       ${formatValue(product.price)}
     </p>
     {product.price_detal && (

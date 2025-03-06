@@ -14,6 +14,7 @@ import useProducts from './hooks/useProducts';
 import useCategories from './hooks/useCategories';
 import useClients from './hooks/useClients';
 import usePersistentState from './hooks/usePersistentState';
+import usePedidoMinimo from './hooks/usePedidoMinimo';
 import { formatValue } from './utils';
 import { FaShoppingCart } from 'react-icons/fa';
 import usePrintOrder from './hooks/usePrintOrder';
@@ -33,6 +34,9 @@ const POS = () => {
   const [filterExistencia, setFilterExistencia] = useState('');
   const [selectedCategory, setSelectedCategory] = useState("todas");
 
+   // [NUEVO] Estado para seleccionar el tipo de precio a usar en el carrito (mayor o detal)
+   const [selectedPriceType, setSelectedPriceType] = useState("mayor");
+
   // Estado para mostrar el drawer del resumen en mobile
   const [showOrderDrawer, setShowOrderDrawer] = useState(false);
   // Estado para mostrar el overlay de carga mientras se guarda la orden
@@ -49,6 +53,9 @@ const POS = () => {
   );
   const { categories } = useCategories();
   const { clientResults, fetchClients } = useClients();
+
+    // Hook para obtener el pedido mínimo
+  const { pedidoMinimo, isLoading: isLoadingPedidoMinimo } = usePedidoMinimo();
 
   // Funciones para agregar y quitar productos de la orden
   const addToOrder = (product) => {
@@ -75,7 +82,15 @@ const POS = () => {
     );
   };
 
-  const totalValue = order.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+// [NUEVO] Calcular total usando el precio efectivo para cada ítem
+const wholesaleTotal = order.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const retailTotal = order.reduce(
+  (sum, item) => sum + (item.price_detal || item.price) * item.quantity,
+  0
+);
+const useRetail = selectedPriceType === "detal";
+const totalValue = useRetail ? retailTotal : wholesaleTotal;
 
   // Función para manejar el scroll infinito en la sección de productos
   const handleScroll = () => {
@@ -138,7 +153,7 @@ const POS = () => {
       detalles: order.map(item => ({
         art_sec: item.id,
         kar_uni: item.quantity,
-        kar_pre_pub: item.price,
+        kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
       })),
     };
     setIsSubmitting(true);
@@ -227,7 +242,38 @@ const POS = () => {
 
         {/* Panel fijo para Desktop */}
         <aside className="hidden md:block w-full md:w-1/3 bg-white rounded-l-lg shadow p-6 cursor-pointer">
-          <OrderSummary order={order} onRemove={removeFromOrder} onAdd={addToOrder} totalValue={totalValue} />
+
+     
+            {/* Se pasa selectedPriceType a OrderSummary */}
+  <OrderSummary 
+    order={order} 
+    onRemove={removeFromOrder} 
+    onAdd={addToOrder} 
+    totalValue={totalValue} 
+    selectedPriceType={selectedPriceType} // [NUEVO]
+  />
+            {/* Información de Pedido Mínimo */}
+                   {pedidoMinimo !== null && (
+            <p className="text-sm text-gray-700 text-center mb-4 cursor-pointer">
+              Pedido Mínimo: ${formatValue(pedidoMinimo)}
+            </p>
+          )}
+
+        {/* [NUEVO] Combo para elegir el tipo de precio */}
+        <div className="mb-4">
+        <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
+          Seleccione tipo de precio:
+        </label>
+        <select
+          value={selectedPriceType}
+          onChange={(e) => setSelectedPriceType(e.target.value)}
+          className="w-full p-2 border rounded cursor-pointer"
+        >
+          <option value="mayor">Precios al Mayor</option>
+          <option value="detal">Precios al Detal</option>
+        </select>
+        </div>
+
           <div className="mb-4 p-4 border rounded-lg cursor-pointer">
             <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
             {selectedClient ? (
@@ -265,17 +311,19 @@ const POS = () => {
         </button>
 
         {showOrderDrawer && (
-          <OrderDrawer
-            order={order}
-            onRemove={removeFromOrder}
-            onAdd={addToOrder}
-            totalValue={totalValue}
-            onClose={() => setShowOrderDrawer(false)}
-            selectedClient={selectedClient}
-            onShowClientModal={() => setShowClientModal(true)}
-            onPlaceOrder={handlePlaceOrder}
-          />
-        )}
+        <OrderDrawer
+          order={order}
+          onRemove={removeFromOrder}
+          onAdd={addToOrder}
+          totalValue={totalValue}
+          onClose={() => setShowOrderDrawer(false)}
+          selectedClient={selectedClient}
+          onShowClientModal={() => setShowClientModal(true)}
+          onPlaceOrder={handlePlaceOrder}
+          selectedPriceType={selectedPriceType} // [NUEVO]
+          onPriceTypeChange={(e) => setSelectedPriceType(e.target.value)} // [NUEVO]
+        />
+      )}
 
         {showClientModal && (
           <ClientModal

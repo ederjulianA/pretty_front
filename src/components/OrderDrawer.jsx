@@ -12,19 +12,23 @@ const OrderDrawer = ({
   selectedClient,
   onShowClientModal,
   onPlaceOrder,
-  selectedPriceType, // [NUEVO] Se recibe el tipo de precio seleccionado
-  onPriceTypeChange  // [NUEVO] Función para cambiar el tipo de precio
+  selectedPriceType,      // [NUEVO] Tipo de precio ("mayor" o "detal")
+  onPriceTypeChange,      // [NUEVO] Función para cambiar el tipo de precio
+  discountPercent,        // [NUEVO] % de descuento actual
+  onDiscountChange,       // [NUEVO] Función para actualizar el % de descuento
+  discountValue,          // [NUEVO] Valor calculado del descuento
+  finalTotal              // [NUEVO] Total final de la compra (totalValue - discountValue)
 }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end cursor-pointer">
       <div className="w-4/5 bg-white p-4 overflow-y-auto transform transition-transform duration-300 cursor-pointer">
         <div className="flex justify-between items-center mb-4 cursor-pointer">
-          <h2 className="text-xl font-bold text-gray-800 cursor-pointer">Resumen de Pedidos</h2>
+          <h2 className="text-xl font-bold text-gray-800 cursor-pointer">Resumen de Pedido</h2>
           <button onClick={onClose} className="text-2xl text-gray-600 cursor-pointer">
             <FaTimes />
           </button>
         </div>
-        {/* [NUEVO] Combo para elegir el tipo de precio */}
+        {/* Combo para seleccionar el tipo de precio */}
         <div className="mb-4">
           <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
             Seleccione tipo de precio:
@@ -38,7 +42,19 @@ const OrderDrawer = ({
             <option value="detal">Precios al Detal</option>
           </select>
         </div>
-        {/* Sección de Selección de Cliente */}
+        {/* Input para ingresar % de descuento */}
+        <div className="mb-4">
+          <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
+            Descuento (%):
+          </label>
+          <input
+            type="number"
+            value={discountPercent}
+            onChange={onDiscountChange}
+            className="w-full p-2 border rounded cursor-pointer"
+          />
+        </div>
+        {/* Sección de selección de cliente */}
         <div className="mb-4 p-4 border rounded-lg cursor-pointer">
           <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
           {selectedClient ? (
@@ -47,9 +63,7 @@ const OrderDrawer = ({
                 <p className="font-medium cursor-pointer">
                   {selectedClient.nit_nom.trim() || "Sin nombre"}
                 </p>
-                <p className="text-xs text-gray-500 cursor-pointer">
-                  {selectedClient.nit_ide}
-                </p>
+                <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
               </div>
               <button
                 onClick={onShowClientModal}
@@ -73,7 +87,9 @@ const OrderDrawer = ({
           onRemove={onRemove}
           onAdd={onAdd}
           totalValue={totalValue}
-          selectedPriceType={selectedPriceType} // Se pasa para actualizar el precio de cada ítem
+          selectedPriceType={selectedPriceType}
+          discountValue={discountValue}
+          finalTotal={finalTotal}
         />
         {/* Botón para Realizar Pedido */}
         <div className="mt-6 border-t pt-4 cursor-pointer">

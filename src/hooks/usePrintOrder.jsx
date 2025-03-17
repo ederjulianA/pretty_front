@@ -9,10 +9,7 @@ import { API_URL } from '../config';
 const usePrintOrder = () => {
   const printOrder = useCallback(async (orderNumber) => {
     try {
-      // Obtener token desde localStorage (si es necesario)
       const token = localStorage.getItem('pedidos_pretty_token');
-
-      // Llamada al endpoint para obtener la data de la orden
       const response = await axios.get(`${API_URL}/order/${orderNumber}`, {
         headers: { 'x-access-token': token },
       });
@@ -22,9 +19,19 @@ const usePrintOrder = () => {
         return;
       }
       const orderData = data.order;
-      // Extraemos el header y los detalles
       const header = orderData.header;
       const details = orderData.details;
+
+      // [NUEVO] Calcular totales globales basados en cada detalle
+      const globalSubtotal = details.reduce(
+        (acc, item) => acc + (item.kar_pre_pub * item.kar_uni),
+        0
+      );
+      const globalDiscount = details.reduce(
+        (acc, item) => acc + (item.kar_pre_pub * item.kar_uni) * (item.kar_des_uno / 100),
+        0
+      );
+      const finalTotal = globalSubtotal - globalDiscount;
 
       const doc = new jsPDF();
       const marginLeft = 14;
@@ -62,21 +69,33 @@ const usePrintOrder = () => {
       currentY += 8;
       doc.text(`Fecha compra   : ${new Date(header.fac_fec).toLocaleDateString()}`, marginLeft, currentY);
       currentY += 8;
-      doc.text(`Comprobante Nro: ${header.fac_nro}`, 140, 55);
+      doc.text(`Comprobante Nro: ${header.fac_sec}`, 140, 55);
       doc.text(`Fecha vencimiento: ${new Date(header.fac_fec).toLocaleDateString()}`, 140, 62);
       currentY = 100;
 
-      // Detalle de la Venta - Items
-      const tableColumn = ["CÓDIGO", "ARTÍCULO", "CANTIDAD", "Vlr Unitario ($)", "TOTAL ($)"];
+      // Preparar la tabla de ítems
+      // [NUEVO] Se agregan columnas para Subtotal, % DTO y Total de cada ítem
+      const tableColumn = [
+        "CÓDIGO",
+        "ARTÍCULO",
+        "CANTIDAD",
+        "Vlr Unitario ($)",
+        "Subtotal ($)",
+        "% DTO",
+        "Total ($)"
+      ];
       const tableRows = details.map((item) => {
-        const subtotal = item.kar_total; // O calcula: item.kar_pre_pub * item.kar_uni
+        const itemSubtotal = item.kar_pre_pub * item.kar_uni;
+        const itemDiscount = itemSubtotal * (item.kar_des_uno / 100);
+        const itemTotal = itemSubtotal - itemDiscount;
         return [
-          item.art_cod,
-          // Puedes incluir más detalles, aquí se usa item.art_sec o si tienes nombre
-           item.art_nom,
+          item.art_sec,
+          "Producto " + item.art_sec, // Puedes usar el nombre real si está disponible
           item.kar_uni.toString(),
           formatValue(item.kar_pre_pub),
-          formatValue(subtotal),
+          formatValue(itemSubtotal),
+          item.kar_des_uno + "%",
+          formatValue(itemTotal)
         ];
       });
 
@@ -89,23 +108,19 @@ const usePrintOrder = () => {
         headStyles: { fillColor: pinkRGB },
       });
 
-      // Calcular el total a partir de los detalles
-      const totalCalculated = details.reduce(
-        (acc, item) => acc + (item.kar_pre_pub * item.kar_uni),
-        0
-      );
-
       const finalY = doc.lastAutoTable.finalY + 10;
-      doc.text(`SUBTOTAL: $${formatValue(totalCalculated)}`, marginLeft, finalY);
-      doc.text(`DESCUENTO: $0`, marginLeft, finalY + 7);
+      // Mostrar totales globales
+      doc.text(`SUBTOTAL: $${formatValue(globalSubtotal)}`, marginLeft, finalY);
+      doc.text(`DESCUENTO: $${formatValue(globalDiscount)}`, marginLeft, finalY + 7);
       doc.setFont("helvetica", "bold");
-      doc.text(`TOTAL: $${formatValue(totalCalculated)}`, marginLeft, finalY + 14);
+      doc.text(`TOTAL: $${formatValue(finalTotal)}`, marginLeft, finalY + 14);
 
       // Observaciones
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.text("Software administrativo MiPunto - Desarrollado por Eder Alvarez", 15, finalY + 25);
+      doc.text("Software administrativo MiPunto - Desarrollado por Eder Alvarez", marginLeft, finalY + 25);
 
+      // Guardar PDF
       doc.save("comprobante_prettymakeup.pdf");
     } catch (error) {
       console.error("Error en printOrder:", error);

@@ -19,6 +19,8 @@ import { formatValue } from './utils';
 import { FaShoppingCart } from 'react-icons/fa';
 import usePrintOrder from './hooks/usePrintOrder';
 import LoadingSpinner from './components/LoadingSpinner';
+import CreateClientModal from './components/CreateClientModal'; // [NUEVO]
+
 
 const POS = () => {
   // Persistimos la orden y el cliente seleccionado en localStorage
@@ -27,6 +29,9 @@ const POS = () => {
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const { printOrder } = usePrintOrder();
+  // [NUEVO] Estado para mostrar el modal de creación de cliente
+const [showCreateClientModal, setShowCreateClientModal] = useState(false);
+
 
   // Estados de filtros para productos y categoría
   const [filterCodigo, setFilterCodigo] = useState('');
@@ -36,7 +41,7 @@ const POS = () => {
 
    // [NUEVO] Estado para seleccionar el tipo de precio a usar en el carrito (mayor o detal)
    const [selectedPriceType, setSelectedPriceType] = useState("mayor");
-
+   const [discountPercent, setDiscountPercent] = useState(0);
   // Estado para mostrar el drawer del resumen en mobile
   const [showOrderDrawer, setShowOrderDrawer] = useState(false);
   // Estado para mostrar el overlay de carga mientras se guarda la orden
@@ -89,8 +94,10 @@ const retailTotal = order.reduce(
   (sum, item) => sum + (item.price_detal || item.price) * item.quantity,
   0
 );
-const useRetail = selectedPriceType === "detal";
-const totalValue = useRetail ? retailTotal : wholesaleTotal;
+const totalValue = selectedPriceType === "detal" ? retailTotal : wholesaleTotal;
+// [NUEVO] Calcular el descuento y el total final
+const discountValue = totalValue * (discountPercent / 100);
+const finalTotal = totalValue - discountValue;
 
   // Función para manejar el scroll infinito en la sección de productos
   const handleScroll = () => {
@@ -150,6 +157,7 @@ const totalValue = useRetail ? retailTotal : wholesaleTotal;
       nit_sec: selectedClient.nit_sec,
       fac_usu_cod_cre: fac_usu_cod,
       fac_tip_cod: "COT",
+      descuento: discountPercent,
       detalles: order.map(item => ({
         art_sec: item.id,
         kar_uni: item.quantity,
@@ -245,19 +253,22 @@ const totalValue = useRetail ? retailTotal : wholesaleTotal;
 
      
             {/* Se pasa selectedPriceType a OrderSummary */}
+            <div className="bg-[#a5762f] p-4 rounded-md mb-4 cursor-pointer">
+      <h2 className="text-xl font-bold text-center text-white cursor-pointer">Resumen de Pedido</h2>
+    </div>
   <OrderSummary 
     order={order} 
     onRemove={removeFromOrder} 
     onAdd={addToOrder} 
     totalValue={totalValue} 
     selectedPriceType={selectedPriceType} // [NUEVO]
+    discountValue={discountValue} // [NUEVO]
+    finalTotal={finalTotal}       // [NUEVO]
   />
-            {/* Información de Pedido Mínimo */}
-                   {pedidoMinimo !== null && (
-            <p className="text-sm text-gray-700 text-center mb-4 cursor-pointer">
-              Pedido Mínimo: ${formatValue(pedidoMinimo)}
-            </p>
-          )}
+  
+
+
+
 
         {/* [NUEVO] Combo para elegir el tipo de precio */}
         <div className="mb-4">
@@ -273,29 +284,52 @@ const totalValue = useRetail ? retailTotal : wholesaleTotal;
           <option value="detal">Precios al Detal</option>
         </select>
         </div>
-
-          <div className="mb-4 p-4 border rounded-lg cursor-pointer">
-            <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
-            {selectedClient ? (
-              <div className="flex justify-between items-center cursor-pointer">
-                <div className="cursor-pointer">
-                  <p className="font-medium cursor-pointer">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
-                  <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
-                  <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_tel}</p>
-                  <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_dir}</p>
-                </div>
-                <button onClick={() => setShowClientModal(true)} className="text-blue-600 underline text-sm cursor-pointer">
-                  Cambiar
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => setShowClientModal(true)} className="w-full bg-[#f7b3c2] text-white py-2 rounded-md cursor-pointer">
-                Seleccionar Cliente
-              </button>
-            )}
+         {/* [NUEVO] Input para ingresar % de descuento */}
+         <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
+              Descuento (%):
+            </label>
+            <input
+              type="number"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(Number(e.target.value))}
+              className="w-full p-2 border rounded cursor-pointer"
+            />
           </div>
+
+         
+<div className="mb-4 p-4 border rounded-lg cursor-pointer">
+  <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
+  {selectedClient ? (
+    <div className="flex justify-between items-center cursor-pointer">
+      <div className="cursor-pointer">
+        <p className="font-medium cursor-pointer">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
+        <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
+        <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_tel}</p>
+        <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_dir}</p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <button onClick={() => setShowClientModal(true)} className="text-blue-600 underline text-sm cursor-pointer">
+          Cambiar
+        </button>
+        <button onClick={() => setShowCreateClientModal(true)} className="text-blue-600 underline text-sm cursor-pointer">
+          Crear Cliente
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-1">
+      <button onClick={() => setShowClientModal(true)} className="w-full bg-[#f7b3c2] text-white py-2 rounded-md cursor-pointer">
+        Seleccionar Cliente
+      </button>
+      <button onClick={() => setShowCreateClientModal(true)} className="w-full bg-[#f58ea3] text-white py-2 rounded-md cursor-pointer">
+        Crear Cliente
+      </button>
+    </div>
+  )}
+</div>
           <div className="mt-6 border-t pt-4 cursor-pointer">
-            <p className="text-lg font-bold text-gray-800 cursor-pointer">Total: ${formatValue(totalValue)}</p>
+            
             <button onClick={handlePlaceOrder} className="w-full bg-[#f58ea3] text-white px-4 py-2 rounded-md shadow-lg hover:bg-[#a5762f] mt-4 cursor-pointer">
               Realizar Pedido
             </button>
@@ -310,7 +344,8 @@ const totalValue = useRetail ? retailTotal : wholesaleTotal;
           <FaShoppingCart /> {order.length}
         </button>
 
-        {showOrderDrawer && (
+        
+      {showOrderDrawer && (
         <OrderDrawer
           order={order}
           onRemove={removeFromOrder}
@@ -322,6 +357,10 @@ const totalValue = useRetail ? retailTotal : wholesaleTotal;
           onPlaceOrder={handlePlaceOrder}
           selectedPriceType={selectedPriceType} // [NUEVO]
           onPriceTypeChange={(e) => setSelectedPriceType(e.target.value)} // [NUEVO]
+          discountPercent={discountPercent} // [NUEVO]
+          onDiscountChange={(e) => setDiscountPercent(Number(e.target.value))} // [NUEVO]
+          discountValue={discountValue} // [NUEVO]
+          finalTotal={finalTotal} // [NUEVO]
         />
       )}
 
@@ -338,6 +377,18 @@ const totalValue = useRetail ? retailTotal : wholesaleTotal;
             onSearchClients={(page) => fetchClients(clientSearch, page)}
           />
         )}
+
+
+{showCreateClientModal && (
+  <CreateClientModal
+    onClose={() => setShowCreateClientModal(false)}
+    onClientCreated={(newClientData) => {
+      // [NUEVO] Actualizar el cliente seleccionado automáticamente con el nuevo cliente creado
+      setSelectedClient(newClientData);
+      setShowCreateClientModal(false);
+    }}
+  />
+)}
       </div>
     </>
   );

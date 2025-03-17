@@ -3,17 +3,23 @@ import React from 'react';
 import { FaPlus, FaMinus } from 'react-icons/fa';
 import { formatValue, formatName } from '../utils';
 
-const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType }) => (
+const OrderSummary = ({
+  order,
+  onRemove,
+  onAdd,
+  totalValue,
+  selectedPriceType,
+  discountValue,
+  finalTotal,
+}) => (
   <div>
-    <div className="bg-[#a5762f] p-4 rounded-md mb-4 cursor-pointer">
-      <h2 className="text-xl font-bold text-center text-white cursor-pointer">Resumen de Pedidos</h2>
-    </div>
+ 
     {order.length === 0 ? (
       <p className="text-gray-500 cursor-pointer">No se han seleccionado artículos.</p>
     ) : (
       <ul className="divide-y divide-gray-200 cursor-pointer">
         {order.map((item) => {
-          // Calcular precio efectivo según el tipo seleccionado
+          // Calcula el precio efectivo según el tipo seleccionado
           const effectivePrice =
             selectedPriceType === 'detal' && item.price_detal ? item.price_detal : item.price;
           const subtotal = effectivePrice * item.quantity;
@@ -39,7 +45,9 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType })
                   onClick={() => onAdd(item)}
                   disabled={item.quantity >= item.existencia}
                   className={`bg-[#f7b3c2] text-white p-2 rounded-full transition cursor-pointer ${
-                    item.quantity >= item.existencia ? "opacity-50 cursor-not-allowed" : "hover:bg-[#a5762f]"
+                    item.quantity >= item.existencia
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[#a5762f]"
                   }`}
                 >
                   <FaPlus />
@@ -50,10 +58,20 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType })
         })}
       </ul>
     )}
-    <div className="mt-6 border-t pt-4 cursor-pointer">
-      <p className="text-lg font-bold text-gray-800 cursor-pointer">
-        Total: ${formatValue(totalValue)}
-      </p>
+    {/* Sección de totales */}
+    <div className="mt-6 border-t pt-4">
+      <div className="flex justify-between items-center">
+        <span className="font-semibold text-gray-700">Subtotal:</span>
+        <span className="font-bold text-gray-800">${formatValue(totalValue)}</span>
+      </div>
+      <div className="flex justify-between items-center mt-2">
+        <span className="font-semibold text-gray-700">Valor Descuento:</span>
+        <span className="font-bold text-gray-800">${formatValue(discountValue)}</span>
+      </div>
+      <div className="flex justify-between items-center mt-2">
+        <span className="font-semibold text-gray-700">Total Compra:</span>
+        <span className="font-bold text-gray-800">${formatValue(finalTotal)}</span>
+      </div>
     </div>
   </div>
 );

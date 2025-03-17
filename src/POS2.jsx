@@ -345,24 +345,25 @@ const finalTotal = totalValue - discountValue;
         </button>
 
         
-      {showOrderDrawer && (
-        <OrderDrawer
-          order={order}
-          onRemove={removeFromOrder}
-          onAdd={addToOrder}
-          totalValue={totalValue}
-          onClose={() => setShowOrderDrawer(false)}
-          selectedClient={selectedClient}
-          onShowClientModal={() => setShowClientModal(true)}
-          onPlaceOrder={handlePlaceOrder}
-          selectedPriceType={selectedPriceType} // [NUEVO]
-          onPriceTypeChange={(e) => setSelectedPriceType(e.target.value)} // [NUEVO]
-          discountPercent={discountPercent} // [NUEVO]
-          onDiscountChange={(e) => setDiscountPercent(Number(e.target.value))} // [NUEVO]
-          discountValue={discountValue} // [NUEVO]
-          finalTotal={finalTotal} // [NUEVO]
-        />
-      )}
+        {showOrderDrawer && (
+  <OrderDrawer
+    order={order}
+    onRemove={removeFromOrder}
+    onAdd={addToOrder}
+    totalValue={totalValue}
+    onClose={() => setShowOrderDrawer(false)}
+    selectedClient={selectedClient}
+    onShowClientModal={() => setShowClientModal(true)}
+    onCreateClient={() => setShowCreateClientModal(true)} // [NUEVO]
+    onPlaceOrder={handlePlaceOrder}
+    selectedPriceType={selectedPriceType}
+    onPriceTypeChange={(e) => setSelectedPriceType(e.target.value)}
+    discountPercent={discountPercent}
+    onDiscountChange={(e) => setDiscountPercent(Number(e.target.value))}
+    discountValue={discountValue}
+    finalTotal={finalTotal}
+  />
+)}
 
         {showClientModal && (
           <ClientModal

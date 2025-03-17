@@ -11,6 +11,7 @@ const OrderDrawer = ({
   onClose,
   selectedClient,
   onShowClientModal,
+  onCreateClient,         // [NUEVO] Callback para crear cliente
   onPlaceOrder,
   selectedPriceType,      // [NUEVO] Tipo de precio ("mayor" o "detal")
   onPriceTypeChange,      // [NUEVO] Función para cambiar el tipo de precio
@@ -23,12 +24,12 @@ const OrderDrawer = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end cursor-pointer">
       <div className="w-4/5 bg-white p-4 overflow-y-auto transform transition-transform duration-300 cursor-pointer">
         <div className="flex justify-between items-center mb-4 cursor-pointer">
-          <h2 className="text-xl font-bold text-gray-800 cursor-pointer">Resumen de Pedido</h2>
+          <h2 className="text-xl font-bold text-gray-800 cursor-pointer">Resumen de Pedidos</h2>
           <button onClick={onClose} className="text-2xl text-gray-600 cursor-pointer">
             <FaTimes />
           </button>
         </div>
-        {/* Combo para seleccionar el tipo de precio */}
+        {/* [NUEVO] Combo para seleccionar el tipo de precio */}
         <div className="mb-4">
           <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
             Seleccione tipo de precio:
@@ -42,7 +43,7 @@ const OrderDrawer = ({
             <option value="detal">Precios al Detal</option>
           </select>
         </div>
-        {/* Input para ingresar % de descuento */}
+        {/* [NUEVO] Input para ingresar % de descuento */}
         <div className="mb-4">
           <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
             Descuento (%):
@@ -60,25 +61,41 @@ const OrderDrawer = ({
           {selectedClient ? (
             <div className="flex justify-between items-center cursor-pointer">
               <div className="cursor-pointer">
-                <p className="font-medium cursor-pointer">
-                  {selectedClient.nit_nom.trim() || "Sin nombre"}
-                </p>
+                <p className="font-medium cursor-pointer">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
                 <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
               </div>
-              <button
-                onClick={onShowClientModal}
-                className="text-blue-600 underline text-sm cursor-pointer"
-              >
-                Cambiar
-              </button>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={onShowClientModal}
+                  className="text-blue-600 underline text-sm cursor-pointer"
+                >
+                  Cambiar
+                </button>
+                {/* [NUEVO] Botón para crear cliente */}
+                <button
+                  onClick={onCreateClient}
+                  className="text-blue-600 underline text-sm cursor-pointer"
+                >
+                  Crear Cliente
+                </button>
+              </div>
             </div>
           ) : (
-            <button
-              onClick={onShowClientModal}
-              className="w-full bg-blue-500 text-white py-2 rounded-md cursor-pointer"
-            >
-              Seleccionar Cliente
-            </button>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={onShowClientModal}
+                className="w-full bg-blue-500 text-white py-2 rounded-md cursor-pointer"
+              >
+                Seleccionar Cliente
+              </button>
+              {/* [NUEVO] Botón para crear cliente cuando no hay uno seleccionado */}
+              <button
+                onClick={onCreateClient}
+                className="w-full bg-[#f58ea3] text-white py-2 rounded-md cursor-pointer"
+              >
+                Crear Cliente
+              </button>
+            </div>
           )}
         </div>
         {/* Resumen de Pedidos */}
@@ -87,9 +104,9 @@ const OrderDrawer = ({
           onRemove={onRemove}
           onAdd={onAdd}
           totalValue={totalValue}
-          selectedPriceType={selectedPriceType}
-          discountValue={discountValue}
-          finalTotal={finalTotal}
+          selectedPriceType={selectedPriceType} // [NUEVO]
+          discountValue={discountValue}         // [NUEVO]
+          finalTotal={finalTotal}               // [NUEVO]
         />
         {/* Botón para Realizar Pedido */}
         <div className="mt-6 border-t pt-4 cursor-pointer">

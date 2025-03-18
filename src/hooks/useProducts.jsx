@@ -35,11 +35,14 @@ const useProducts = (filters, selectedCategory) => {
         if (data.success) {
           const mappedProducts = data.articulos.map((articulo) => ({
             id: articulo.art_sec,
+            codigo:articulo.art_cod,
             name: articulo.art_nom,
             price: articulo.precio_mayor,
             price_detal:articulo.precio_detal,
             category: articulo.categoria + " - " + articulo.sub_categoria,
+            sub_categoria: articulo.sub_categoria,
             existencia: articulo.existencia,
+            art_woo_id:articulo.art_woo_id,
             imgUrl: articulo.art_url_img_servi,
           }));
           if (page === 1) {

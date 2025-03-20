@@ -8,6 +8,7 @@ import Clients from '../pages/Clients';
 import Orders from '../pages/Orders';
 import POS from '../POS2';
 import CreateProduct from '../pages/CreateProduct';
+import EditProduct from '../pages/EditProduct';
 
 const AppRoutes = () => {
   return (
@@ -19,6 +20,7 @@ const AppRoutes = () => {
         <Route path="clients" element={<Clients />} />
         <Route path="orders" element={<Orders />} />
         <Route path="/products/new" element={<CreateProduct />} />
+        <Route path="/products/edit/:id" element={<EditProduct />} />
       </Route>
     </Routes>
   );

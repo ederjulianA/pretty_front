@@ -11,7 +11,7 @@ const ProductAdminCard = ({ product, onEdit }) => {
       <div className="px-3 py-2 bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2]">
         <h3 className="text-lg font-bold text-white">{formatName(product.name)}</h3>
         <div className="flex items-center text-xs text-white mt-1">
-          <span className="mr-2">Código: {product.id}</span>
+          <span className="mr-2">Código: {product.codigo}</span>
           <span>| Woo: {product.art_woo_id}</span>
         </div>
       </div>

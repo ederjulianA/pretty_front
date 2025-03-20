@@ -18,6 +18,15 @@ const EditProduct = () => {
     precio_mayor: '',
     art_woo_id: ''
   });
+  
+  // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
+  const [initialArtCod, setInitialArtCod] = useState('');
+  const [initialArtWooId, setInitialArtWooId] = useState('');
+  
+  // Estados para errores de validación
+  const [errorArtCod, setErrorArtCod] = useState('');
+  const [errorArtWoo, setErrorArtWoo] = useState('');
+  
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
@@ -31,16 +40,20 @@ const EditProduct = () => {
     axios.get(`${API_URL}/articulos/${id}`)
       .then(response => {
         const data = response.data;
-        if(data.success && data.producto) {
+        if(data.success && data.articulo) {
+          const prod = data.articulo;
           setFormData({
-            art_cod: data.producto.art_cod || '',
-            art_nom: data.producto.art_nom || '',
-            categoria: data.producto.categoria || '',
-            subcategoria: data.producto.sub_categoria || '',
-            precio_detal: data.producto.precio_detal || '',
-            precio_mayor: data.producto.precio_mayor || '',
-            art_woo_id: data.producto.art_woo_id || ''
+            art_cod: prod.art_cod || '',
+            art_nom: prod.art_nom || '',
+            categoria: prod.inv_gru_cod || '',
+            subcategoria: prod.inv_sub_gru_cod || 0,
+            precio_detal: prod.precio_detal || '',
+            precio_mayor: prod.precio_mayor || '',
+            art_woo_id: prod.art_woo_id || ''
           });
+          // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
+          setInitialArtCod(prod.art_cod || '');
+          setInitialArtWooId(prod.art_woo_id || '');
         } else {
           Swal.fire({
             icon: 'error',
@@ -127,13 +140,68 @@ const EditProduct = () => {
 
   const handleChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value});
+    // Reiniciar mensaje de error al editar
+    if(e.target.name === 'art_cod') setErrorArtCod('');
+    if(e.target.name === 'art_woo_id') setErrorArtWoo('');
+  };
+
+  // Función para validar la unicidad
+  const validateUnique = async (field, value) => {
+    try {
+      const response = await axios.get(`${API_URL}/articulos/validar`, {
+        params: { [field]: value }
+      });
+      if(response.data.success && response.data.exists) {
+        return true;
+      }
+    } catch (error) {
+      console.error(`Error validando ${field}:`, error);
+    }
+    return false;
+  };
+
+  // Validar en línea para art_cod, excluyendo el valor inicial
+  const handleBlurArtCod = async () => {
+    if(formData.art_cod && formData.art_cod !== initialArtCod) {
+      const exists = await validateUnique('art_cod', formData.art_cod);
+      if(exists) {
+        setErrorArtCod('El código ya existe.');
+      }
+    }
+  };
+
+  // Validar en línea para art_woo_id, excluyendo el valor inicial
+  const handleBlurArtWoo = async () => {
+    if(formData.art_woo_id && formData.art_woo_id !== initialArtWooId) {
+      const exists = await validateUnique('art_woo_id', formData.art_woo_id);
+      if(exists) {
+        setErrorArtWoo('El código de WooCommerce ya existe.');
+      }
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Si existen errores, no se envía
+    if(errorArtCod || errorArtWoo) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de validación',
+        text: 'Corrija los errores en el formulario antes de enviar.',
+        confirmButtonColor: '#f58ea3'
+      });
+      return;
+    }
     setIsSubmitting(true);
-    // Realizamos una petición PUT para editar el producto
-    axios.put(`${API_URL}/editarArticulo/${id}`, formData)
+    
+    const dataToSend = {
+      ...formData,
+      subcategoria: formData.subcategoria || 0,
+      precio_detal: Number(formData.precio_detal),
+      precio_mayor: Number(formData.precio_mayor)
+    };
+    
+    axios.put(`${API_URL}/editarArticulo/${id}`, dataToSend)
       .then(response => {
         const data = response.data;
         if(data.success) {
@@ -188,10 +256,12 @@ const EditProduct = () => {
               name="art_cod"
               value={formData.art_cod}
               onChange={handleChange}
+              onBlur={handleBlurArtCod}
               placeholder="Ingrese código"
               className="w-full p-2 border rounded"
               required
             />
+            {errorArtCod && <p className="text-red-500 text-xs mt-1">{errorArtCod}</p>}
           </div>
           {/* Nombre */}
           <div className="mb-4">
@@ -285,10 +355,12 @@ const EditProduct = () => {
               name="art_woo_id"
               value={formData.art_woo_id}
               onChange={handleChange}
+              onBlur={handleBlurArtWoo}
               placeholder="Ingrese código WooCommerce"
               className="w-full p-2 border rounded"
               required
             />
+            {errorArtWoo && <p className="text-red-500 text-xs mt-1">{errorArtWoo}</p>}
           </div>
           {/* Botones de acción */}
           <div className="flex justify-end gap-3">
@@ -301,7 +373,7 @@ const EditProduct = () => {
             </button>
             <button 
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || errorArtCod || errorArtWoo}
               className="px-4 py-2 bg-[#f58ea3] text-white rounded hover:bg-[#a5762f] transition cursor-pointer"
             >
               {isSubmitting ? "Editando..." : "Editar Producto"}

@@ -24,7 +24,8 @@ const Products = () => {
   };
 
   const handleEdit = (product) => {
-    console.log("Editar producto:", product);
+    // Navegar a la página de edición con el ID del producto
+    navigate(`/products/edit/${product.id}`);
   };
 
   return (

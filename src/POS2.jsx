@@ -82,6 +82,7 @@ const POS = () => {
             nit_tel: orderData.header.nit_tel,
             nit_dir: orderData.header.nit_dir,
             fac_nro: orderData.header.fac_nro,
+            fac_nro_woo : orderData.header.fac_nro_woo,
           });
           setOrderType(orderData.header.fac_tip_cod);
 
@@ -358,6 +359,7 @@ const POS = () => {
       fac_est_fac: "A",
       descuento: discountPercent,
       lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+      fac_nro_woo: selectedClient.fac_nro_woo,
       detalles: order.map(item => ({
         art_sec: item.id,
         kar_uni: item.quantity,

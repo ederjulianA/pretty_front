@@ -17,6 +17,7 @@ const Orders = () => {
   const [nitIde, setNitIde] = useState('');
   const [nitNom, setNitNom] = useState('');
   const [facNro, setFacNro] = useState('');
+  const [facNroWoo, setFacNroWoo] = useState('');
   const [facEstFac, setFacEstFac] = useState('A');
   // Nuevo filtro: Tipo de documento (fue_cod)
   const [fueCod, setFueCod] = useState('4'); // Por defecto: COTIZACIONES (fue_cod = 4)
@@ -46,6 +47,7 @@ const Orders = () => {
           nit_ide: nitIde,
           nit_nom: nitNom,
           fac_nro: facNro,
+          fac_nro_woo:facNroWoo,
           fac_est_fac: facEstFac,
           fue_cod: fueCod, // Se envía el filtro de tipo de documento
           PageNumber: page,
@@ -75,7 +77,7 @@ const Orders = () => {
     setHasMore(true);
     fetchOrders(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facEstFac, fueCod]);
+  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro,facNroWoo, facEstFac, fueCod]);
 
   useEffect(() => {
     if (!loadMoreRef.current) return;
@@ -185,6 +187,17 @@ const Orders = () => {
               type="text" 
               value={facNro} 
               onChange={e => setFacNro(e.target.value)} 
+              placeholder="Ingrese número de pedido"
+              className="w-full p-2 border rounded"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 text-sm mb-1"># Pedido Woo</label>
+            <input 
+              type="text" 
+              value={facNroWoo} 
+              onChange={e => setFacNroWoo(e.target.value)} 
               placeholder="Ingrese número de pedido"
               className="w-full p-2 border rounded"
             />

@@ -11,7 +11,17 @@ export const formatDate = (dateString) => {
   if (!dateString) return '';
   
   try {
-    // Crear un objeto Date y formatear manualmente
+    // Si la fecha ya viene en formato YYYY-MM-DD, la retornamos directamente
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateString;
+    }
+    
+    // Si viene con tiempo (T), tomamos solo la parte de la fecha
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+    
+    // Para otros formatos, usamos el método anterior
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');

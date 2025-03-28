@@ -6,10 +6,11 @@ import OrderCard from '../components/OrderCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
+import { formatDate, getCurrentDate } from '../utils/dateUtils';
 
 const Orders = () => {
   const navigate = useNavigate();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDate();
 
   // Estados para filtros
   const [fechaDesde, setFechaDesde] = useState(today);
@@ -124,8 +125,8 @@ const Orders = () => {
             <label className="block text-gray-700 text-sm mb-1">Fecha Inicial</label>
             <input 
               type="date" 
-              value={fechaDesde} 
-              onChange={e => setFechaDesde(e.target.value)} 
+              value={fechaDesde}
+              onChange={e => setFechaDesde(e.target.value)}
               className="w-full p-2 border rounded"
             />
           </div>
@@ -133,8 +134,8 @@ const Orders = () => {
             <label className="block text-gray-700 text-sm mb-1">Fecha Final</label>
             <input 
               type="date" 
-              value={fechaHasta} 
-              onChange={e => setFechaHasta(e.target.value)} 
+              value={fechaHasta}
+              onChange={e => setFechaHasta(e.target.value)}
               className="w-full p-2 border rounded"
             />
           </div>

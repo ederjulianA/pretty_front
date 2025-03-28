@@ -1,9 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { formatValue } from '../utils';
+import { formatDate } from '../utils/dateUtils';
 
 const OrderCard = ({ order, onClick }) => {
-  const formattedDate = new Date(order.fac_fec).toLocaleDateString();
   const isFacturado = order.documentos && order.documentos !== "";
 
   return (
@@ -18,7 +18,7 @@ const OrderCard = ({ order, onClick }) => {
       )}
       <div className="mb-2">
         <p className="text-sm text-gray-500">
-          <strong>Fecha:</strong> {formattedDate}
+          <strong>Fecha:</strong> {formatDate(order.fac_fec)}
         </p>
       </div>
       <div className="mb-2">

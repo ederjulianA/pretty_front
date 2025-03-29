@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
+import usePrintOrder from '../hooks/usePrintOrder';
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -37,6 +38,9 @@ const Orders = () => {
   // Referencias para scroll infinito
   const containerRef = useRef(null);
   const loadMoreRef = useRef(null);
+
+  // Agregar el hook de impresión
+  const { printOrder } = usePrintOrder();
 
   const fetchOrders = async (page = 1) => {
     setIsLoading(true);
@@ -222,7 +226,7 @@ const Orders = () => {
   return (
     <div key={index} className="bg-white p-4 rounded-lg shadow cursor-pointer">
       <OrderCard order={order} onClick={() => console.log(order)} />
-      <div className="mt-2 flex justify-between">
+      <div className="mt-2 flex justify-between gap-2">
         <button 
           onClick={() => !isFacturado && handleEditOrder(order)}
           disabled={isFacturado}
@@ -234,12 +238,23 @@ const Orders = () => {
         >
           {fueCod === "4" ? "Editar Cotizaciones" : "Editar Factura"}
         </button>
-        <button 
-          onClick={() => handleViewDetail(order)}
-          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition cursor-pointer text-xs"
-        >
-          Visualizar Detalle
-        </button>
+        <div className="flex gap-1">
+          <button 
+            onClick={() => handleViewDetail(order)}
+            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition cursor-pointer text-xs"
+          >
+            Visualizar
+          </button>
+          <button 
+            onClick={() => printOrder(order.fac_nro)}
+            className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition cursor-pointer text-xs flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            PDF
+          </button>
+        </div>
       </div>
     </div>
   );

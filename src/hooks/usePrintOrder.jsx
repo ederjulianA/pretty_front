@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import axios from 'axios';
 import { formatValue, formatName } from '../utils';
+import { formatDate } from '../utils/dateUtils';
 import { API_URL } from '../config';
 
 const usePrintOrder = () => {
@@ -67,10 +68,10 @@ const usePrintOrder = () => {
       currentY += 6;
       doc.text(`Ciudad         : ${header.ciu_nom}`, marginLeft, currentY);
       currentY += 8;
-      doc.text(`Fecha compra   : ${new Date(header.fac_fec).toLocaleDateString()}`, marginLeft, currentY);
+      doc.text(`Fecha compra   : ${formatDate(header.fac_fec)}`, marginLeft, currentY);
       currentY += 8;
-      doc.text(`Comprobante Nro: ${header.fac_sec}`, 140, 55);
-      doc.text(`Fecha vencimiento: ${new Date(header.fac_fec).toLocaleDateString()}`, 140, 62);
+      doc.text(`Comprobante Nro: ${header.fac_nro}`, 140, 55);
+      doc.text(`Fecha vencimiento: ${formatDate(header.fac_fec)}`, 140, 62);
       currentY = 100;
 
       // Preparar la tabla de ítems
@@ -89,8 +90,8 @@ const usePrintOrder = () => {
         const itemDiscount = itemSubtotal * (item.kar_des_uno / 100);
         const itemTotal = itemSubtotal - itemDiscount;
         return [
-          item.art_sec,
-          "Producto " + item.art_sec, // Puedes usar el nombre real si está disponible
+          item.art_cod,
+          item.art_nom, // Puedes usar el nombre real si está disponible
           item.kar_uni.toString(),
           formatValue(item.kar_pre_pub),
           formatValue(itemSubtotal),

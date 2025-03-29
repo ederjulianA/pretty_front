@@ -4,34 +4,13 @@ const COLOMBIA_TIMEZONE = 'America/Bogota';
 /**
  * Formatea una fecha para mostrar en la UI
  * @param {string} dateString - Fecha en formato ISO (YYYY-MM-DD)
- * @param {object} options - Opciones de formato (opcional)
  * @returns {string} Fecha formateada
  */
 export const formatDate = (dateString) => {
   if (!dateString) return '';
   
-  try {
-    // Si la fecha ya viene en formato YYYY-MM-DD, la retornamos directamente
-    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return dateString;
-    }
-    
-    // Si viene con tiempo (T), tomamos solo la parte de la fecha
-    if (dateString.includes('T')) {
-      return dateString.split('T')[0];
-    }
-    
-    // Para otros formatos, usamos el método anterior
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}`;
-  } catch (error) {
-    console.error('Error formateando fecha:', error);
-    return dateString;
-  }
+  // Simplemente retornamos los primeros 10 caracteres (YYYY-MM-DD)
+  return dateString.substring(0, 10);
 };
 
 /**

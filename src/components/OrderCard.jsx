@@ -18,7 +18,7 @@ const OrderCard = ({ order, onClick }) => {
       )}
       <div className="mb-2">
         <p className="text-sm text-gray-500">
-          <strong>*Fecha:</strong> {formatDate(order.fac_fec)}
+          <strong>*Fecha:</strong> {(order.fac_fec)}
         </p>
       </div>
       <div className="mb-2">

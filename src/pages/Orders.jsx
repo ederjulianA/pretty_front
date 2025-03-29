@@ -1,5 +1,5 @@
 // src/pages/Orders.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import OrderCard from '../components/OrderCard';
@@ -13,16 +13,67 @@ const Orders = () => {
   const navigate = useNavigate();
   const today = getCurrentDate();
 
-  // Estados para filtros
-  const [fechaDesde, setFechaDesde] = useState(today);
-  const [fechaHasta, setFechaHasta] = useState(today);
-  const [nitIde, setNitIde] = useState('');
-  const [nitNom, setNitNom] = useState('');
-  const [facNro, setFacNro] = useState('');
-  const [facNroWoo, setFacNroWoo] = useState('');
-  const [facEstFac, setFacEstFac] = useState('A');
-  // Nuevo filtro: Tipo de documento (fue_cod)
-  const [fueCod, setFueCod] = useState('4'); // Por defecto: COTIZACIONES (fue_cod = 4)
+  // Función para obtener los filtros guardados
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('ordersFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      fechaDesde: today,
+      fechaHasta: today,
+      nitIde: '',
+      nitNom: '',
+      facNro: '',
+      facNroWoo: '',
+      facEstFac: 'A',
+      fueCod: '4'
+    };
+  };
+
+  // Inicializar estados con los filtros guardados
+  const [fechaDesde, setFechaDesde] = useState(getInitialFilters().fechaDesde);
+  const [fechaHasta, setFechaHasta] = useState(getInitialFilters().fechaHasta);
+  const [nitIde, setNitIde] = useState(getInitialFilters().nitIde);
+  const [nitNom, setNitNom] = useState(getInitialFilters().nitNom);
+  const [facNro, setFacNro] = useState(getInitialFilters().facNro);
+  const [facNroWoo, setFacNroWoo] = useState(getInitialFilters().facNroWoo);
+  const [facEstFac, setFacEstFac] = useState(getInitialFilters().facEstFac);
+  const [fueCod, setFueCod] = useState(getInitialFilters().fueCod);
+
+  // Función para guardar filtros
+  const saveFilters = useCallback(() => {
+    const filters = {
+      fechaDesde,
+      fechaHasta,
+      nitIde,
+      nitNom,
+      facNro,
+      facNroWoo,
+      facEstFac,
+      fueCod
+    };
+    localStorage.setItem('ordersFilters', JSON.stringify(filters));
+  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
+
+  // Guardar filtros cuando cambien
+  useEffect(() => {
+    saveFilters();
+  }, [saveFilters]);
+
+  // Función para limpiar filtros
+  const handleClearFilters = () => {
+    setFechaDesde(today);
+    setFechaHasta(today);
+    setNitIde('');
+    setNitNom('');
+    setFacNro('');
+    setFacNroWoo('');
+    setFacEstFac('A');
+    setFueCod('4');
+    localStorage.removeItem('ordersFilters');
+    fetchOrders(1); // Recargar con filtros limpios
+  };
 
   // Estados para datos y paginación
   const [orders, setOrders] = useState([]);
@@ -208,12 +259,24 @@ const Orders = () => {
             />
           </div>
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex gap-2">
           <button 
             onClick={() => fetchOrders(1)}
-            className="bg-[#f58ea3] text-white px-4 py-2 rounded hover:bg-[#a5762f] transition cursor-pointer"
+            className="bg-[#f58ea3] text-white px-4 py-2 rounded hover:bg-[#a5762f] transition cursor-pointer flex items-center gap-2"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             Buscar
+          </button>
+          <button 
+            onClick={handleClearFilters}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition cursor-pointer flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Limpiar Filtros
           </button>
         </div>
       </div>

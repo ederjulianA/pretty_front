@@ -42,6 +42,7 @@ export const formatDateTime = (dateTimeString, options = {}) => {
   try {
     const date = new Date(dateTimeString);
     return new Intl.DateTimeFormat('es-CO', defaultOptions).format(date);
+    console.log('Nueva Fecha '.date);
   } catch (error) {
     console.error('Error formateando fecha y hora:', error);
     return dateTimeString;

@@ -5,6 +5,11 @@ import { formatDate } from '../utils/dateUtils';
 
 const OrderCard = ({ order, onClick }) => {
   const isFacturado = order.documentos && order.documentos !== "";
+  
+  // Agregar log para debug
+  console.log('Fecha original:', order.fac_fec);
+  const formattedDate = formatDate(order.fac_fec);
+  console.log('Fecha formateada:', formattedDate);
 
   return (
     <div 
@@ -18,7 +23,7 @@ const OrderCard = ({ order, onClick }) => {
       )}
       <div className="mb-2">
         <p className="text-sm text-gray-500">
-          <strong>Fecha:</strong> {formatDate(order.fac_fec)}
+          <strong>Fecha:</strong> {formattedDate}
         </p>
       </div>
       <div className="mb-2">

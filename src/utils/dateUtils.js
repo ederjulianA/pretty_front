@@ -9,8 +9,14 @@ const COLOMBIA_TIMEZONE = 'America/Bogota';
 export const formatDate = (dateString) => {
   if (!dateString) return '';
   
-  // Simplemente retornamos los primeros 10 caracteres (YYYY-MM-DD)
-  return dateString.substring(0, 10);
+  try {
+    // Crear la fecha especificando UTC para evitar conversiones de zona horaria
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return dateString;
+  }
 };
 
 /**

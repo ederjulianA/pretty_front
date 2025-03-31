@@ -1,6 +1,9 @@
 {
     "rewrites": [
-  
+      {
+        "source": "/apigenexus/:path*", 
+        "destination": "http://154.53.62.220:8081/mipuntoV1/ApiWoo/:path*" 
+      },
       {
         "source": "/(.*)",
         "destination": "/"

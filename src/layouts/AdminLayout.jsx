@@ -1,14 +1,75 @@
 // src/layouts/AdminLayout.jsx
-import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { FaBars, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
+import Swal from 'sweetalert2';
+import axiosInstance from '../axiosConfig';
+
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    validateToken();
+  }, []);
+
+  const validateToken = async () => {
+    const token = localStorage.getItem('pedidos_pretty_token');
+    
+    if (!token) {
+      handleInvalidToken('No hay sesión activa');
+      return;
+    }
+
+    try {
+      setIsValidatingToken(true);
+      await axiosInstance.get('articulos', {
+        headers: {
+          'x-access-token': token,
+        },
+        params: {
+          PageNumber: 1,
+          PageSize: 1,
+        },
+      });
+      setIsValidatingToken(false);
+    } catch (error) {
+      console.error('Error validando token:', error);
+      if (error.response && error.response.status === 401) {
+        handleInvalidToken('Su sesión ha expirado');
+      }
+    }
+  };
+
+  const handleInvalidToken = (message) => {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Sesión Inválida',
+      text: message,
+      confirmButtonColor: '#f58ea3',
+    }).then(() => {
+      localStorage.removeItem('pedidos_pretty_token');
+      navigate('/login');
+    });
+  };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  if (isValidatingToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#f58ea3] mx-auto mb-4"></div>
+          <p className="text-gray-600">Validando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -27,18 +88,55 @@ const AdminLayout = () => {
         </div>
         <nav className="p-4">
           <ul>
+            {/* Menú de Administración con submenú */}
             <li className="mb-2">
-              <NavLink
-                to="/dashboard"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'flex items-center p-2 rounded bg-[#f58ea3] text-white'
-                    : 'flex items-center p-2 rounded hover:bg-gray-200 transition'
-                }
+              <button
+                onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                className={`w-full flex items-center justify-between p-2 rounded hover:bg-gray-200 transition ${
+                  isAdminMenuOpen ? 'bg-gray-100' : ''
+                }`}
               >
-                Dashboard
-              </NavLink>
+                <span>Administración</span>
+                {isAdminMenuOpen ? (
+                  <FaChevronDown className="text-sm" />
+                ) : (
+                  <FaChevronRight className="text-sm" />
+                )}
+              </button>
+              {/* Submenú */}
+              <div
+                className={`ml-4 mt-2 space-y-2 transition-all duration-300 ${
+                  isAdminMenuOpen ? 'block' : 'hidden'
+                }`}
+              >
+                <NavLink
+                  to="/dashboard/ventas"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded text-sm ${
+                      isActive
+                        ? 'bg-[#f58ea3] text-white'
+                        : 'hover:bg-gray-200 transition'
+                    }`
+                  }
+                >
+                  Dashboard Ventas
+                </NavLink>
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded text-sm ${
+                      isActive
+                        ? 'bg-[#f58ea3] text-white'
+                        : 'hover:bg-gray-200 transition'
+                    }`
+                  }
+                >
+                  Sync WooCommerce
+                </NavLink>
+              </div>
             </li>
+
+            {/* Resto de opciones del menú */}
             <li className="mb-2">
               <NavLink
                 to="/products"

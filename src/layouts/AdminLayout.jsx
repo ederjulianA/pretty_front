@@ -96,7 +96,7 @@ const AdminLayout = () => {
                   isAdminMenuOpen ? 'bg-gray-100' : ''
                 }`}
               >
-                <span>Administración</span>
+                <span>Administración 2</span>
                 {isAdminMenuOpen ? (
                   <FaChevronDown className="text-sm" />
                 ) : (

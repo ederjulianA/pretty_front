@@ -1,10 +1,66 @@
 // src/layouts/AdminLayout.jsx
-import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { FaBars, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
+import axiosInstance from '../axiosConfig';
+import Swal from 'sweetalert2';
+
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const navigate = useNavigate();
+
+  const validateToken = async () => {
+    const token = localStorage.getItem('pedidos_pretty_token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.get('/articulos', {
+        headers: {
+          'x-access-token': token
+        },
+        params: {
+          PageNumber: 1,
+          PageSize: 1
+        }
+      });
+
+      if (!response.data.success) {
+        throw new Error('Token inválido');
+      }
+    } catch (error) {
+      console.error('Error de validación:', error);
+      localStorage.removeItem('pedidos_pretty_token');
+      localStorage.removeItem('user_pretty');
+      Swal.fire({
+        icon: 'error',
+        title: 'Sesión expirada',
+        text: 'Por favor, inicie sesión nuevamente.',
+        confirmButtonColor: '#f58ea3',
+      }).then(() => {
+        navigate('/login');
+      });
+    } finally {
+      setIsValidatingToken(false);
+    }
+  };
+
+  useEffect(() => {
+    validateToken();
+  }, []);
+
+  if (isValidatingToken) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#f58ea3]"></div>
+      </div>
+    );
+  }
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -27,17 +83,41 @@ const AdminLayout = () => {
         </div>
         <nav className="p-4">
           <ul>
+            {/* Menú Dashboard con submenú */}
             <li className="mb-2">
-              <NavLink
-                to="/dashboard"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'flex items-center p-2 rounded bg-[#f58ea3] text-white'
-                    : 'flex items-center p-2 rounded hover:bg-gray-200 transition'
-                }
+              <button
+                onClick={() => setIsDashboardOpen(!isDashboardOpen)}
+                className="w-full flex items-center justify-between p-2 rounded hover:bg-gray-200 transition"
               >
-                Dashboard
-              </NavLink>
+                <span>Dashboard</span>
+                {isDashboardOpen ? <FaChevronDown /> : <FaChevronRight />}
+              </button>
+              <div className={`pl-4 mt-2 space-y-2 ${isDashboardOpen ? 'block' : 'hidden'}`}>
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded ${
+                      isActive
+                        ? 'bg-[#f58ea3] text-white'
+                        : 'hover:bg-gray-200 transition'
+                    }`
+                  }
+                >
+                  Sync Pedidos Woo
+                </NavLink>
+                <NavLink
+                  to="/dashboard/ventas"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded ${
+                      isActive
+                        ? 'bg-[#f58ea3] text-white'
+                        : 'hover:bg-gray-200 transition'
+                    }`
+                  }
+                >
+                  Dashboard Ventas
+                </NavLink>
+              </div>
             </li>
             <li className="mb-2">
               <NavLink

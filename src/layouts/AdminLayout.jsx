@@ -20,7 +20,7 @@ const AdminLayout = () => {
     const token = localStorage.getItem('pedidos_pretty_token');
     
     if (!token) {
-      handleInvalidToken('No hay sesión activa');
+      handleInvalidToken('No hay sesión activa.');
       return;
     }
 

@@ -54,7 +54,7 @@ const Login = ({ onLoginSuccess }) => {
   return (
     <div className="h-screen flex items-center justify-center bg-[#fff9e9] cursor-pointer">
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md w-11/12 max-w-md cursor-pointer">
-        <h2 className="text-2xl font-bold mb-4 text-center cursor-pointer">Iniciar Sesión</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center cursor-pointer">Iniciar Sesión ed</h2>
         <div className="mb-4">
           <label className="block text-gray-700 mb-2 cursor-pointer">Usuario</label>
           <input

@@ -42,6 +42,11 @@ const DashboardVentas = () => {
     
     const wooSales = wooInvoices.reduce((sum, inv) => sum + inv.total_pedido, 0);
     const localSales = localInvoices.reduce((sum, inv) => sum + inv.total_pedido, 0);
+    
+    // Calcular comisiones
+    const wooCommission = wooSales * 0.05; // 5% para WooCommerce
+    const localCommission = localSales * 0.025; // 2.5% para ventas locales
+    const totalCommission = wooCommission + localCommission;
 
     return {
       wooSales,
@@ -49,7 +54,10 @@ const DashboardVentas = () => {
       totalSales: wooSales + localSales,
       wooCount: wooInvoices.length,
       localCount: localInvoices.length,
-      totalCount: invoices.length
+      totalCount: invoices.length,
+      wooCommission,
+      localCommission,
+      totalCommission
     };
   };
 
@@ -185,9 +193,10 @@ const DashboardVentas = () => {
                 <p className="text-2xl font-bold text-purple-900">
                   ${formatValue(totals.wooSales)}
                 </p>
-                <p className="text-sm text-purple-700 mt-2">
-                  Total Facturas: {totals.wooCount}
-                </p>
+                <div className="text-sm text-purple-700 mt-2 space-y-1">
+                  <p>Total Facturas: {totals.wooCount}</p>
+                  <p>Comisión (5%): ${formatValue(totals.wooCommission)}</p>
+                </div>
               </div>
 
               <div className="bg-green-100 rounded-lg shadow p-6">
@@ -197,9 +206,10 @@ const DashboardVentas = () => {
                 <p className="text-2xl font-bold text-green-900">
                   ${formatValue(totals.localSales)}
                 </p>
-                <p className="text-sm text-green-700 mt-2">
-                  Total Facturas: {totals.localCount}
-                </p>
+                <div className="text-sm text-green-700 mt-2 space-y-1">
+                  <p>Total Facturas: {totals.localCount}</p>
+                  <p>Comisión (2.5%): ${formatValue(totals.localCommission)}</p>
+                </div>
               </div>
 
               <div className="bg-blue-100 rounded-lg shadow p-6">
@@ -209,9 +219,10 @@ const DashboardVentas = () => {
                 <p className="text-2xl font-bold text-blue-900">
                   ${formatValue(totals.totalSales)}
                 </p>
-                <p className="text-sm text-blue-700 mt-2">
-                  Total Facturas: {totals.totalCount}
-                </p>
+                <div className="text-sm text-blue-700 mt-2 space-y-1">
+                  <p>Total Facturas: {totals.totalCount}</p>
+                  <p>Comisión Total: ${formatValue(totals.totalCommission)}</p>
+                </div>
               </div>
             </div>
 

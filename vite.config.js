@@ -18,5 +18,15 @@ export default defineConfig({
       },
     } // Esto hace que el servidor escuche en todas las interfaces (0.0.0.0)
   },
-  
+  resolve: {
+    preserveSymlinks: true
+  },
+  optimizeDeps: {
+    exclude: ['js-big-decimal']
+  },
+  build: {
+    commonjsOptions: {
+      include: []
+    }
+  }
 })

@@ -30,6 +30,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/pos" element={<POS />} />
       
       <Route path="/" element={<AdminLayout />}>
         {/* Dashboard Routes */}
@@ -43,7 +44,6 @@ function App() {
         
         {/* Orders Routes */}
         <Route path="orders" element={<Orders />} />
-        <Route path="pos" element={<POS />} />
         
         {/* Clients Routes */}
         <Route path="clients" element={<Clients />} />

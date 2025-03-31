@@ -351,11 +351,12 @@ const POS = () => {
       });
       return;
     }
+
     const fac_usu_cod = localStorage.getItem('user_pretty');
     const payload = {
       nit_sec: selectedClient.nit_sec,
       fac_usu_cod_cre: fac_usu_cod,
-      fac_tip_cod: "VTA", // Para facturar, se utiliza "VTA"
+      fac_tip_cod: "VTA",
       fac_est_fac: "A",
       descuento: discountPercent,
       lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
@@ -365,58 +366,117 @@ const POS = () => {
         kar_uni: item.quantity,
         kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
         kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
-        kar_nat: "-", // Se establece kar_nat en "-"
-        kar_kar_sec_ori: item.kar_sec || null,   // Toma el kar_sec del pedido original
-        kar_fac_sec_ori: item.fac_sec || null      // Toma el fac_sec del pedido original
+        kar_nat: "-",
+        kar_kar_sec_ori: item.kar_sec || null,
+        kar_fac_sec_ori: item.fac_sec || null
       })),
     };
+
     setIsSubmitting(true);
-    axios.post(`${API_URL}/order`, payload)
-      .then(response => {
-        const data = response.data;
-        if (data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Factura creada exitosamente',
-            html: `<p>Número de factura: ${data.fac_nro}</p>
-                   <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
-            showConfirmButton: true,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#f58ea3',
-            allowOutsideClick: false,
-          }).then(() => {});
-          const container = Swal.getHtmlContainer();
-          const printButton = container ? container.querySelector('#printOrder') : null;
-          if (printButton) {
-            printButton.addEventListener('click', (e) => {
-              e.stopPropagation();
-              printOrder(data.fac_nro);
+
+    // Si estamos en modo edición y es una factura
+    if (isEditing && orderType === "VTA") {
+      axios.put(`${API_URL}/order/${selectedClient.fac_nro}`, payload)
+        .then(response => {
+          const data = response.data;
+          if (data.success) {
+            // Usamos el número de factura del cliente seleccionado ya que es una edición
+            const facturaNumero = selectedClient.fac_nro;
+            Swal.fire({
+              icon: 'success',
+              title: 'Factura actualizada exitosamente',
+              html: `<p>Número de factura: ${facturaNumero}</p>
+                     <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
+              showConfirmButton: true,
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#f58ea3',
+              allowOutsideClick: false,
+            }).then(() => {
+              // Redirigir a la lista de órdenes después de cerrar el modal
+              navigate('/orders');
+            });
+
+            const container = Swal.getHtmlContainer();
+            const printButton = container ? container.querySelector('#printOrder') : null;
+            if (printButton) {
+              printButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                printOrder(facturaNumero); // Usamos el número de factura guardado
+              });
+            }
+            setOrder([]);
+            setSelectedClient(null);
+            setShowOrderDrawer(false);
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al actualizar la factura',
+              text: data.message || 'Ocurrió un error al actualizar la factura',
+              confirmButtonColor: '#f58ea3',
             });
           }
-          setOrder([]);
-          setSelectedClient(null);
-          setShowOrderDrawer(false);
-        } else {
+        })
+        .catch(error => {
+          console.error("Error al actualizar la factura:", error);
           Swal.fire({
             icon: 'error',
-            title: 'Error al crear la factura',
-            text: data.message,
+            title: 'Error',
+            text: 'Error al actualizar la factura, por favor intente nuevamente.',
             confirmButtonColor: '#f58ea3',
           });
-        }
-      })
-      .catch(error => {
-        console.error("Error al crear la factura:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Error al crear la factura, por favor intente nuevamente.',
-          confirmButtonColor: '#f58ea3',
+        })
+        .finally(() => {
+          setIsSubmitting(false);
         });
-      })
-      .finally(() => {
-        setIsSubmitting(false);
-      });
+    } else {
+      // Crear nueva factura
+      axios.post(`${API_URL}/order`, payload)
+        .then(response => {
+          const data = response.data;
+          if (data.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Factura creada exitosamente',
+              html: `<p>Número de factura: ${data.fac_nro}</p>
+                     <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
+              showConfirmButton: true,
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#f58ea3',
+              allowOutsideClick: false,
+            }).then(() => {});
+            const container = Swal.getHtmlContainer();
+            const printButton = container ? container.querySelector('#printOrder') : null;
+            if (printButton) {
+              printButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                printOrder(data.fac_nro);
+              });
+            }
+            setOrder([]);
+            setSelectedClient(null);
+            setShowOrderDrawer(false);
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al crear la factura',
+              text: data.message,
+              confirmButtonColor: '#f58ea3',
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Error al crear la factura:", error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al crear la factura, por favor intente nuevamente.',
+            confirmButtonColor: '#f58ea3',
+          });
+        })
+        .finally(() => {
+          setIsSubmitting(false);
+        });
+    }
   };
 
   return (

@@ -8,7 +8,15 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    host: true, // Esto hace que el servidor escuche en todas las interfaces (0.0.0.0)
+    host: true,
+    port:5174,
+    proxy: {
+      '/mipuntoV1': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/mipuntoV1/, '/mipuntoV1'),
+      },
+    } // Esto hace que el servidor escuche en todas las interfaces (0.0.0.0)
   },
   
 })

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppRoutes from './routes/AppRoutes';
 import Login from './components/Login';
-
+export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 

@@ -3,21 +3,25 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { API_URL } from '../config';
-const Login = ({ onLoginSuccess }) => {
+import { useNavigate } from 'react-router-dom';
+
+const Login = () => {
   const [usuCod, setUsuCod] = useState('');
   const [usuPass, setUsuPass] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    console.log(`LA URL ${API_URL}`);
     try {
       
       const response = await axios.post(`${API_URL}/auth/login`, {
         usu_cod: usuCod,
         usu_pass: usuPass,
       });
-      
+      console.log(`LA RESPUESTA ${response}`);
       const data = response.data;
       if (data.success) {
         // Guardamos el token con una clave única para esta app
@@ -29,7 +33,7 @@ const Login = ({ onLoginSuccess }) => {
           text: data.message,
           confirmButtonColor: '#f58ea3',
         });
-        onLoginSuccess();
+        navigate('/dashboard');
       } else {
         Swal.fire({
           icon: 'error',

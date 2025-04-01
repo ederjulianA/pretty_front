@@ -75,6 +75,9 @@ const POS = () => {
       .then(response => {
         if (response.data.success) {
           const orderData = response.data.order;
+          // Log para ver los datos recibidos del servidor
+          console.log("Datos recibidos del servidor:", orderData);
+          
           setSelectedClient({
             nit_sec: orderData.header.nit_sec,
             nit_ide: orderData.header.nit_ide,
@@ -96,18 +99,23 @@ const POS = () => {
           }
           setDiscountPercent(initialDiscount);
           setSelectedPriceType(initialListaPrecio);
-          // Map details to order items; se asume que backend devuelve ambos precios
-          const mergedDetails = orderData.details.map(item => ({
-            id: item.art_sec,
-            name: item.art_nom,
-            price: item.precio_mayor, // Precio mayor
-            price_detal: item.precio_detal, // Precio detal
-            quantity: item.kar_uni,
-            existencia: item.existencia || 1,
-            kar_des_uno: item.kar_des_uno || 0,
-            kar_sec: item.kar_sec,          // Identificador del detalle original
-            fac_sec: item.fac_sec,           // Identificador del pedido original
-          }));
+          // Map details to order items
+          const mergedDetails = orderData.details.map(item => {
+            console.log("Item original:", item); // Para debugging
+            return {
+              id: item.art_sec,
+              name: item.art_nom,
+              price: item.precio_mayor,
+              price_detal: item.precio_detal,
+              quantity: item.kar_uni,
+              existencia: item.existencia || 1,
+              kar_des_uno: item.kar_des_uno || 0,
+              kar_sec: item.kar_sec,
+              fac_sec: item.fac_sec
+            };
+          });
+          
+          console.log("Detalles procesados:", mergedDetails);
           setOrder(mergedDetails);
           setIsEditing(true);
         }
@@ -359,6 +367,9 @@ const POS = () => {
       return;
     }
 
+    console.log("Orden actual:", order);
+    console.log("Cliente seleccionado:", selectedClient);
+
     const fac_usu_cod = localStorage.getItem('user_pretty');
     const payload = {
       nit_sec: selectedClient.nit_sec,
@@ -367,76 +378,130 @@ const POS = () => {
       fac_est_fac: "A",
       descuento: discountPercent,
       lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
-      fac_nro_woo: selectedClient.fac_nro_woo,
-      detalles: order.map(item => ({
-        art_sec: item.id,
-        kar_uni: item.quantity,
-        kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
-        kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
-        kar_nat: "-",
-        kar_kar_sec_ori: item.kar_sec || null,
-        kar_fac_sec_ori: item.fac_sec || null
-      })),
+      fac_nro_woo: selectedClient.fac_nro_woo || null,
+      detalles: order.map(item => {
+        // Para debugging, imprimir cada item individualmente
+        console.log("Detalle del item:", item);
+        
+        return {
+          art_sec: item.id,
+          kar_uni: item.quantity,
+          kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
+          kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+          kar_nat: "-",
+          kar_kar_sec_ori: item.kar_sec || null,
+          kar_fac_sec_ori: item.fac_sec || null
+        };
+      }),
     };
+
+    // Log para verificar el payload completo
+    console.log("Payload a enviar:", payload);
+    console.log("Detalles de payload:", payload.detalles);
 
     setIsSubmitting(true);
 
     // Si estamos en modo edición y es una factura
     if (isEditing && orderType === "VTA") {
-      axios.put(`${API_URL}/order/${selectedClient.fac_nro}`, payload)
-        .then(response => {
-          const data = response.data;
-          if (data.success) {
-            const facturaNumero = selectedClient.fac_nro;
-            Swal.fire({
-              icon: 'success',
-              title: 'Factura actualizada exitosamente',
-              html: `<p>Número de factura: ${facturaNumero}</p>
-                     <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
-              showConfirmButton: true,
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#f58ea3',
-              allowOutsideClick: false,
-            }).then(() => {
-              navigate('/orders');
-            });
+      // Aquí necesitamos preservar los campos originales kar_kar_sec_ori y kar_fac_sec_ori
+      // Crear una copia del payload donde mantenemos estos campos iguales
+      
+      // Primero, hacemos un GET para obtener los datos actuales de la factura
+      axios.get(`${API_URL}/order/${selectedClient.fac_nro}`, {
+        headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+      })
+      .then(getResponse => {
+        if (getResponse.data.success) {
+          const currentOrderData = getResponse.data.order;
+          console.log("Datos actuales de la factura:", currentOrderData);
+          
+          // Crear un mapa de los detalles actuales para acceder fácilmente a los valores originales
+          const detailsMap = {};
+          currentOrderData.details.forEach(detail => {
+            // Usamos art_sec como clave para mapear los detalles actuales
+            detailsMap[detail.art_sec] = {
+              kar_kar_sec_ori: detail.kar_kar_sec_ori,
+              kar_fac_sec_ori: detail.kar_fac_sec_ori
+            };
+          });
+          
+          // Ahora modificamos el payload para mantener los valores originales
+          const preservedPayload = {
+            ...payload,
+            detalles: payload.detalles.map(item => {
+              const originalDetail = detailsMap[item.art_sec];
+              return {
+                ...item,
+                // Si existe el detalle original, usamos sus valores, si no, usamos los actuales
+                kar_kar_sec_ori: originalDetail ? originalDetail.kar_kar_sec_ori : item.kar_kar_sec_ori,
+                kar_fac_sec_ori: originalDetail ? originalDetail.kar_fac_sec_ori : item.kar_fac_sec_ori
+              };
+            })
+          };
+          
+          console.log("Payload con valores originales preservados:", preservedPayload);
+          
+          // Ahora enviamos el payload modificado
+          return axios.put(`${API_URL}/order/${selectedClient.fac_nro}`, preservedPayload);
+        } else {
+          throw new Error("No se pudo obtener la información actual de la factura");
+        }
+      })
+      .then(putResponse => {
+        console.log("Respuesta del servidor (edición):", putResponse.data);
+        const data = putResponse.data;
+        if (data.success) {
+          const facturaNumero = selectedClient.fac_nro;
+          Swal.fire({
+            icon: 'success',
+            title: 'Factura actualizada exitosamente',
+            html: `<p>Número de factura: ${facturaNumero}</p>
+                   <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
+            showConfirmButton: true,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#f58ea3',
+            allowOutsideClick: false,
+          }).then(() => {
+            navigate('/orders');
+          });
 
-            const container = Swal.getHtmlContainer();
-            const printButton = container ? container.querySelector('#printOrder') : null;
-            if (printButton) {
-              printButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                printOrder(facturaNumero); // Usamos el número de factura guardado
-              });
-            }
-            setOrder([]);
-            setSelectedClient(null);
-            setShowOrderDrawer(false);
-          } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error al actualizar la factura',
-              text: data.message || 'Ocurrió un error al actualizar la factura',
-              confirmButtonColor: '#f58ea3',
+          const container = Swal.getHtmlContainer();
+          const printButton = container ? container.querySelector('#printOrder') : null;
+          if (printButton) {
+            printButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              printOrder(facturaNumero);
             });
           }
-        })
-        .catch(error => {
-          console.error("Error al actualizar la factura:", error);
+          setOrder([]);
+          setSelectedClient(null);
+          setShowOrderDrawer(false);
+        } else {
           Swal.fire({
             icon: 'error',
-            title: 'Error',
-            text: 'Error al actualizar la factura, por favor intente nuevamente.',
+            title: 'Error al actualizar la factura',
+            text: data.message || 'Ocurrió un error al actualizar la factura',
             confirmButtonColor: '#f58ea3',
           });
-        })
-        .finally(() => {
-          setIsSubmitting(false);
+        }
+      })
+      .catch(error => {
+        console.error("Error al actualizar la factura:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al actualizar la factura, por favor intente nuevamente.',
+          confirmButtonColor: '#f58ea3',
         });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
     } else {
       // Crear nueva factura
       axios.post(`${API_URL}/order`, payload)
         .then(response => {
+          console.log("Respuesta del servidor (creación):", response.data);
           const data = response.data;
           if (data.success) {
             Swal.fire({

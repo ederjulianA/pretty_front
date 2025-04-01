@@ -219,6 +219,7 @@ const POS = () => {
       fac_est_fac: "A",
       descuento: discountPercent,
       lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+      fac_nro_woo: selectedClient.fac_nro_woo || null,
       detalles: order.map(item => ({
         art_sec: item.id,
         kar_uni: item.quantity,
@@ -235,22 +236,28 @@ const POS = () => {
         .then(response => {
           const data = response.data;
           if (data.success) {
+            // Usamos el número de cotización del cliente seleccionado ya que es una edición
+            const cotizacionNumero = selectedClient.fac_nro;
             Swal.fire({
               icon: 'success',
               title: 'Pedido editado exitosamente',
-              html: `<p>Número de pedido: ${data.fac_nro}</p>
+              html: `<p>Número de pedido: ${cotizacionNumero}</p>
                      <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
               showConfirmButton: true,
               confirmButtonText: 'OK',
               confirmButtonColor: '#f58ea3',
               allowOutsideClick: false,
-            }).then(() => {});
+            }).then(() => {
+              // Redirigir a la lista de órdenes después de cerrar el modal
+              navigate('/orders');
+            });
+
             const container = Swal.getHtmlContainer();
             const printButton = container ? container.querySelector('#printOrder') : null;
             if (printButton) {
               printButton.addEventListener('click', (e) => {
                 e.stopPropagation();
-                printOrder(data.fac_nro);
+                printOrder(cotizacionNumero); // Usamos el número de cotización guardado
               });
             }
             setOrder([]);
@@ -260,7 +267,7 @@ const POS = () => {
             Swal.fire({
               icon: 'error',
               title: 'Error al editar el pedido',
-              text: data.message,
+              text: data.message || 'Ocurrió un error al editar el pedido',
               confirmButtonColor: '#f58ea3',
             });
           }
@@ -380,7 +387,6 @@ const POS = () => {
         .then(response => {
           const data = response.data;
           if (data.success) {
-            // Usamos el número de factura del cliente seleccionado ya que es una edición
             const facturaNumero = selectedClient.fac_nro;
             Swal.fire({
               icon: 'success',
@@ -392,7 +398,6 @@ const POS = () => {
               confirmButtonColor: '#f58ea3',
               allowOutsideClick: false,
             }).then(() => {
-              // Redirigir a la lista de órdenes después de cerrar el modal
               navigate('/orders');
             });
 

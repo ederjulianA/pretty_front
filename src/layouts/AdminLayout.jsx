@@ -155,6 +155,19 @@ const AdminLayout = () => {
                 Órdenes
               </NavLink>
             </li>
+
+            <li className="mb-2">
+              <NavLink
+                to="/ajustes"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'flex items-center p-2 rounded bg-[#f58ea3] text-white'
+                    : 'flex items-center p-2 rounded hover:bg-gray-200 transition'
+                }
+              >
+                Ajustes
+              </NavLink>
+            </li>
             {/* Se podrán agregar más opciones fácilmente */}
           </ul>
         </nav>

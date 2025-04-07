@@ -7,6 +7,7 @@ import Products from '../pages/Products';
 import Clients from '../pages/Clients';
 import Orders from '../pages/Orders';
 import POS from '../POS2';
+import Ajustes from '../pages/Ajustes';
 import CreateProduct from '../pages/CreateProduct';
 import EditProduct from '../pages/EditProduct';
 
@@ -19,6 +20,7 @@ const AppRoutes = () => {
         <Route path="products" element={<Products />} />
         <Route path="clients" element={<Clients />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="ajustes" element={<Ajustes />} />
         <Route path="/products/new" element={<CreateProduct />} />
         <Route path="/products/edit/:id" element={<EditProduct />} />
       </Route>

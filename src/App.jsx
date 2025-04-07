@@ -6,9 +6,11 @@ import Dashboard from './pages/Dashboard';
 import DashboardVentas from './pages/DashboardVentas';
 import Products from './pages/Products';
 import CreateProduct from './pages/CreateProduct';
+import AjustesNew from './pages/AjusteNew';
 import EditProduct from './pages/EditProduct';
 import Orders from './pages/Orders';
 import Clients from './pages/Clients';
+import Ajustes from './pages/Ajustes';
 import POS from './POS2';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
@@ -44,6 +46,10 @@ function App() {
         
         {/* Orders Routes */}
         <Route path="orders" element={<Orders />} />
+
+         {/* Orders Ajustes */}
+         <Route path="ajustes" element={<Ajustes />} />
+         <Route path="ajustes/nuevo" element={<AjustesNew />} />
         
         {/* Clients Routes */}
         <Route path="clients" element={<Clients />} />

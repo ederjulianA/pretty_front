@@ -50,6 +50,7 @@ function App() {
          {/* Orders Ajustes */}
          <Route path="ajustes" element={<Ajustes />} />
          <Route path="ajustes/nuevo" element={<AjustesNew />} />
+         <Route path="ajustes/editar/:fac_nro" element={<AjustesNew />} />
         
         {/* Clients Routes */}
         <Route path="clients" element={<Clients />} />

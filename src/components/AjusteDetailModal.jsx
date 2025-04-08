@@ -1,23 +1,41 @@
 // src/components/AjusteDetailModal.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaEdit } from 'react-icons/fa';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 const AjusteDetailModal = ({ ajuste, onClose }) => {
+  const navigate = useNavigate();
+
+  const handleEdit = () => {
+    navigate(`/ajustes/editar/${ajuste.fac_nro}`);
+    onClose();
+  };
+
   if (!ajuste) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-11/12 md:w-1/2 max-h-[90vh] overflow-y-auto p-6 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-2xl text-gray-600 hover:text-gray-800"
-          aria-label="Cerrar"
-        >
-          <FaTimes />
-        </button>
-        <h2 className="text-2xl font-bold mb-4">Detalle del Ajuste</h2>
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold">Detalle del Ajuste</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={handleEdit}
+              className="text-blue-600 hover:text-blue-800"
+              title="Editar ajuste"
+            >
+              <FaEdit className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <FaTimes className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-600">

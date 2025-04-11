@@ -4,7 +4,6 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { FaCloudUploadAlt, FaTrash } from 'react-icons/fa';
 
 const CreateProduct = () => {
   const navigate = useNavigate();
@@ -15,10 +14,8 @@ const CreateProduct = () => {
     subcategoria: '',
     precio_detal: '',
     precio_mayor: '',
-    art_woo_id: '',
-    imagenes: []
+    art_woo_id: ''
   });
-  const [imagesPreviews, setImagesPreviews] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
@@ -132,154 +129,52 @@ const CreateProduct = () => {
     }
   };
 
-  // Añadir después de handleBlurArtWoo
-const handleImageChange = (e) => {
-  const files = Array.from(e.target.files);
-  
-  const validFiles = files.filter(file => {
-    const isValid = file.type.startsWith('image/');
-    const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB máximo
-    
-    if (!isValid) {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Si existen errores de validación, no se permite enviar
+    if(errorArtCod || errorArtWoo) {
       Swal.fire({
         icon: 'error',
-        title: 'Archivo no válido',
-        text: `${file.name} no es una imagen válida.`,
+        title: 'Error de validación',
+        text: 'Por favor corrija los errores en el formulario.',
         confirmButtonColor: '#f58ea3'
       });
+      return;
     }
-    if (!isValidSize) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Archivo muy grande',
-        text: `${file.name} excede el tamaño máximo de 5MB.`,
-        confirmButtonColor: '#f58ea3'
+    setIsSubmitting(true);
+    axios.post(`${API_URL}/crearArticulo`, formData)
+      .then(response => {
+        const data = response.data;
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Producto creado',
+            text: data.message,
+            confirmButtonColor: '#f58ea3'
+          });
+          navigate('/products');
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.message,
+            confirmButtonColor: '#f58ea3'
+          });
+        }
+      })
+      .catch(error => {
+        console.error("Error al crear producto:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al crear el producto, por favor intente nuevamente.',
+          confirmButtonColor: '#f58ea3'
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-    }
-    
-    return isValid && isValidSize;
-  });
-
-  validFiles.forEach(file => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagesPreviews(prev => [...prev, { file, preview: reader.result }]);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  setFormData(prev => ({
-    ...prev,
-    imagenes: [...prev.imagenes, ...validFiles]
-  }));
-};
-
-const handleRemoveImage = (index) => {
-  setImagesPreviews(prev => prev.filter((_, i) => i !== index));
-  setFormData(prev => ({
-    ...prev,
-    imagenes: prev.imagenes.filter((_, i) => i !== index)
-  }));
-};
-  
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if(errorArtCod || errorArtWoo) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error de validación',
-      text: 'Por favor corrija los errores en el formulario.',
-      confirmButtonColor: '#f58ea3'
-    });
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    // Primero, crear el objeto de datos básicos
-    const productData = {
-      art_cod: formData.art_cod,
-      art_nom: formData.art_nom,
-      categoria: formData.categoria,
-      subcategoria: formData.subcategoria,
-      art_woo_id: formData.art_woo_id,
-      precio_detal: formData.precio_detal,
-      precio_mayor: formData.precio_mayor,
-      imagenes: [] // Inicialmente vacío
-    };
-
-    // Si hay imágenes, convertirlas a base64
-    if (formData.imagenes.length > 0) {
-      const formDataImages = new FormData();
-      
-      if (formData.imagenes.length === 1) {
-        // Si hay una sola imagen
-        formDataImages.append('image', formData.imagenes[0]);
-        const uploadResponse = await axios.post(`${API_URL}/upload-single`, formDataImages, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        
-        productData.imagenes = [{
-          nombre: formData.imagenes[0].name,
-          tipo: formData.imagenes[0].type,
-          fullUrl: uploadResponse.data.image.fullUrl
-        }];
-      } else {
-        // Si hay múltiples imágenes
-        formData.imagenes.forEach(file => {
-          formDataImages.append('image', file);
-        });
-
-        const uploadResponse = await axios.post(`${API_URL}/upload-multiple`, formDataImages, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-
-        productData.imagenes = uploadResponse.data.images.map((image, index) => ({
-          nombre: formData.imagenes[index].name,
-          tipo: formData.imagenes[index].type,
-          fullUrl: image.fullUrl
-        }));
-      }
-    }
-
-    // Enviar los datos como JSON
-    const response = await axios.post(`${API_URL}/crearArticulo`, productData, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.data.success) {
-      Swal.fire({
-        icon: 'success',
-        title: 'Producto creado',
-        text: response.data.message,
-        confirmButtonColor: '#f58ea3'
-      });
-      navigate('/products');
-    } else {
-      throw new Error(response.data.message);
-    }
-  } catch (error) {
-    console.error("Error completo:", error);
-    console.error("Respuesta del servidor:", error.response?.data);
-    
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: error.response?.data?.error || error.message || 'Error al crear el producto',
-      confirmButtonColor: '#f58ea3'
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -400,54 +295,6 @@ const handleSubmit = async (e) => {
             />
             {errorArtWoo && <p className="text-red-500 text-xs mt-1">{errorArtWoo}</p>}
           </div>
-
-            {/* Nuevo campo para imágenes */}
-<div className="mb-6">
-  <label className="block text-gray-700 mb-2">Imágenes del Producto</label>
-  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-    <input
-      type="file"
-      multiple
-      accept="image/*"
-      onChange={handleImageChange}
-      className="hidden"
-      id="image-upload"
-    />
-    <label
-      htmlFor="image-upload"
-      className="flex flex-col items-center justify-center cursor-pointer"
-    >
-      <FaCloudUploadAlt className="text-4xl text-gray-400 mb-2" />
-      <span className="text-gray-500">Click para seleccionar imágenes</span>
-      <span className="text-xs text-gray-400 mt-1">
-        Máximo 5MB por imagen. Formatos: JPG, PNG, GIF
-      </span>
-    </label>
-  </div>
-
-  {/* Previsualización de imágenes */}
-  {imagesPreviews.length > 0 && (
-    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-      {imagesPreviews.map((image, index) => (
-        <div key={index} className="relative group">
-          <img
-            src={image.preview}
-            alt={`Preview ${index + 1}`}
-            className="w-full h-32 object-cover rounded"
-          />
-          <button
-            type="button"
-            onClick={() => handleRemoveImage(index)}
-            className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <FaTrash size="0.875rem" />
-          </button>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
           {/* Botones de acción */}
           <div className="flex justify-end gap-3">
             <button 

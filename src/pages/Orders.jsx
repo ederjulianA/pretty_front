@@ -8,6 +8,8 @@ import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
 import usePrintOrder from '../hooks/usePrintOrder';
+import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt } from 'react-icons/fa';
+import debounce from 'lodash/debounce';
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -41,40 +43,6 @@ const Orders = () => {
   const [facEstFac, setFacEstFac] = useState(getInitialFilters().facEstFac);
   const [fueCod, setFueCod] = useState(getInitialFilters().fueCod);
 
-  // Función para guardar filtros
-  const saveFilters = useCallback(() => {
-    const filters = {
-      fechaDesde,
-      fechaHasta,
-      nitIde,
-      nitNom,
-      facNro,
-      facNroWoo,
-      facEstFac,
-      fueCod
-    };
-    localStorage.setItem('ordersFilters', JSON.stringify(filters));
-  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
-
-  // Guardar filtros cuando cambien
-  useEffect(() => {
-    saveFilters();
-  }, [saveFilters]);
-
-  // Función para limpiar filtros
-  const handleClearFilters = () => {
-    setFechaDesde(today);
-    setFechaHasta(today);
-    setNitIde('');
-    setNitNom('');
-    setFacNro('');
-    setFacNroWoo('');
-    setFacEstFac('A');
-    setFueCod('4');
-    localStorage.removeItem('ordersFilters');
-    fetchOrders(1); // Recargar con filtros limpios
-  };
-
   // Estados para datos y paginación
   const [orders, setOrders] = useState([]);
   const [pageNumber, setPageNumber] = useState(1);
@@ -103,9 +71,9 @@ const Orders = () => {
           nit_ide: nitIde,
           nit_nom: nitNom,
           fac_nro: facNro,
-          fac_nro_woo:facNroWoo,
+          fac_nro_woo: facNroWoo,
           fac_est_fac: facEstFac,
-          fue_cod: fueCod, // Se envía el filtro de tipo de documento
+          fue_cod: fueCod,
           PageNumber: page,
           PageSize: pageSize,
         },
@@ -127,212 +95,348 @@ const Orders = () => {
     }
   };
 
+  // Función para guardar filtros
+  const saveFilters = useCallback(() => {
+    const filters = {
+      fechaDesde,
+      fechaHasta,
+      nitIde,
+      nitNom,
+      facNro,
+      facNroWoo,
+      facEstFac,
+      fueCod
+    };
+    localStorage.setItem('ordersFilters', JSON.stringify(filters));
+  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
+
+  // Guardar filtros cuando cambien
   useEffect(() => {
-    setOrders([]);
+    saveFilters();
+  }, [saveFilters]);
+
+  // Debounce para la búsqueda al cambiar filtros
+  const debouncedFetch = useCallback(debounce(() => {
+    fetchOrders(1);
+  }, 500), [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
+
+  // Efecto para re-buscar cuando cambian los filtros (debounced)
+  useEffect(() => {
     setPageNumber(1);
     setHasMore(true);
-    fetchOrders(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro,facNroWoo, facEstFac, fueCod]);
-
-  useEffect(() => {
-    if (!loadMoreRef.current) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
-          fetchOrders(pageNumber + 1);
-        }
-      },
-      { threshold: 1.0 }
-    );
-    observer.observe(loadMoreRef.current);
+    setOrders([]);
+    debouncedFetch();
     return () => {
-      if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
+      debouncedFetch.cancel();
     };
-  }, [hasMore, isLoading, pageNumber]);
+  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
 
-  // Acciones para editar pedido: redirigir a la pantalla POS con el número de pedido en query string
+  // Función para limpiar filtros
+  const handleClearFilters = () => {
+    setFechaDesde(today);
+    setFechaHasta(today);
+    setNitIde('');
+    setNitNom('');
+    setFacNro('');
+    setFacNroWoo('');
+    setFacEstFac('A');
+    setFueCod('4');
+    localStorage.removeItem('ordersFilters');
+  };
+
+  // Acciones para editar pedido
   const handleEditOrder = (order) => {
     navigate(`/pos?fac_nro=${order.fac_nro}`);
   };
 
-  // Acción para visualizar detalle: abrir modal con la información del pedido
+  // Acción para visualizar detalle
   const handleViewDetail = (order) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* Panel superior: Título, filtros y botón "Agregar nuevo" */}
-      <div className="p-4 bg-white shadow">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Listado de Órdenes</h2>
+    <div className="p-2 sm:p-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Gestión de Órdenes</h1>
+        <div className="flex gap-2 w-full sm:w-auto">
           <button
-            onClick={() => navigate('/pos')}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition cursor-pointer"
-          >
-            Agregar nuevo
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Fecha Inicial</label>
-            <input 
-              type="date" 
-              value={fechaDesde}
-              onChange={e => setFechaDesde(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Fecha Final</label>
-            <input 
-              type="date" 
-              value={fechaHasta}
-              onChange={e => setFechaHasta(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Estado Pedido</label>
-            <select 
-              value={facEstFac} 
-              onChange={e => setFacEstFac(e.target.value)} 
-              className="w-full p-2 border rounded"
-            >
-              <option value="A">Activo</option>
-              <option value="P">Pendiente</option>
-              <option value="I">Inactivo</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Tipo de documento</label>
-            <select
-              value={fueCod}
-              onChange={e => setFueCod(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
-              <option value="4">COTIZACIONES</option>
-              <option value="1">FACTURAS</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Identificación Cliente</label>
-            <input 
-              type="text" 
-              value={nitIde} 
-              onChange={e => setNitIde(e.target.value)} 
-              placeholder="Ingrese identificación"
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Nombre Cliente</label>
-            <input 
-              type="text" 
-              value={nitNom} 
-              onChange={e => setNitNom(e.target.value)} 
-              placeholder="Ingrese nombre"
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1"># Pedido</label>
-            <input 
-              type="text" 
-              value={facNro} 
-              onChange={e => setFacNro(e.target.value)} 
-              placeholder="Ingrese número de pedido"
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm mb-1"># Pedido Woo</label>
-            <input 
-              type="text" 
-              value={facNroWoo} 
-              onChange={e => setFacNroWoo(e.target.value)} 
-              placeholder="Ingrese número de pedido"
-              className="w-full p-2 border rounded"
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button 
-            onClick={() => fetchOrders(1)}
-            className="bg-[#f58ea3] text-white px-4 py-2 rounded hover:bg-[#a5762f] transition cursor-pointer flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            Buscar
-          </button>
-          <button 
             onClick={handleClearFilters}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition cursor-pointer flex items-center gap-2"
+            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base"
+            title="Limpiar Filtros"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Limpiar Filtros
+            <FaBroom />
+          </button>
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow"
+            onClick={() => navigate('/pos')}
+          >
+            <FaPlus className="mr-2" /> Nueva Orden
           </button>
         </div>
       </div>
-      
-      {/* Listado de órdenes */}
-      <div ref={containerRef} className="flex-1 p-4 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {orders.map((order, index) => {
-  const isFacturado = order.documentos && order.documentos !== "";
-  return (
-    <div key={index} className="bg-white p-4 rounded-lg shadow cursor-pointer">
-      <OrderCard order={order} onClick={() => console.log(order)} />
-      <div className="mt-2 flex justify-between gap-2">
-        <button 
-          onClick={() => !isFacturado && handleEditOrder(order)}
-          disabled={isFacturado}
-          className={`px-3 py-1 rounded text-xs transition ${
-            isFacturado 
-              ? "bg-gray-400 cursor-not-allowed" 
-              : "bg-blue-600 hover:bg-blue-700 cursor-pointer text-white"
-          }`}
-        >
-          {fueCod === "4" ? "Editar Cotizaciones" : "Editar Factura"}
-        </button>
-        <div className="flex gap-1">
-          <button 
-            onClick={() => handleViewDetail(order)}
-            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition cursor-pointer text-xs"
-          >
-            Visualizar
-          </button>
-          <button 
-            onClick={() => printOrder(order.fac_nro)}
-            className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition cursor-pointer text-xs flex items-center gap-1"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            PDF
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-})}
 
+      {/* Filtros */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 bg-white rounded shadow">
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
+          <input
+            type="date"
+            value={fechaDesde}
+            onChange={e => setFechaDesde(e.target.value)}
+            className="p-2 border rounded text-sm bg-white"
+          />
         </div>
-        {/* Sentinel para el IntersectionObserver */}
-        <div ref={loadMoreRef} className="py-4 flex justify-center">
-          {isLoading && <LoadingSpinner />}
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
+          <input
+            type="date"
+            value={fechaHasta}
+            onChange={e => setFechaHasta(e.target.value)}
+            className="p-2 border rounded text-sm bg-white"
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
+          <select
+            value={facEstFac}
+            onChange={e => setFacEstFac(e.target.value)}
+            className="p-2 border rounded text-sm bg-white"
+          >
+            <option value="A">Activo</option>
+            <option value="P">Pendiente</option>
+            <option value="I">Inactivo</option>
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo Documento</label>
+          <select
+            value={fueCod}
+            onChange={e => setFueCod(e.target.value)}
+            className="p-2 border rounded text-sm bg-white"
+          >
+            <option value="4">COTIZACIONES</option>
+            <option value="1">FACTURAS</option>
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
+          <input
+            type="text"
+            value={nitIde}
+            onChange={e => setNitIde(e.target.value)}
+            placeholder="Ingrese NIT"
+            className="p-2 border rounded text-sm"
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Cliente</label>
+          <input
+            type="text"
+            value={nitNom}
+            onChange={e => setNitNom(e.target.value)}
+            placeholder="Ingrese nombre"
+            className="p-2 border rounded text-sm"
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1"># Pedido</label>
+          <input
+            type="text"
+            value={facNro}
+            onChange={e => setFacNro(e.target.value)}
+            placeholder="Ingrese número"
+            className="p-2 border rounded text-sm"
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1"># Pedido Woo</label>
+          <input
+            type="text"
+            value={facNroWoo}
+            onChange={e => setFacNroWoo(e.target.value)}
+            placeholder="Ingrese número"
+            className="p-2 border rounded text-sm"
+          />
         </div>
       </div>
-      
-      {/* Modal para visualizar detalle */}
+
+      {/* Vista de Lista/Tabla */}
+      <div>
+        {/* Vista Móvil (Tarjetas) */}
+        <div className="block sm:hidden space-y-3">
+          {isLoading && pageNumber === 1 && <div className="text-center py-4"><LoadingSpinner /></div>}
+          {!isLoading && orders.length === 0 && pageNumber === 1 && (
+            <p className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</p>
+          )}
+          {orders.map((order) => {
+            const isFacturado = order.documentos && order.documentos !== "";
+            return (
+              <div key={order.fac_sec} className={`bg-white p-3 rounded shadow border border-gray-200 ${isFacturado ? 'border-green-200 bg-green-50' : ''}`}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-semibold text-sm">{order.fac_nro}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.fac_est_fac === 'A' ? 'bg-green-100 text-green-800' :
+                        order.fac_est_fac === 'P' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                        {order.fac_est_fac || 'N/A'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-1">Fecha: {formatDate(order.fac_fec)}</p>
+                    <p className="text-xs text-gray-600 mb-1">WooCommerce: {order.fac_nro_woo || '-'}</p>
+                    <p className="text-sm text-gray-800 break-words">{order.nit_nom}</p>
+                    <p className="text-xs text-gray-500">{order.nit_ide}</p>
+                    {isFacturado && (
+                      <p className="text-xs text-green-700 mt-1">
+                        Documentos: <span className="font-medium">{order.documentos}</span>
+                      </p>
+                    )}
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      Total: ${parseFloat(order.total_pedido).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="flex flex-col space-y-1 flex-shrink-0">
+                    <button
+                      onClick={() => !isFacturado && handleEditOrder(order)}
+                      disabled={isFacturado}
+                      className={`p-2 rounded ${isFacturado
+                        ? "bg-gray-400 cursor-not-allowed text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                        }`}
+                      title={fueCod === "4" ? "Editar Cotización" : "Editar Factura"}
+                    >
+                      <FaEdit size="1em" />
+                    </button>
+                    <button
+                      onClick={() => handleViewDetail(order)}
+                      className="bg-green-600 hover:bg-green-700 text-white p-2 rounded"
+                      title="Visualizar Detalles"
+                    >
+                      <FaEye size="1em" />
+                    </button>
+                    <button
+                      onClick={() => printOrder(order.fac_nro)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded"
+                      title="Imprimir PDF"
+                    >
+                      <FaPrint size="1em" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {isLoading && pageNumber > 1 && <div className="text-center py-4"><LoadingSpinner /></div>}
+        </div>
+
+        {/* Vista Desktop (Tabla) */}
+        <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"># Pedido</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"># WooCommerce</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NIT</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documentos</th>
+                <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoading && pageNumber === 1 && (
+                <tr><td colSpan="9" className="text-center py-4"><LoadingSpinner /></td></tr>
+              )}
+              {!isLoading && orders.length === 0 && pageNumber === 1 && (
+                <tr><td colSpan="9" className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</td></tr>
+              )}
+              {orders.map((order) => {
+                const isFacturado = order.documentos && order.documentos !== "";
+                return (
+                  <tr key={order.fac_sec} className={`hover:bg-gray-50 ${isFacturado ? 'bg-green-50' : ''}`}>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{formatDate(order.fac_fec)}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro_woo || '-'}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.nit_ide}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.nit_nom}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">
+                      ${parseFloat(order.total_pedido).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      {isFacturado ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {order.documentos}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap text-center">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.fac_est_fac === 'A' ? 'bg-green-100 text-green-800' :
+                        order.fac_est_fac === 'P' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                        {order.fac_est_fac || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => !isFacturado && handleEditOrder(order)}
+                          disabled={isFacturado}
+                          className={`p-2 rounded ${isFacturado
+                            ? "bg-gray-400 cursor-not-allowed text-white"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                            }`}
+                          title={fueCod === "4" ? "Editar Cotización" : "Editar Factura"}
+                        >
+                          <FaEdit size="1em" />
+                        </button>
+                        <button
+                          onClick={() => handleViewDetail(order)}
+                          className="bg-green-600 hover:bg-green-700 text-white p-2 rounded"
+                          title="Visualizar Detalles"
+                        >
+                          <FaEye size="1em" />
+                        </button>
+                        <button
+                          onClick={() => printOrder(order.fac_nro)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded"
+                          title="Imprimir PDF"
+                        >
+                          <FaPrint size="1em" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {isLoading && pageNumber > 1 && (
+                <tr><td colSpan="9" className="text-center py-4"><LoadingSpinner /></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Botón Cargar Más */}
+      {hasMore && !isLoading && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => fetchOrders(pageNumber + 1)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base"
+          >
+            Cargar Más Órdenes
+          </button>
+        </div>
+      )}
+
+      {/* Modal */}
       {showDetailModal && selectedOrder && (
-        <OrderDetailModal 
+        <OrderDetailModal
           order={selectedOrder}
           onClose={() => setShowDetailModal(false)}
         />

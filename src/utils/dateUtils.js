@@ -3,19 +3,29 @@ const COLOMBIA_TIMEZONE = 'America/Bogota';
 
 /**
  * Formatea una fecha para mostrar en la UI
- * @param {string} dateString - Fecha en formato ISO (YYYY-MM-DD)
+ * @param {string|Date} dateInput - Fecha en formato ISO (YYYY-MM-DD) o objeto Date
  * @returns {string} Fecha formateada
  */
-export const formatDate = (dateString) => {
-  if (!dateString) return '';
-  
+export const formatDate = (dateInput) => {
+  if (!dateInput) return '';
+
   try {
-    // Crear la fecha especificando UTC para evitar conversiones de zona horaria
+    let dateString;
+
+    if (dateInput instanceof Date) {
+      // Si es un objeto Date, convertirlo a string ISO
+      dateString = dateInput.toISOString();
+    } else {
+      // Si ya es un string, usarlo directamente
+      dateString = dateInput;
+    }
+
+    // Extraer la parte de la fecha (YYYY-MM-DD)
     const [year, month, day] = dateString.split('T')[0].split('-');
-    return `${year}-${month}-${day}`;
+    return `${day}/${month}/${year}`;
   } catch (error) {
     console.error('Error formateando fecha:', error);
-    return dateString;
+    return dateInput;
   }
 };
 
@@ -68,7 +78,7 @@ export const getCurrentDate = () => {
  */
 export const toAPIDateFormat = (dateString) => {
   if (!dateString) return '';
-  
+
   try {
     const [year, month, day] = dateString.split('-');
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;

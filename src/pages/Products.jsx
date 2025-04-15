@@ -53,7 +53,7 @@ const Products = () => {
         } catch (error) {
             console.error("Error fetching products:", error);
             if (error.response && error.response.status === 404) {
-                 console.error("Endpoint no encontrado. Verifica la URL:", `${API_URL}/articulos`);
+                console.error("Endpoint no encontrado. Verifica la URL:", `${API_URL}/articulos`);
             }
             setProducts(currentProducts);
             setHasMore(false);
@@ -94,6 +94,11 @@ const Products = () => {
             default:
                 return <span className="text-gray-400 text-xs" title="Estado no disponible">-</span>;
         }
+    };
+
+    const formatPrice = (price) => {
+        if (!price) return '$0';
+        return `$${parseInt(price).toLocaleString('es-CO')}`;
     };
 
     return (
@@ -147,14 +152,14 @@ const Products = () => {
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="font-semibold text-sm">{product.art_cod}</span>
                                         <span className="flex-shrink-0">
-                                             {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
+                                            {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                         </span>
                                     </div>
                                     <p className="text-sm text-gray-700 break-words mb-2">{product.art_nom}</p>
                                 </div>
                                 <div className="flex flex-col space-y-1 flex-shrink-0">
-                                     <button onClick={() => navigate(`/products/edit/${product.art_sec}`)} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
-                                     <button onClick={() => handleDelete(product.art_sec)} className="text-red-600 hover:text-red-900 p-1" title="Eliminar"><FaTrash size="1.0em"/></button>
+                                    <button onClick={() => navigate(`/products/edit/${product.art_sec}`)} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
+                                    <button onClick={() => handleDelete(product.art_sec)} className="text-red-600 hover:text-red-900 p-1" title="Eliminar"><FaTrash size="1.0em" /></button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-2 border-t pt-2 mt-2 text-xs">
@@ -164,16 +169,16 @@ const Products = () => {
                                 </div>
                                 <div className="text-center">
                                     <span className="text-gray-500 block">P. Detal</span>
-                                    <span className="font-medium">{product.precio_detal ? parseFloat(product.precio_detal).toFixed(2) : 'N/A'}</span>
+                                    <span className="font-medium">{formatPrice(product.precio_detal)}</span>
                                 </div>
                                 <div className="text-center">
                                     <span className="text-gray-500 block">P. Mayor</span>
-                                    <span className="font-medium">{product.precio_mayor ? parseFloat(product.precio_mayor).toFixed(2) : 'N/A'}</span>
+                                    <span className="font-medium">{formatPrice(product.precio_mayor)}</span>
                                 </div>
                             </div>
                         </div>
                     ))}
-                     {isLoading && pageNumber > 1 && <div className="text-center py-4"><LoadingSpinner /></div>}
+                    {isLoading && pageNumber > 1 && <div className="text-center py-4"><LoadingSpinner /></div>}
                 </div>
 
                 <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
@@ -203,8 +208,8 @@ const Products = () => {
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{product.art_cod}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{product.art_nom}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{product.existencia}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{product.precio_detal ? parseFloat(product.precio_detal).toFixed(2) : '0.00'}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{product.precio_mayor ? parseFloat(product.precio_mayor).toFixed(2) : '0.00'}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatPrice(product.precio_detal)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatPrice(product.precio_mayor)}</td>
                                     <td className="px-2 py-2 whitespace-nowrap text-center">
                                         {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                     </td>
@@ -214,9 +219,9 @@ const Products = () => {
                                     </td>
                                 </tr>
                             ))}
-                             {isLoading && pageNumber > 1 && (
-                                 <tr><td colSpan="7" className="text-center py-4"><LoadingSpinner /></td></tr>
-                             )}
+                            {isLoading && pageNumber > 1 && (
+                                <tr><td colSpan="7" className="text-center py-4"><LoadingSpinner /></td></tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

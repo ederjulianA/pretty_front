@@ -8,10 +8,11 @@ import { format } from 'date-fns';
 import AjusteDetailModal from '../components/AjusteDetailModal'; // Componente de detalle (debe existir o ser creado)
 import { FaPlus, FaEdit, FaTrash, FaEye, FaBroom } from 'react-icons/fa'; // Iconos actualizados
 import debounce from 'lodash/debounce';
+import AnularDocumentoModal from '../components/AnularDocumentoModal';
 
 const AjusteCard = ({ ajuste, onClick }) => {
   return (
-    <div 
+    <div
       onClick={() => onClick && onClick(ajuste)}
       className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition"
     >
@@ -85,6 +86,7 @@ const Ajustes = () => {
   // Estados de Modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedAjuste, setSelectedAjuste] = useState(null);
+  const [showAnularModal, setShowAnularModal] = useState(false);
 
   // Función para obtener ajustes
   const fetchAjustes = useCallback(async (page, currentAjustes = []) => {
@@ -201,6 +203,24 @@ const Ajustes = () => {
     // El useEffect que observa los filtros se encargará de llamar a debouncedFetch
   };
 
+  const handleAnularClick = (ajuste) => {
+    setSelectedAjuste(ajuste);
+    setShowAnularModal(true);
+  };
+
+  const handleAnularSuccess = (response) => {
+    // Actualizar el estado del ajuste en la lista
+    setAjustes(ajustes.map(ajuste =>
+      ajuste.fac_nro === response.fac_nro
+        ? { ...ajuste, fac_est_fac: response.fac_est_fac }
+        : ajuste
+    ));
+  };
+
+  const canEditOrAnular = (estado) => {
+    return ['A', 'P'].includes(estado);
+  };
+
   return (
     <div className="p-2 sm:p-4">
       {/* --- Header --- */}
@@ -228,27 +248,27 @@ const Ajustes = () => {
         {/* Columna Fecha Desde */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
-          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="p-2 border rounded text-sm bg-white"/>
+          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="p-2 border rounded text-sm bg-white" />
         </div>
         {/* Columna Fecha Hasta */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
-          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="p-2 border rounded text-sm bg-white"/>
+          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="p-2 border rounded text-sm bg-white" />
         </div>
         {/* Columna Nro Ajuste */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Nro Ajuste</label>
-          <input type="text" placeholder="Número..." value={facNro} onChange={e => setFacNro(e.target.value)} className="p-2 border rounded text-sm"/>
+          <input type="text" placeholder="Número..." value={facNro} onChange={e => setFacNro(e.target.value)} className="p-2 border rounded text-sm" />
         </div>
         {/* Columna NIT */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
-          <input type="text" placeholder="NIT..." value={nitIde} onChange={e => setNitIde(e.target.value)} className="p-2 border rounded text-sm"/>
+          <input type="text" placeholder="NIT..." value={nitIde} onChange={e => setNitIde(e.target.value)} className="p-2 border rounded text-sm" />
         </div>
         {/* Columna Proveedor */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-          <input type="text" placeholder="Nombre..." value={nitNom} onChange={e => setNitNom(e.target.value)} className="p-2 border rounded text-sm"/>
+          <input type="text" placeholder="Nombre..." value={nitNom} onChange={e => setNitNom(e.target.value)} className="p-2 border rounded text-sm" />
         </div>
         {/* Columna Estado */}
         <div className="flex flex-col">
@@ -287,8 +307,12 @@ const Ajustes = () => {
                 </div>
                 {/* Acciones en móvil */}
                 <div className="flex flex-col space-y-1 flex-shrink-0">
-                  <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(ajuste.fac_sec); }} className="text-red-600 hover:text-red-900 p-1" title="Eliminar"><FaTrash size="1.0em"/></button>
+                  {canEditOrAnular(ajuste.fac_est_fac) && (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }} className="text-red-600 hover:text-red-900 p-1" title="Anular"><FaTrash size="1.0em" /></button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -328,9 +352,12 @@ const Ajustes = () => {
                     </span>
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                    <button onClick={(e) => { e.stopPropagation(); handleViewDetail(ajuste); }} className="text-blue-600 hover:text-blue-900 mr-3" title="Ver Detalle"><FaEye /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><FaEdit /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(ajuste.fac_sec); }} className="text-red-600 hover:text-red-900" title="Eliminar"><FaTrash /></button>
+                    {canEditOrAnular(ajuste.fac_est_fac) && (
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><FaEdit /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }} className="text-red-600 hover:text-red-900" title="Anular"><FaTrash /></button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -359,6 +386,17 @@ const Ajustes = () => {
         <AjusteDetailModal
           ajuste={selectedAjuste}
           onClose={() => setShowDetailModal(false)}
+        />
+      )}
+
+      {/* Modal de Anulación */}
+      {showAnularModal && selectedAjuste && (
+        <AnularDocumentoModal
+          isOpen={showAnularModal}
+          onClose={() => setShowAnularModal(false)}
+          fac_nro={selectedAjuste.fac_nro}
+          fac_tip_cod={selectedAjuste.fac_tip_cod}
+          onSuccess={handleAnularSuccess}
         />
       )}
     </div>

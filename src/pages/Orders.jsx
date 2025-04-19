@@ -8,8 +8,9 @@ import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
 import usePrintOrder from '../hooks/usePrintOrder';
-import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt } from 'react-icons/fa';
+import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt, FaTrash } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
+import AnularDocumentoModal from '../components/AnularDocumentoModal';
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ const Orders = () => {
     };
   };
 
-  // Inicializar estados con los filtros guardados
+  // Inicializar estados con los filtros guardados 
   const [fechaDesde, setFechaDesde] = useState(getInitialFilters().fechaDesde);
   const [fechaHasta, setFechaHasta] = useState(getInitialFilters().fechaHasta);
   const [nitIde, setNitIde] = useState(getInitialFilters().nitIde);
@@ -60,6 +61,8 @@ const Orders = () => {
 
   // Agregar el hook de impresión
   const { printOrder } = usePrintOrder();
+
+  const [showAnularModal, setShowAnularModal] = useState(false);
 
   const fetchOrders = async (page = 1) => {
     setIsLoading(true);
@@ -153,6 +156,24 @@ const Orders = () => {
   const handleViewDetail = (order) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
+  };
+
+  const handleAnularClick = (order) => {
+    setSelectedOrder(order);
+    setShowAnularModal(true);
+  };
+
+  const handleAnularSuccess = (response) => {
+    // Actualizar el estado de la orden en la lista
+    setOrders(orders.map(order =>
+      order.fac_nro === response.fac_nro
+        ? { ...order, fac_est_fac: response.fac_est_fac }
+        : order
+    ));
+  };
+
+  const canEditOrAnular = (estado) => {
+    return ['A', 'P'].includes(estado);
   };
 
   return (
@@ -299,31 +320,12 @@ const Orders = () => {
                     </p>
                   </div>
                   <div className="flex flex-col space-y-1 flex-shrink-0">
-                    <button
-                      onClick={() => !isFacturado && handleEditOrder(order)}
-                      disabled={isFacturado}
-                      className={`p-2 rounded ${isFacturado
-                        ? "bg-gray-400 cursor-not-allowed text-white"
-                        : "bg-blue-600 hover:bg-blue-700 text-white"
-                        }`}
-                      title={fueCod === "4" ? "Editar Cotización" : "Editar Factura"}
-                    >
-                      <FaEdit size="1em" />
-                    </button>
-                    <button
-                      onClick={() => handleViewDetail(order)}
-                      className="bg-green-600 hover:bg-green-700 text-white p-2 rounded"
-                      title="Visualizar Detalles"
-                    >
-                      <FaEye size="1em" />
-                    </button>
-                    <button
-                      onClick={() => printOrder(order.fac_nro)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded"
-                      title="Imprimir PDF"
-                    >
-                      <FaPrint size="1em" />
-                    </button>
+                    {canEditOrAnular(order.fac_est_fac) && (
+                      <>
+                        <button onClick={() => handleEditOrder(order)} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
+                        <button onClick={() => handleAnularClick(order)} className="text-red-600 hover:text-red-900 p-1" title="Anular"><FaTrash size="1.0em" /></button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -383,33 +385,12 @@ const Orders = () => {
                       </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => !isFacturado && handleEditOrder(order)}
-                          disabled={isFacturado}
-                          className={`p-2 rounded ${isFacturado
-                            ? "bg-gray-400 cursor-not-allowed text-white"
-                            : "bg-blue-600 hover:bg-blue-700 text-white"
-                            }`}
-                          title={fueCod === "4" ? "Editar Cotización" : "Editar Factura"}
-                        >
-                          <FaEdit size="1em" />
-                        </button>
-                        <button
-                          onClick={() => handleViewDetail(order)}
-                          className="bg-green-600 hover:bg-green-700 text-white p-2 rounded"
-                          title="Visualizar Detalles"
-                        >
-                          <FaEye size="1em" />
-                        </button>
-                        <button
-                          onClick={() => printOrder(order.fac_nro)}
-                          className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded"
-                          title="Imprimir PDF"
-                        >
-                          <FaPrint size="1em" />
-                        </button>
-                      </div>
+                      {canEditOrAnular(order.fac_est_fac) && (
+                        <>
+                          <button onClick={() => handleEditOrder(order)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><FaEdit /></button>
+                          <button onClick={() => handleAnularClick(order)} className="text-red-600 hover:text-red-900" title="Anular"><FaTrash /></button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -439,6 +420,17 @@ const Orders = () => {
         <OrderDetailModal
           order={selectedOrder}
           onClose={() => setShowDetailModal(false)}
+        />
+      )}
+
+      {/* Modal de Anulación */}
+      {showAnularModal && selectedOrder && (
+        <AnularDocumentoModal
+          isOpen={showAnularModal}
+          onClose={() => setShowAnularModal(false)}
+          fac_nro={selectedOrder.fac_nro}
+          fac_tip_cod={selectedOrder.fac_tip_cod}
+          onSuccess={handleAnularSuccess}
         />
       )}
     </div>

@@ -29,6 +29,7 @@ const CreateProduct = () => {
   // Estados para los errores de validación
   const [errorArtCod, setErrorArtCod] = useState('');
   const [errorArtWoo, setErrorArtWoo] = useState('');
+  const [formErrors, setFormErrors] = useState({});
 
   // Cargar listado de categorías
   useEffect(() => {
@@ -184,7 +185,13 @@ const CreateProduct = () => {
       Swal.fire({
         icon: 'error',
         title: 'Error de validación',
-        text: 'Por favor corrija los errores en el formulario.',
+        html: `
+          <div class="text-left">
+            <p class="mb-2">Por favor corrija los siguientes errores:</p>
+            ${errorArtCod ? `<p class="text-red-600">• ${errorArtCod}</p>` : ''}
+            ${errorArtWoo ? `<p class="text-red-600">• ${errorArtWoo}</p>` : ''}
+          </div>
+        `,
         confirmButtonColor: '#f58ea3'
       });
       return;
@@ -213,24 +220,210 @@ const CreateProduct = () => {
         }
       });
 
+      console.log('Respuesta del servidor:', response.data); // Para debug
+
       if (response.data.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Producto creado',
-          text: response.data.message,
-          confirmButtonColor: '#f58ea3'
-        });
-        navigate('/products');
+        // Si no hay errores, mostrar mensaje de éxito simple
+        if (!response.data.errors || Object.keys(response.data.errors).length === 0) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Producto creado',
+            text: response.data.message,
+            confirmButtonColor: '#f58ea3'
+          }).then(() => {
+            navigate('/products');
+          });
+        } else {
+          // Si hay errores pero el artículo se creó, mostrar mensaje detallado
+          let errorMessage = '<div class="text-left">';
+          errorMessage += `<p class="mb-4 text-lg">${response.data.message}</p>`;
+          errorMessage += '<div class="space-y-4">';
+
+          Object.entries(response.data.errors).forEach(([key, errorData]) => {
+            console.log(`Procesando error de ${key}:`, errorData); // Para debug
+
+            const errorType = {
+              cloudinary: { title: 'Error en Cloudinary', color: 'red' },
+              wooCommerce: { title: 'Error en WooCommerce', color: 'orange' },
+              database: { title: 'Error en Base de Datos', color: 'red' }
+            }[key] || { title: key, color: 'red' };
+
+            // Asegurarse de que errorData sea un objeto
+            const error = typeof errorData === 'string' ? { message: errorData } : errorData;
+
+            errorMessage += `
+              <div class="bg-${errorType.color}-50 p-4 rounded-lg border border-${errorType.color}-200">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-${errorType.color}-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div class="ml-3 flex-1">
+                    <h3 class="text-sm font-medium text-${errorType.color}-800">${errorType.title}</h3>
+                    <div class="mt-2">
+                      ${error.message ? `
+                        <p class="text-sm text-${errorType.color}-700">
+                          ${error.message}
+                        </p>
+                      ` : ''}
+                      
+                      ${error.details ? `
+                        <p class="text-sm text-${errorType.color}-600 mt-1">
+                          ${error.details}
+                        </p>
+                      ` : ''}
+
+                      <div class="mt-2 p-2 bg-${errorType.color}-100 rounded">
+                        <div class="text-xs font-mono">
+                          ${Object.entries(error)
+                .filter(([k]) => !['message', 'details'].includes(k))
+                .map(([k, v]) => `
+                              <div class="grid grid-cols-3 gap-2 mb-1">
+                                <span class="text-${errorType.color}-800 font-medium">${k}:</span>
+                                <span class="text-${errorType.color}-900 col-span-2 break-all">
+                                  ${typeof v === 'object' ? JSON.stringify(v) : v}
+                                </span>
+                              </div>
+                            `).join('')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+          errorMessage += '</div></div>';
+
+          Swal.fire({
+            icon: 'warning',
+            title: 'Producto creado con advertencias',
+            html: errorMessage,
+            width: '600px',
+            confirmButtonColor: '#f58ea3',
+            confirmButtonText: 'Entendido',
+            showClass: {
+              popup: 'animate__animated animate__fadeInDown'
+            },
+            hideClass: {
+              popup: 'animate__animated animate__fadeOutUp'
+            }
+          }).then((result) => {
+            if (result.isConfirmed) {
+              navigate('/products');
+            }
+          });
+        }
       } else {
-        throw new Error(response.data.message || 'Error al crear el producto');
+        // Si hay error en la creación del artículo
+        let errorMessage = '<div class="text-left">';
+        errorMessage += `<p class="mb-4 text-lg font-medium">${response.data.message || 'Error al crear el producto'}</p>`;
+        errorMessage += '<div class="space-y-4">';
+
+        if (response.data.errors) {
+          Object.entries(response.data.errors).forEach(([key, error]) => {
+            const errorData = typeof error === 'string' ? { message: error } : error;
+
+            errorMessage += `
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div class="ml-3 flex-1">
+                    <h3 class="text-sm font-medium text-red-800">${key}</h3>
+                    <div class="mt-2">
+                      ${errorData.message ? `
+                        <p class="text-sm text-red-700">${errorData.message}</p>
+                      ` : ''}
+                      
+                      <div class="mt-2 p-2 bg-red-100 rounded">
+                        <div class="text-xs font-mono">
+                          ${Object.entries(errorData)
+                .filter(([k]) => k !== 'message')
+                .map(([k, v]) => `
+                              <div class="grid grid-cols-3 gap-2 mb-1">
+                                <span class="text-red-800 font-medium">${k}:</span>
+                                <span class="text-red-900 col-span-2 break-all">
+                                  ${typeof v === 'object' ? JSON.stringify(v) : v}
+                                </span>
+                              </div>
+                            `).join('')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        errorMessage += '</div></div>';
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al crear el producto',
+          html: errorMessage,
+          width: '600px',
+          confirmButtonColor: '#f58ea3',
+          confirmButtonText: 'Entendido',
+          showClass: {
+            popup: 'animate__animated animate__fadeInDown'
+          },
+          hideClass: {
+            popup: 'animate__animated animate__fadeOutUp'
+          }
+        });
       }
     } catch (error) {
       console.error("Error al crear producto:", error);
+      console.error("Detalles del error:", error.response?.data); // Para debug
+
+      let errorMessage = '<div class="text-left">';
+      errorMessage += `<p class="mb-4 text-lg font-medium">Error al crear el producto:</p>`;
+
+      // Mostrar el mensaje principal del error
+      const mainError = error.response?.data?.message || error.message || 'Ha ocurrido un error inesperado.';
+      errorMessage += `
+        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+          <p class="text-sm text-red-700">${mainError}</p>
+          
+          ${error.response?.data?.errors ? `
+            <div class="mt-2 p-2 bg-red-100 rounded text-xs font-mono">
+              ${Object.entries(error.response.data.errors)
+            .map(([key, value]) => `
+                  <div class="grid grid-cols-3 gap-2 mb-1">
+                    <span class="text-red-800 font-medium">${key}:</span>
+                    <span class="text-red-900 col-span-2 break-all">
+                      ${typeof value === 'object' ? JSON.stringify(value) : value}
+                    </span>
+                  </div>
+                `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      errorMessage += '</div>';
+
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.message || 'Error al crear el producto, por favor intente nuevamente.',
-        confirmButtonColor: '#f58ea3'
+        html: errorMessage,
+        width: '600px',
+        confirmButtonColor: '#f58ea3',
+        confirmButtonText: 'Entendido',
+        showClass: {
+          popup: 'animate__animated animate__fadeInDown'
+        },
+        hideClass: {
+          popup: 'animate__animated animate__fadeOutUp'
+        }
       });
     } finally {
       setIsSubmitting(false);
@@ -259,11 +452,19 @@ const CreateProduct = () => {
               onChange={handleChange}
               onBlur={handleBlurArtCod}
               placeholder="Ingrese código"
-              className="w-full p-2 border rounded disabled:bg-gray-100"
+              className={`w-full p-2 border rounded disabled:bg-gray-100 ${errorArtCod ? 'border-red-500 focus:border-red-500' : ''
+                }`}
               required
               disabled={isSubmitting}
             />
-            {errorArtCod && <p className="text-red-500 text-xs mt-1">{errorArtCod}</p>}
+            {errorArtCod && (
+              <div className="mt-1 flex items-center text-red-500 text-sm">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {errorArtCod}
+              </div>
+            )}
           </div>
           {/* Nombre */}
           <div className="mb-4">
@@ -370,10 +571,18 @@ const CreateProduct = () => {
               onChange={handleChange}
               onBlur={handleBlurArtWoo}
               placeholder="Ingrese código WooCommerce (opcional)"
-              className="w-full p-2 border rounded disabled:bg-gray-100"
+              className={`w-full p-2 border rounded disabled:bg-gray-100 ${errorArtWoo ? 'border-red-500 focus:border-red-500' : ''
+                }`}
               disabled={isSubmitting}
             />
-            {errorArtWoo && <p className="text-red-500 text-xs mt-1">{errorArtWoo}</p>}
+            {errorArtWoo && (
+              <div className="mt-1 flex items-center text-red-500 text-sm">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {errorArtWoo}
+              </div>
+            )}
           </div>
           {/* Imágenes */}
           <div className="mb-4">

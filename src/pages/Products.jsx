@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaEdit, FaTrash, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ArticleMovementModal from '../components/ArticleMovementModal';
 import debounce from 'lodash/debounce';
 
 const Products = () => {
@@ -16,6 +17,8 @@ const Products = () => {
     const [filterNombre, setFilterNombre] = useState('');
     const [filterExistencia, setFilterExistencia] = useState('');
     const [selectedExistencia, setSelectedExistencia] = useState("todas");
+    const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+    const [selectedArticleCode, setSelectedArticleCode] = useState(null);
 
     const limit = 15;
 
@@ -81,6 +84,11 @@ const Products = () => {
 
     const handleDelete = async (id) => {
         console.log("Borrar producto:", id);
+    };
+
+    const handleViewMovements = (articleCode) => {
+        setSelectedArticleCode(articleCode);
+        setIsMovementModalOpen(true);
     };
 
     const renderSyncStatus = (status, message) => {
@@ -168,6 +176,11 @@ const Products = () => {
                                         title="Eliminar">
                                         <FaTrash className="w-4 h-4" />
                                     </button>
+                                    <button onClick={() => handleViewMovements(product.art_cod)}
+                                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                                        title="Ver Movimientos">
+                                        <FaHistory className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-2 border-t pt-2 mt-2 text-xs">
@@ -228,9 +241,14 @@ const Products = () => {
                                             <FaEdit />
                                         </button>
                                         <button onClick={() => handleDelete(product.art_sec)}
-                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
                                             title="Eliminar">
                                             <FaTrash />
+                                        </button>
+                                        <button onClick={() => handleViewMovements(product.art_cod)}
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                            title="Ver Movimientos">
+                                            <FaHistory />
                                         </button>
                                     </td>
                                 </tr>
@@ -253,6 +271,12 @@ const Products = () => {
                     </button>
                 </div>
             )}
+
+            <ArticleMovementModal
+                isOpen={isMovementModalOpen}
+                onClose={() => setIsMovementModalOpen(false)}
+                articleCode={selectedArticleCode}
+            />
         </div>
     );
 };

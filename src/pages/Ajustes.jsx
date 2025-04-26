@@ -14,7 +14,7 @@ const AjusteCard = ({ ajuste, onClick }) => {
   return (
     <div
       onClick={() => onClick && onClick(ajuste)}
-      className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition"
+      className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition border border-gray-100 hover:border-[#f58ea3]"
     >
       <div className="mb-2">
         <p className="text-sm text-gray-700">
@@ -223,67 +223,72 @@ const Ajustes = () => {
 
   return (
     <div className="p-2 sm:p-4">
-      {/* --- Header --- */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Gestión de Ajustes</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Ajustes</h1>
         <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={handleClearFilters}
-            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base"
+            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors"
             title="Limpiar Filtros"
           >
-            <FaBroom />
+            <FaBroom className="text-[#f58ea3]" />
           </button>
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow"
+            className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow transition-colors"
             onClick={() => navigate('/ajustes/nuevo')}
           >
-            <FaPlus className="mr-2" /> Nuevo Ajuste
+            <FaPlus className="mr-2 text-white" /> Nuevo Ajuste
           </button>
         </div>
       </div>
 
-      {/* --- Filtros --- */}
+      {/* Filtros */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 bg-white rounded shadow">
         {/* Columna Fecha Desde */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
-          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="p-2 border rounded text-sm bg-white" />
+          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)}
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
         </div>
         {/* Columna Fecha Hasta */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
-          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="p-2 border rounded text-sm bg-white" />
+          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)}
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
         </div>
         {/* Columna Nro Ajuste */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Nro Ajuste</label>
-          <input type="text" placeholder="Número..." value={facNro} onChange={e => setFacNro(e.target.value)} className="p-2 border rounded text-sm" />
+          <input type="text" placeholder="Número..." value={facNro} onChange={e => setFacNro(e.target.value)}
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
         </div>
         {/* Columna NIT */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
-          <input type="text" placeholder="NIT..." value={nitIde} onChange={e => setNitIde(e.target.value)} className="p-2 border rounded text-sm" />
+          <input type="text" placeholder="NIT..." value={nitIde} onChange={e => setNitIde(e.target.value)}
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
         </div>
         {/* Columna Proveedor */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-          <input type="text" placeholder="Nombre..." value={nitNom} onChange={e => setNitNom(e.target.value)} className="p-2 border rounded text-sm" />
+          <input type="text" placeholder="Nombre..." value={nitNom} onChange={e => setNitNom(e.target.value)}
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
         </div>
         {/* Columna Estado */}
         <div className="flex flex-col">
           <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select value={facEstFac} onChange={e => setFacEstFac(e.target.value)} className="p-2 border rounded text-sm bg-white">
+          <select value={facEstFac} onChange={e => setFacEstFac(e.target.value)}
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors">
             <option value="">Todos</option>
             <option value="A">Activo</option>
-            {/* Añadir otros estados si existen */}
             <option value="P">Pendiente</option>
             <option value="I">Inactivo</option>
           </select>
         </div>
       </div>
 
-      {/* --- Vista de Lista/Tabla --- */}
+      {/* Vista de Lista/Tabla */}
       <div>
         {/* Vista Móvil (Tarjetas) */}
         <div className="block sm:hidden space-y-3">
@@ -292,12 +297,15 @@ const Ajustes = () => {
             <p className="text-center py-4 text-gray-500">No hay ajustes para mostrar.</p>
           )}
           {ajustes.map((ajuste) => (
-            <div key={ajuste.fac_sec} className="bg-white p-3 rounded shadow border border-gray-200" onClick={() => handleViewDetail(ajuste)}>
+            <div key={ajuste.fac_sec} className="bg-white p-3 rounded shadow border border-gray-200 hover:border-[#f58ea3] transition-colors" onClick={() => handleViewDetail(ajuste)}>
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold text-sm">{ajuste.fac_nro}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ajuste.fac_est_fac === 'A' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ajuste.fac_est_fac === 'A'
+                      ? 'bg-[#fff5f7] text-[#f58ea3]'
+                      : 'bg-gray-100 text-gray-800'
+                      }`}>
                       {ajuste.fac_est_fac || 'N/A'}
                     </span>
                   </div>
@@ -309,8 +317,16 @@ const Ajustes = () => {
                 <div className="flex flex-col space-y-1 flex-shrink-0">
                   {canEditOrAnular(ajuste.fac_est_fac) && (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }} className="text-red-600 hover:text-red-900 p-1" title="Anular"><FaTrash size="1.0em" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }}
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                        title="Editar">
+                        <FaEdit className="w-5 h-5" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }}
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                        title="Anular">
+                        <FaTrash className="w-4 h-4" />
+                      </button>
                     </>
                   )}
                 </div>
@@ -323,7 +339,7 @@ const Ajustes = () => {
         {/* Vista Desktop (Tabla) */}
         <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-100">
+            <thead className="bg-[#fff5f7]">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nro Ajuste</th>
@@ -354,8 +370,16 @@ const Ajustes = () => {
                   <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
                     {canEditOrAnular(ajuste.fac_est_fac) && (
                       <>
-                        <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><FaEdit /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }} className="text-red-600 hover:text-red-900" title="Anular"><FaTrash /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
+                          title="Editar">
+                          <FaEdit className="w-5 h-5" />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                          title="Anular">
+                          <FaTrash className="w-4 h-4" />
+                        </button>
                       </>
                     )}
                   </td>
@@ -374,7 +398,7 @@ const Ajustes = () => {
         <div className="mt-4 text-center">
           <button
             onClick={handleLoadMore}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base"
+            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors"
           >
             Cargar Más Ajustes
           </button>

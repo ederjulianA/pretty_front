@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaSpinner } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import ArticleSearchModal from '../components/ArticleSearchModal';
@@ -35,6 +35,7 @@ const InventoryAdjustment = () => {
   // Agregar estos nuevos estados
   const [showArticleModal, setShowArticleModal] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cargar datos del ajuste si estamos en modo edición
   useEffect(() => {
@@ -49,7 +50,7 @@ const InventoryAdjustment = () => {
 
           if (response.data.header) {
             const { header, details } = response.data;
-            
+
             // Establecer los datos del encabezado
             setHeaderData({
               fecha: header.fac_fec,
@@ -67,8 +68,8 @@ const InventoryAdjustment = () => {
               kar_nat: detalle.kar_nat,
               kar_uni: detalle.kar_uni,
               saldo_actual: detalle.stock_actual,
-              nuevo_saldo: detalle.kar_nat === '+' 
-                ? detalle.stock_actual + detalle.kar_uni 
+              nuevo_saldo: detalle.kar_nat === '+'
+                ? detalle.stock_actual + detalle.kar_uni
                 : detalle.stock_actual - detalle.kar_uni
             }));
 
@@ -103,7 +104,7 @@ const InventoryAdjustment = () => {
   // Manejo de cambios en cada fila
   const handleRowChange = (index, field, value) => {
     const updatedRows = [...rows];
-    updatedRows[index] = { 
+    updatedRows[index] = {
       ...updatedRows[index],
       [field]: value
     };
@@ -120,6 +121,7 @@ const InventoryAdjustment = () => {
 
   // Funciones para acciones finales
   const handleGuardar = async () => {
+    setIsSubmitting(true);
     try {
       // Validaciones
       if (!headerData.fecha) {
@@ -129,6 +131,7 @@ const InventoryAdjustment = () => {
           text: 'La fecha es requerida',
           confirmButtonColor: '#f58ea3'
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -139,13 +142,30 @@ const InventoryAdjustment = () => {
           text: 'El proveedor es requerido',
           confirmButtonColor: '#f58ea3'
         });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validar que todos los artículos con código tengan unidades
+      const articulosSinUnidades = rows.filter(row =>
+        row.art_cod && (!row.kar_uni || Number(row.kar_uni) <= 0)
+      );
+
+      if (articulosSinUnidades.length > 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de validación',
+          text: `Los siguientes artículos no tienen unidades: ${articulosSinUnidades.map(row => row.art_cod).join(', ')}`,
+          confirmButtonColor: '#f58ea3'
+        });
+        setIsSubmitting(false);
         return;
       }
 
       // Filtrar solo las filas que tienen artículos y cantidades
-      const detallesValidos = rows.filter(row => 
-        row.art_sec && 
-        row.kar_uni && 
+      const detallesValidos = rows.filter(row =>
+        row.art_sec &&
+        row.kar_uni &&
         Number(row.kar_uni) > 0
       );
 
@@ -156,6 +176,7 @@ const InventoryAdjustment = () => {
           text: 'Debe ingresar al menos un artículo en el detalle',
           confirmButtonColor: '#f58ea3'
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -196,7 +217,7 @@ const InventoryAdjustment = () => {
         text: `El ajuste #${numeroAjuste} ha sido ${isEditing ? 'actualizado' : 'creado'} exitosamente`,
         confirmButtonColor: '#f58ea3'
       });
-      
+
       // Navegar después de que el usuario cierre el mensaje
       navigate('/ajustes');
 
@@ -208,6 +229,8 @@ const InventoryAdjustment = () => {
         text: error.response?.data?.message || 'Error al guardar el ajuste',
         confirmButtonColor: '#f58ea3'
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -250,20 +273,86 @@ const InventoryAdjustment = () => {
         const updatedRows = [...rows];
         updatedRows[index] = {
           ...updatedRows[index],
-          art_cod: articulo.art_cod,  // Se actualiza el código (podrías conservar lo ingresado si lo prefieres)
+          art_cod: articulo.art_cod,
           art_nom: articulo.art_nom,
           saldo_actual: articulo.existencia,
-          nuevo_saldo: updatedRows[index].kar_uni 
-            ? (updatedRows[index].kar_nat === '+' 
-                ? articulo.existencia + Number(updatedRows[index].kar_uni)
-                : articulo.existencia - Number(updatedRows[index].kar_uni))
+          nuevo_saldo: updatedRows[index].kar_uni
+            ? (updatedRows[index].kar_nat === '+'
+              ? articulo.existencia + Number(updatedRows[index].kar_uni)
+              : articulo.existencia - Number(updatedRows[index].kar_uni))
             : articulo.existencia,
-          art_sec: articulo.art_sec  // Guardamos el identificador para trazabilidad
+          art_sec: articulo.art_sec
+        };
+        setRows(updatedRows);
+      } else {
+        // Mostrar toast de error cuando no se encuentra el artículo
+        Swal.fire({
+          icon: 'error',
+          title: 'Artículo no encontrado',
+          text: response.data.error || `No se encontró ningún artículo con el código ${artCodValue}`,
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          confirmButtonColor: '#f58ea3'
+        });
+
+        // Limpiar los campos de la fila
+        const updatedRows = [...rows];
+        updatedRows[index] = {
+          ...updatedRows[index],
+          art_cod: artCodValue, // Mantener el código ingresado
+          art_nom: '',
+          saldo_actual: '',
+          nuevo_saldo: '',
+          art_sec: ''
         };
         setRows(updatedRows);
       }
     } catch (error) {
       console.error("Error al consultar artículo:", error);
+
+      // Verificar si es un error de respuesta del servidor
+      if (error.response) {
+        // Si el servidor responde con un error
+        Swal.fire({
+          icon: 'error',
+          title: 'Artículo no encontrado',
+          text: error.response.data.error || 'No se encontró el artículo',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          confirmButtonColor: '#f58ea3'
+        });
+      } else {
+        // Si es un error de conexión
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de conexión',
+          text: 'No se pudo consultar el artículo. Por favor, intente nuevamente.',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          confirmButtonColor: '#f58ea3'
+        });
+      }
+
+      // Limpiar los campos de la fila en caso de error
+      const updatedRows = [...rows];
+      updatedRows[index] = {
+        ...updatedRows[index],
+        art_cod: artCodValue, // Mantener el código ingresado
+        art_nom: '',
+        saldo_actual: '',
+        nuevo_saldo: '',
+        art_sec: ''
+      };
+      setRows(updatedRows);
     }
   };
 
@@ -289,7 +378,7 @@ const InventoryAdjustment = () => {
   // Agregar esta nueva función para manejar la búsqueda del proveedor cuando se pierde el foco
   const handleProveedorBlur = async (nitValue) => {
     if (!nitValue) return;
-    
+
     try {
       const response = await axios.get(`${API_URL}/proveedor/${nitValue}`, {
         headers: {
@@ -315,7 +404,7 @@ const InventoryAdjustment = () => {
         text: 'Proveedor no encontrado',
         confirmButtonColor: '#f58ea3'
       });
-      
+
       // Limpiar los campos del proveedor
       setHeaderData(prev => ({
         ...prev,
@@ -327,9 +416,18 @@ const InventoryAdjustment = () => {
 
   return (
     <div className="p-2 sm:p-4 max-w-full sm:max-w-4xl mx-auto bg-gray-50">
+      {/* Overlay de carga */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50">
+          <FaSpinner className="animate-spin text-4xl text-[#f58ea3] mb-4" />
+          <p className="text-gray-600 font-medium">Guardando ajuste...</p>
+          <p className="text-sm text-gray-500 mt-2">Por favor espere mientras procesamos su solicitud</p>
+        </div>
+      )}
+
       {/* Sección de Encabezado */}
       <div className="bg-white p-2 sm:p-4 rounded shadow mb-4 sm:mb-6">
-        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800">
           {isEditing ? `Editar Ajuste de Inventario #${fac_nro}` : 'Nuevo Ajuste de Inventario'}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:gap-4">
@@ -339,8 +437,8 @@ const InventoryAdjustment = () => {
             <input
               type="date"
               value={headerData.fecha}
-              onChange={(e) => setHeaderData({...headerData, fecha: e.target.value})}
-              className="mt-1 block w-full p-2 border rounded text-sm"
+              onChange={(e) => setHeaderData({ ...headerData, fecha: e.target.value })}
+              className="mt-1 block w-full p-2 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
             />
           </div>
           {/* NIT Proveedor */}
@@ -350,16 +448,16 @@ const InventoryAdjustment = () => {
               <input
                 type="text"
                 value={headerData.proveedor}
-                onChange={(e) => setHeaderData({...headerData, proveedor: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, proveedor: e.target.value })}
                 onBlur={(e) => handleProveedorBlur(e.target.value)}
-                className="mt-1 block w-full p-2 border rounded-l text-sm"
+                className="mt-1 block w-full p-2 border rounded-l text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 placeholder="Ingrese NIT..."
               />
               <button
                 onClick={buscarProveedor}
-                className="mt-1 px-3 py-2 bg-gray-100 border border-l-0 rounded-r hover:bg-gray-200"
+                className="mt-1 px-3 py-2 bg-[#fff5f7] border border-l-0 rounded-r hover:bg-[#fce7eb] transition-colors"
               >
-                <FaSearch className="text-gray-500" />
+                <FaSearch className="text-[#f58ea3]" />
               </button>
             </div>
           </div>
@@ -379,8 +477,8 @@ const InventoryAdjustment = () => {
             <label className="block text-sm font-medium text-gray-700">Observaciones</label>
             <textarea
               value={headerData.observaciones}
-              onChange={(e) => setHeaderData({...headerData, observaciones: e.target.value})}
-              className="mt-1 block w-full p-2 border rounded text-sm"
+              onChange={(e) => setHeaderData({ ...headerData, observaciones: e.target.value })}
+              className="mt-1 block w-full p-2 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
               rows={2}
             ></textarea>
           </div>
@@ -389,8 +487,8 @@ const InventoryAdjustment = () => {
 
       {/* Sección de Detalle del Ajuste */}
       <div className="bg-white p-2 sm:p-4 rounded shadow mb-4 sm:mb-6">
-        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Detalle del Ajuste</h3>
-        
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-gray-800">Detalle del Ajuste</h3>
+
         {/* Vista móvil */}
         <div className="block sm:hidden">
           <div className="space-y-4">
@@ -409,9 +507,9 @@ const InventoryAdjustment = () => {
                       />
                       <button
                         onClick={() => buscarArticulo(index)}
-                        className="p-1 border rounded bg-gray-200"
+                        className="p-1 border rounded bg-[#fff5f7] hover:bg-[#fce7eb] transition-colors"
                       >
-                        <FaSearch className="text-gray-600 w-3 h-3" />
+                        <FaSearch className="text-[#f58ea3] w-3 h-3" />
                       </button>
                     </div>
                   </div>
@@ -502,9 +600,9 @@ const InventoryAdjustment = () => {
                   <td className="px-2 py-1">
                     <button
                       onClick={() => buscarArticulo(index)}
-                      className="p-1 border rounded bg-gray-200"
+                      className="p-1 border rounded bg-[#fff5f7] hover:bg-[#fce7eb] transition-colors"
                     >
-                      <FaSearch className="text-gray-600 w-3 h-3" />
+                      <FaSearch className="text-[#f58ea3] w-3 h-3" />
                     </button>
                   </td>
                   <td className="px-2 py-1">
@@ -558,7 +656,7 @@ const InventoryAdjustment = () => {
         <div className="mt-3 sm:mt-4">
           <button
             onClick={addNewRow}
-            className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
+            className="w-full sm:w-auto px-4 py-2 bg-[#f58ea3] text-white rounded hover:bg-[#f7b3c2] transition-colors text-sm"
           >
             Agregar Nuevo
           </button>
@@ -568,15 +666,24 @@ const InventoryAdjustment = () => {
       <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
         <button
           onClick={handleCancelar}
-          className="w-full sm:w-auto px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
+          className="w-full sm:w-auto px-4 py-2 border border-[#f58ea3] text-[#f58ea3] rounded hover:bg-[#fff5f7] transition-colors text-sm"
+          disabled={isSubmitting}
         >
           Cancelar
         </button>
         <button
           onClick={handleGuardar}
-          className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
+          className="w-full sm:w-auto px-4 py-2 bg-[#f58ea3] text-white rounded hover:bg-[#f7b3c2] transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          disabled={isSubmitting}
         >
-          Guardar
+          {isSubmitting ? (
+            <>
+              <FaSpinner className="animate-spin" />
+              <span>Guardando...</span>
+            </>
+          ) : (
+            'Guardar'
+          )}
         </button>
       </div>
 
@@ -585,6 +692,21 @@ const InventoryAdjustment = () => {
         onClose={() => setShowArticleModal(false)}
         onSelectArticle={handleSelectArticle}
       />
+
+      {/* Estilos globales */}
+      <style global jsx>{`
+        .focus-within\\:ring-2:focus-within {
+          --tw-ring-color: #f58ea3;
+        }
+        input:focus, select:focus, textarea:focus {
+          --tw-ring-color: #f58ea3;
+          --tw-border-opacity: 1;
+          border-color: rgba(245, 142, 163, var(--tw-border-opacity));
+        }
+        .hover\\:bg-brand:hover {
+          background-color: #f7b3c2;
+        }
+      `}</style>
     </div>
   );
 };

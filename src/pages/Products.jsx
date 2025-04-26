@@ -104,12 +104,12 @@ const Products = () => {
     return (
         <div className="p-2 sm:p-4">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Gestión de Productos</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Productos</h1>
                 <button
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center w-full sm:w-auto justify-center text-sm sm:text-base"
+                    className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center w-full sm:w-auto justify-center text-sm sm:text-base transition-colors"
                     onClick={() => navigate('/products/create')}
                 >
-                    <FaPlus className="mr-2" /> Crear Producto
+                    <FaPlus className="mr-2 text-white" /> Crear Producto
                 </button>
             </div>
 
@@ -119,19 +119,19 @@ const Products = () => {
                     placeholder="Código..."
                     value={filterCodigo}
                     onChange={(e) => setFilterCodigo(e.target.value)}
-                    className="p-2 border rounded text-sm"
+                    className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 />
                 <input
                     type="text"
                     placeholder="Nombre..."
                     value={filterNombre}
                     onChange={(e) => setFilterNombre(e.target.value)}
-                    className="p-2 border rounded text-sm"
+                    className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 />
                 <select
                     value={selectedExistencia}
                     onChange={(e) => setSelectedExistencia(e.target.value)}
-                    className="p-2 border rounded text-sm bg-white"
+                    className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 >
                     <option value="todas">Todas existencias</option>
                     <option value="con_existencia">Con existencia</option>
@@ -146,7 +146,7 @@ const Products = () => {
                         <p className="text-center py-4 text-gray-500">No hay productos para mostrar.</p>
                     )}
                     {products.map((product) => (
-                        <div key={product.art_sec} className="bg-white p-3 rounded shadow border border-gray-200">
+                        <div key={product.art_sec} className="bg-white p-3 rounded shadow border border-gray-200 hover:border-[#f58ea3] transition-colors">
                             <div className="flex justify-between items-start gap-2">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
@@ -158,22 +158,30 @@ const Products = () => {
                                     <p className="text-sm text-gray-700 break-words mb-2">{product.art_nom}</p>
                                 </div>
                                 <div className="flex flex-col space-y-1 flex-shrink-0">
-                                    <button onClick={() => navigate(`/products/edit/${product.art_sec}`)} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar"><FaEdit size="1.1em" /></button>
-                                    <button onClick={() => handleDelete(product.art_sec)} className="text-red-600 hover:text-red-900 p-1" title="Eliminar"><FaTrash size="1.0em" /></button>
+                                    <button onClick={() => navigate(`/products/edit/${product.art_sec}`)}
+                                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                                        title="Editar">
+                                        <FaEdit className="w-5 h-5" />
+                                    </button>
+                                    <button onClick={() => handleDelete(product.art_sec)}
+                                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                                        title="Eliminar">
+                                        <FaTrash className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-2 border-t pt-2 mt-2 text-xs">
                                 <div className="text-center">
                                     <span className="text-gray-500 block">Exist.</span>
-                                    <span className="font-medium">{product.existencia}</span>
+                                    <span className="font-medium text-[#f58ea3]">{product.existencia}</span>
                                 </div>
                                 <div className="text-center">
                                     <span className="text-gray-500 block">P. Detal</span>
-                                    <span className="font-medium">{formatPrice(product.precio_detal)}</span>
+                                    <span className="font-medium text-[#f58ea3]">{formatPrice(product.precio_detal)}</span>
                                 </div>
                                 <div className="text-center">
                                     <span className="text-gray-500 block">P. Mayor</span>
-                                    <span className="font-medium">{formatPrice(product.precio_mayor)}</span>
+                                    <span className="font-medium text-[#f58ea3]">{formatPrice(product.precio_mayor)}</span>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +191,7 @@ const Products = () => {
 
                 <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-100">
+                        <thead className="bg-[#fff5f7]">
                             <tr>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
@@ -191,7 +199,7 @@ const Products = () => {
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">P. Detal</th>
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">P. Mayor</th>
                                 <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Estado Sincronización WooCommerce">
-                                    <FaSyncAlt className="inline-block" />
+                                    <FaSyncAlt className="inline-block text-[#f58ea3]" />
                                 </th>
                                 <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                             </tr>
@@ -204,7 +212,7 @@ const Products = () => {
                                 <tr><td colSpan="7" className="text-center py-4 text-gray-500">No hay productos para mostrar.</td></tr>
                             )}
                             {products.map((product) => (
-                                <tr key={product.art_sec} className="hover:bg-gray-50">
+                                <tr key={product.art_sec} className="hover:bg-[#fff5f7] transition-colors">
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{product.art_cod}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{product.art_nom}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{product.existencia}</td>
@@ -214,8 +222,16 @@ const Products = () => {
                                         {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                     </td>
                                     <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                                        <button onClick={() => navigate(`/products/edit/${product.art_sec}`)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><FaEdit /></button>
-                                        <button onClick={() => handleDelete(product.art_sec)} className="text-red-600 hover:text-red-900" title="Eliminar"><FaTrash /></button>
+                                        <button onClick={() => navigate(`/products/edit/${product.art_sec}`)}
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
+                                            title="Editar">
+                                            <FaEdit />
+                                        </button>
+                                        <button onClick={() => handleDelete(product.art_sec)}
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                            title="Eliminar">
+                                            <FaTrash />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -231,7 +247,7 @@ const Products = () => {
                 <div className="mt-4 text-center">
                     <button
                         onClick={handleLoadMore}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base"
+                        className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors"
                     >
                         Cargar Más Productos
                     </button>

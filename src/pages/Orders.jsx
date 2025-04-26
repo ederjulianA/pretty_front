@@ -180,20 +180,20 @@ const Orders = () => {
     <div className="p-2 sm:p-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Gestión de Órdenes</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Órdenes</h1>
         <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={handleClearFilters}
-            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base"
+            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors"
             title="Limpiar Filtros"
           >
-            <FaBroom />
+            <FaBroom className="text-[#f58ea3]" />
           </button>
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow"
+            className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow transition-colors"
             onClick={() => navigate('/pos')}
           >
-            <FaPlus className="mr-2" /> Nueva Orden
+            <FaPlus className="mr-2 text-white" /> Nueva Orden
           </button>
         </div>
       </div>
@@ -206,7 +206,7 @@ const Orders = () => {
             type="date"
             value={fechaDesde}
             onChange={e => setFechaDesde(e.target.value)}
-            className="p-2 border rounded text-sm bg-white"
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           />
         </div>
         <div className="flex flex-col">
@@ -215,7 +215,7 @@ const Orders = () => {
             type="date"
             value={fechaHasta}
             onChange={e => setFechaHasta(e.target.value)}
-            className="p-2 border rounded text-sm bg-white"
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           />
         </div>
         <div className="flex flex-col">
@@ -223,7 +223,7 @@ const Orders = () => {
           <select
             value={facEstFac}
             onChange={e => setFacEstFac(e.target.value)}
-            className="p-2 border rounded text-sm bg-white"
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           >
             <option value="A">Activo</option>
             <option value="P">Pendiente</option>
@@ -235,7 +235,7 @@ const Orders = () => {
           <select
             value={fueCod}
             onChange={e => setFueCod(e.target.value)}
-            className="p-2 border rounded text-sm bg-white"
+            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           >
             <option value="4">COTIZACIONES</option>
             <option value="1">FACTURAS</option>
@@ -248,7 +248,7 @@ const Orders = () => {
             value={nitIde}
             onChange={e => setNitIde(e.target.value)}
             placeholder="Ingrese NIT"
-            className="p-2 border rounded text-sm"
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           />
         </div>
         <div className="flex flex-col">
@@ -258,7 +258,7 @@ const Orders = () => {
             value={nitNom}
             onChange={e => setNitNom(e.target.value)}
             placeholder="Ingrese nombre"
-            className="p-2 border rounded text-sm"
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           />
         </div>
         <div className="flex flex-col">
@@ -268,7 +268,7 @@ const Orders = () => {
             value={facNro}
             onChange={e => setFacNro(e.target.value)}
             placeholder="Ingrese número"
-            className="p-2 border rounded text-sm"
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           />
         </div>
         <div className="flex flex-col">
@@ -278,7 +278,7 @@ const Orders = () => {
             value={facNroWoo}
             onChange={e => setFacNroWoo(e.target.value)}
             placeholder="Ingrese número"
-            className="p-2 border rounded text-sm"
+            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
           />
         </div>
       </div>
@@ -294,12 +294,14 @@ const Orders = () => {
           {orders.map((order) => {
             const isFacturado = order.documentos && order.documentos !== "";
             return (
-              <div key={order.fac_sec} className={`bg-white p-3 rounded shadow border border-gray-200 ${isFacturado ? 'border-green-200 bg-green-50' : ''}`}>
+              <div key={order.fac_sec}
+                className={`bg-white p-3 rounded shadow border transition-colors
+                     ${isFacturado ? 'border-[#f58ea3] bg-[#fff5f7]' : 'border-gray-200 hover:border-[#f58ea3]'}`}>
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-semibold text-sm">{order.fac_nro}</span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.fac_est_fac === 'A' ? 'bg-green-100 text-green-800' :
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.fac_est_fac === 'A' ? 'bg-[#fff5f7] text-[#f58ea3]' :
                         order.fac_est_fac === 'P' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
@@ -320,19 +322,27 @@ const Orders = () => {
                     </p>
                   </div>
                   <div className="flex flex-col space-y-1 flex-shrink-0">
-                    <button onClick={() => handleViewDetail(order)} className="text-blue-600 hover:text-blue-900 p-1" title="Ver Detalle">
-                      <FaEye size="1.1em" />
+                    <button onClick={() => handleViewDetail(order)}
+                      className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                      title="Ver Detalle">
+                      <FaEye className="w-5 h-5" />
                     </button>
-                    <button onClick={() => printOrder(order.fac_nro)} className="text-green-600 hover:text-green-900 p-1" title="Imprimir">
-                      <FaPrint size="1.1em" />
+                    <button onClick={() => printOrder(order.fac_nro)}
+                      className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                      title="Imprimir">
+                      <FaPrint className="w-5 h-5" />
                     </button>
                     {canEditOrAnular(order.fac_est_fac) && (
                       <>
-                        <button onClick={() => handleEditOrder(order)} className="text-indigo-600 hover:text-indigo-900 p-1" title="Editar">
-                          <FaEdit size="1.1em" />
+                        <button onClick={() => handleEditOrder(order)}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                          title="Editar">
+                          <FaEdit className="w-5 h-5" />
                         </button>
-                        <button onClick={() => handleAnularClick(order)} className="text-red-600 hover:text-red-900 p-1" title="Anular">
-                          <FaTrash size="1.0em" />
+                        <button onClick={() => handleAnularClick(order)}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                          title="Anular">
+                          <FaTrash className="w-4 h-4" />
                         </button>
                       </>
                     )}
@@ -347,7 +357,7 @@ const Orders = () => {
         {/* Vista Desktop (Tabla) */}
         <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-100">
+            <thead className="bg-[#fff5f7]">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"># Pedido</th>
@@ -370,7 +380,7 @@ const Orders = () => {
               {orders.map((order) => {
                 const isFacturado = order.documentos && order.documentos !== "";
                 return (
-                  <tr key={order.fac_sec} className={`hover:bg-gray-50 ${isFacturado ? 'bg-green-50' : ''}`}>
+                  <tr key={order.fac_sec} className={`hover:bg-[#fff5f7] transition-colors ${isFacturado ? 'bg-[#fff5f7]' : ''}`}>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{formatDate(order.fac_fec)}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro_woo || '-'}</td>
@@ -395,18 +405,26 @@ const Orders = () => {
                       </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                      <button onClick={() => handleViewDetail(order)} className="text-blue-600 hover:text-blue-900 mr-3" title="Ver Detalle">
+                      <button onClick={() => handleViewDetail(order)}
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
+                        title="Ver Detalle">
                         <FaEye />
                       </button>
-                      <button onClick={() => printOrder(order.fac_nro)} className="text-green-600 hover:text-green-900 mr-3" title="Imprimir">
+                      <button onClick={() => printOrder(order.fac_nro)}
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
+                        title="Imprimir">
                         <FaPrint />
                       </button>
                       {canEditOrAnular(order.fac_est_fac) && (
                         <>
-                          <button onClick={() => handleEditOrder(order)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar">
+                          <button onClick={() => handleEditOrder(order)}
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
+                            title="Editar">
                             <FaEdit />
                           </button>
-                          <button onClick={() => handleAnularClick(order)} className="text-red-600 hover:text-red-900" title="Anular">
+                          <button onClick={() => handleAnularClick(order)}
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                            title="Anular">
                             <FaTrash />
                           </button>
                         </>
@@ -428,7 +446,7 @@ const Orders = () => {
         <div className="mt-4 text-center">
           <button
             onClick={() => fetchOrders(pageNumber + 1)}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base"
+            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors"
           >
             Cargar Más Órdenes
           </button>

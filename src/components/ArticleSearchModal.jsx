@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaSearch, FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { FaSearch, FaTimes, FaCheckCircle, FaBarcode, FaBox } from 'react-icons/fa';
 import LoadingSpinner from './LoadingSpinner';
 import useProducts from '../hooks/useProducts';
-import debounce from 'lodash/debounce'; // Asegúrate de tener lodash instalado
+import debounce from 'lodash/debounce';
 
 const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
   // Estados para los filtros
   const [filterCodigo, setFilterCodigo] = useState('');
   const [filterNombre, setFilterNombre] = useState('');
-  
+  const [activeTab, setActiveTab] = useState('codigo'); // 'codigo' o 'nombre'
+
   // Contenedor para el scroll infinito
   const containerRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   // Usar el hook useProducts
   const { products, fetchProducts, pageNumber, hasMore, isLoading } = useProducts(
@@ -41,7 +43,7 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
   // Manejar el scroll infinito
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && hasMore && !isLoading) {
@@ -61,165 +63,145 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
     };
   }, [hasMore, isLoading, pageNumber, fetchProducts]);
 
+  // Efecto para enfocar el input cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl h-[90vh] sm:h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-lg w-full h-full sm:h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="p-2 sm:p-4 border-b flex justify-between items-center">
-          <h2 className="text-base sm:text-xl font-bold">Búsqueda de Artículos</h2>
+        <div className="p-4 border-b flex justify-between items-center bg-[#fff5f7]">
+          <h2 className="text-lg font-bold text-gray-800">Buscar Artículo</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 p-2"
           >
-            <FaTimes />
+            <FaTimes className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Filtros */}
-        <div className="p-2 sm:p-4 border-b bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Código
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={filterCodigo}
-                  onChange={(e) => setFilterCodigo(e.target.value)}
-                  className="w-full p-1 sm:p-2 border rounded pr-8 sm:pr-10 text-sm"
-                  placeholder="Buscar por código..."
-                />
-                <FaSearch className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Nombre
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={filterNombre}
-                  onChange={(e) => setFilterNombre(e.target.value)}
-                  className="w-full p-1 sm:p-2 border rounded pr-8 sm:pr-10 text-sm"
-                  placeholder="Buscar por nombre..."
-                />
-                <FaSearch className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
-              </div>
-            </div>
+        {/* Tabs de búsqueda */}
+        <div className="flex border-b">
+          <button
+            className={`flex-1 py-3 flex items-center justify-center gap-2 ${activeTab === 'codigo'
+              ? 'text-[#f58ea3] border-b-2 border-[#f58ea3]'
+              : 'text-gray-500'
+              }`}
+            onClick={() => setActiveTab('codigo')}
+          >
+            <FaBarcode className="w-4 h-4" />
+            <span className="text-sm font-medium">Código</span>
+          </button>
+          <button
+            className={`flex-1 py-3 flex items-center justify-center gap-2 ${activeTab === 'nombre'
+              ? 'text-[#f58ea3] border-b-2 border-[#f58ea3]'
+              : 'text-gray-500'
+              }`}
+            onClick={() => setActiveTab('nombre')}
+          >
+            <FaBox className="w-4 h-4" />
+            <span className="text-sm font-medium">Nombre</span>
+          </button>
+        </div>
+
+        {/* Barra de búsqueda */}
+        <div className="p-4 border-b bg-white">
+          <div className="relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={activeTab === 'codigo' ? filterCodigo : filterNombre}
+              onChange={(e) => {
+                if (activeTab === 'codigo') {
+                  setFilterCodigo(e.target.value);
+                } else {
+                  setFilterNombre(e.target.value);
+                }
+              }}
+              className="w-full p-3 pl-10 border rounded-lg text-base focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+              placeholder={activeTab === 'codigo' ? "Buscar por código..." : "Buscar por nombre..."}
+            />
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
-        {/* Tabla Responsive */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Vista móvil: Lista de tarjetas */}
-          <div className="block sm:hidden flex-1 overflow-auto">
-            <div className="divide-y divide-gray-200">
+        {/* Lista de productos */}
+        <div className="flex-1 overflow-auto">
+          {isLoading && pageNumber === 1 ? (
+            <div className="flex items-center justify-center h-full">
+              <LoadingSpinner />
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
+              <FaBox className="w-12 h-12 mb-2 text-gray-400" />
+              <p className="text-center">No se encontraron artículos</p>
+              <p className="text-sm text-center mt-1">Intenta con otro término de búsqueda</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
               {products.map((product, index) => (
-                <div 
+                <div
                   key={`${product.id}-${product.codigo}-${index}`}
-                  className="p-3 hover:bg-gray-50"
+                  className="p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  onClick={() => onSelectArticle(product)}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="font-medium">{product.codigo}</div>
-                      <div className="text-sm text-gray-600">{product.name}</div>
+                  <div className="flex gap-4">
+                    {/* Imagen del producto */}
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                      {product.imgUrl ? (
+                        <img
+                          src={product.imgUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <FaBox className="w-8 h-8 text-gray-400" />
+                      )}
                     </div>
-                    <button
-                      onClick={() => onSelectArticle(product)}
-                      className="text-green-600 hover:text-green-800 p-2"
-                      title="Seleccionar artículo"
-                    >
-                      <FaCheckCircle className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                    <div>Existencia: {product.existencia}</div>
-                    <div>Detal: {product.price_detal}</div>
-                    <div>Mayor: {product.price}</div>
+
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{product.name}</h3>
+                          <p className="text-sm text-gray-500 mt-1">{product.codigo}</p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectArticle(product);
+                          }}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] p-2"
+                        >
+                          <FaCheckCircle className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <span className="text-gray-500">Existencia</span>
+                          <p className="font-medium text-gray-900">{product.existencia}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <span className="text-gray-500">Precio</span>
+                          <p className="font-medium text-gray-900">${product.price_detal}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          )}
 
-          {/* Vista desktop: Tabla tradicional */}
-          <div className="hidden sm:flex flex-col flex-1">
-            <div className="bg-gray-50 border-b">
-              <table className="min-w-full">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Seleccionar
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Código
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nombre
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Existencia
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      P. Detal
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      P. Mayor
-                    </th>
-                  </tr>
-                </thead>
-              </table>
-            </div>
-
-            <div className="flex-1 overflow-auto">
-              <table className="min-w-full">
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {products.map((product, index) => (
-                    <tr 
-                      key={`${product.id}-${product.codigo}-${index}`}
-                      className="hover:bg-gray-50"
-                    >
-                      <td className="px-4 py-2 whitespace-nowrap">
-                        <button
-                          onClick={() => onSelectArticle(product)}
-                          className="text-green-600 hover:text-green-800"
-                          title="Seleccionar artículo"
-                        >
-                          <FaCheckCircle className="w-5 h-5" />
-                        </button>
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {product.codigo}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {product.name}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {product.existencia}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {product.price_detal}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {product.price}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Estado de carga */}
-          <div ref={containerRef} className="p-2 sm:p-4 flex justify-center">
-            {isLoading && <LoadingSpinner />}
-            {!isLoading && products.length === 0 && (
-              <p className="text-sm text-gray-500">No se encontraron resultados</p>
-            )}
+          {/* Trigger para cargar más */}
+          <div ref={containerRef} className="p-4">
+            {isLoading && pageNumber > 1 && <LoadingSpinner />}
           </div>
         </div>
       </div>

@@ -70,9 +70,8 @@ const AdminLayout = () => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar: se muestra fijo en desktop y colapsado en mobile */}
       <aside
-        className={`bg-white shadow-lg border-r fixed md:static top-0 left-0 h-full w-64 transform transition-transform duration-300 z-50 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0`}
+        className={`bg-white shadow-lg border-r fixed md:static top-0 left-0 h-full w-64 transform transition-transform duration-300 z-50 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:translate-x-0`}
       >
         <div className="p-4 border-b flex items-center justify-between md:justify-center">
           <img src={logoPretty} alt="Logo PrettyMakeup" className="w-32" />
@@ -96,10 +95,9 @@ const AdminLayout = () => {
                 <NavLink
                   to="/dashboard"
                   className={({ isActive }) =>
-                    `flex items-center p-2 rounded ${
-                      isActive
-                        ? 'bg-[#f58ea3] text-white'
-                        : 'hover:bg-gray-200 transition'
+                    `flex items-center p-2 rounded ${isActive
+                      ? 'bg-[#f58ea3] text-white'
+                      : 'hover:bg-gray-200 transition'
                     }`
                   }
                 >
@@ -108,10 +106,9 @@ const AdminLayout = () => {
                 <NavLink
                   to="/dashboard/ventas"
                   className={({ isActive }) =>
-                    `flex items-center p-2 rounded ${
-                      isActive
-                        ? 'bg-[#f58ea3] text-white'
-                        : 'hover:bg-gray-200 transition'
+                    `flex items-center p-2 rounded ${isActive
+                      ? 'bg-[#f58ea3] text-white'
+                      : 'hover:bg-gray-200 transition'
                     }`
                   }
                 >
@@ -166,6 +163,18 @@ const AdminLayout = () => {
                 }
               >
                 Ajustes
+              </NavLink>
+            </li>
+            <li className="mb-2">
+              <NavLink
+                to="/conteos"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'flex items-center p-2 rounded bg-[#f58ea3] text-white'
+                    : 'flex items-center p-2 rounded hover:bg-gray-200 transition'
+                }
+              >
+                Conteos
               </NavLink>
             </li>
             {/* Se podrán agregar más opciones fácilmente */}

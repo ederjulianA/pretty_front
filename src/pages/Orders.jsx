@@ -34,7 +34,7 @@ const Orders = () => {
     };
   };
 
-  // Inicializar estados con los filtros guardados 
+  // Inicializar estados con los filtros guardados
   const [fechaDesde, setFechaDesde] = useState(getInitialFilters().fechaDesde);
   const [fechaHasta, setFechaHasta] = useState(getInitialFilters().fechaHasta);
   const [nitIde, setNitIde] = useState(getInitialFilters().nitIde);

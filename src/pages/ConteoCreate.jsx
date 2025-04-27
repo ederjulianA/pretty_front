@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaTimes, FaSave, FaSearch, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaSave, FaSearch, FaTrash, FaCheckCircle, FaEdit } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
 import ArticleSearchModal from '../components/ArticleSearchModal';
 import Swal from 'sweetalert2';
+import { debounce } from 'lodash';
 
 const ConteoCreate = () => {
     const navigate = useNavigate();
@@ -25,6 +26,12 @@ const ConteoCreate = () => {
     const [detalles, setDetalles] = useState([]);
     const [codigoArticulo, setCodigoArticulo] = useState('');
     const [cantidadFisica, setCantidadFisica] = useState('');
+    const [editingCantidad, setEditingCantidad] = useState(null);
+    const [tempCantidad, setTempCantidad] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchPageNumber, setSearchPageNumber] = useState(1);
+    const [hasMoreSearch, setHasMoreSearch] = useState(true);
+    const [isSearching, setIsSearching] = useState(false);
 
     // Estado para el modal de búsqueda
     const [showArticleModal, setShowArticleModal] = useState(false);
@@ -92,6 +99,104 @@ const ConteoCreate = () => {
 
         cargarConteo();
     }, [id]);
+
+    // Función para buscar artículos
+    const searchDetalles = useCallback(async (page = 1) => {
+        if (!conteoId) return;
+
+        setIsSearching(true);
+        try {
+            const response = await axios.get(`${API_URL}/inventario-conteo/${conteoId}/detalle/buscar`, {
+                params: {
+                    nombre: searchTerm.trim(),
+                    PageNumber: page,
+                    PageSize: 10
+                },
+                headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+            });
+
+            if (response.data.success) {
+                const newDetalles = response.data.data;
+                if (page === 1) {
+                    setDetalles(newDetalles);
+                } else {
+                    setDetalles(prev => [...prev, ...newDetalles]);
+                }
+                setHasMoreSearch(newDetalles.length >= 10);
+                setSearchPageNumber(page);
+            }
+        } catch (error) {
+            console.error('Error al buscar detalles:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al buscar artículos',
+                confirmButtonColor: '#f58ea3'
+            });
+        } finally {
+            setIsSearching(false);
+        }
+    }, [conteoId, searchTerm]);
+
+    // Función para cargar detalles
+    const cargarDetalles = useCallback(async () => {
+        if (!conteoId) return;
+
+        setIsLoading(true);
+        try {
+            const response = await axios.get(`${API_URL}/inventario-conteo/${conteoId}`, {
+                headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+            });
+
+            if (response.data.success) {
+                setDetalles(response.data.data);
+                setHasMoreSearch(false);
+                setSearchPageNumber(1);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al cargar los detalles del conteo',
+                confirmButtonColor: '#f58ea3'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [conteoId]);
+
+    // Debounce para la búsqueda
+    const debouncedSearch = useCallback(
+        debounce((term) => {
+            if (term.trim()) {
+                searchDetalles(1);
+            } else {
+                cargarDetalles();
+            }
+        }, 300),
+        [searchDetalles, cargarDetalles]
+    );
+
+    // Efecto para la búsqueda
+    useEffect(() => {
+        const searchTimeout = setTimeout(() => {
+            if (searchTerm.trim()) {
+                searchDetalles(1);
+            } else {
+                cargarDetalles();
+            }
+        }, 300);
+
+        return () => clearTimeout(searchTimeout);
+    }, [searchTerm, searchDetalles, cargarDetalles]);
+
+    // Función para cargar más resultados
+    const loadMoreSearch = useCallback(() => {
+        if (!isSearching && hasMoreSearch) {
+            searchDetalles(searchPageNumber + 1);
+        }
+    }, [isSearching, hasMoreSearch, searchPageNumber, searchDetalles]);
 
     // Función para agregar detalle
     const handleAgregarDetalle = async () => {
@@ -164,45 +269,6 @@ const ConteoCreate = () => {
             const errorMessage = error.response?.data?.error ||
                 error.response?.data?.message ||
                 'Error al agregar el artículo';
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: errorMessage,
-                confirmButtonColor: '#f58ea3'
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Función para cargar detalles
-    const cargarDetalles = async () => {
-        if (!conteoId) return;
-
-        setIsLoading(true);
-        try {
-            const response = await axios.get(`${API_URL}/inventario-conteo/${conteoId}`, {
-                headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
-            });
-
-            if (response.data.success) {
-                setDetalles(response.data.data);
-            } else {
-                // Mostrar el mensaje de error específico del API
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response.data.error || 'Error al cargar los detalles del conteo',
-                    confirmButtonColor: '#f58ea3'
-                });
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            // Mostrar el mensaje de error específico del API si está disponible
-            const errorMessage = error.response?.data?.error ||
-                error.response?.data?.message ||
-                'Error al cargar los detalles del conteo';
 
             Swal.fire({
                 icon: 'error',
@@ -346,6 +412,69 @@ const ConteoCreate = () => {
         }
     };
 
+    // Función para actualizar cantidad
+    const handleUpdateCantidad = async (articuloCodigo, nuevaCantidad) => {
+        if (!conteoId) return;
+
+        setIsLoading(true);
+        try {
+            const response = await axios.patch(
+                `${API_URL}/inventario-conteo/${conteoId}/detalle/${articuloCodigo}/cantidad`,
+                {
+                    cantidad_fisica: parseInt(nuevaCantidad)
+                },
+                {
+                    headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+                }
+            );
+
+            if (response.data.success) {
+                // Recargar detalles
+                await cargarDetalles();
+                setEditingCantidad(null);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Cantidad actualizada',
+                    text: 'La cantidad ha sido actualizada exitosamente',
+                    confirmButtonColor: '#f58ea3'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.data.error || 'Error al actualizar la cantidad',
+                    confirmButtonColor: '#f58ea3'
+                });
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            const errorMessage = error.response?.data?.error ||
+                error.response?.data?.message ||
+                'Error al actualizar la cantidad';
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMessage,
+                confirmButtonColor: '#f58ea3'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Función para iniciar edición de cantidad
+    const startEditingCantidad = (detalle) => {
+        setEditingCantidad(detalle.art_cod);
+        setTempCantidad(detalle.cantidad_fisica.toString());
+    };
+
+    // Función para cancelar edición
+    const cancelEditing = () => {
+        setEditingCantidad(null);
+        setTempCantidad('');
+    };
+
     return (
         <div className="p-2 sm:p-4 max-w-full sm:max-w-4xl mx-auto bg-gray-50">
             {/* Header */}
@@ -472,61 +601,127 @@ const ConteoCreate = () => {
             <div className="bg-white p-2 sm:p-4 rounded shadow mb-4 sm:mb-6">
                 <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-gray-800">Detalle del Conteo</h3>
 
+                {/* Barra de búsqueda */}
+                <div className="mb-4">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Buscar artículo por nombre..."
+                            className="w-full p-2 pl-10 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                        />
+                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    </div>
+                </div>
+
                 {/* Vista móvil */}
                 <div className="block sm:hidden">
                     <div className="space-y-4">
-                        {isLoading && (
+                        {isSearching && searchPageNumber === 1 ? (
                             <div className="text-center py-4">
                                 <LoadingSpinner />
                             </div>
-                        )}
-                        {!isLoading && detalles.length === 0 && (
+                        ) : detalles.length === 0 ? (
                             <p className="text-center py-4 text-gray-500">
-                                No hay artículos agregados
+                                {searchTerm ? 'No se encontraron artículos' : 'No hay artículos agregados'}
                             </p>
+                        ) : (
+                            <>
+                                {detalles.map((detalle) => (
+                                    <div key={detalle.art_sec} className="border rounded-lg p-3 bg-gray-50">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="grid grid-cols-2 gap-2 flex-1">
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Código</span>
+                                                    <p className="text-sm font-medium">{detalle.art_cod}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Cant. Sistema</span>
+                                                    <p className="text-sm font-medium text-right">{detalle.cantidad_sistema}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleEliminarDetalle(detalle.art_cod)}
+                                                className="p-2 text-red-500 hover:text-red-700 transition-colors"
+                                                disabled={isLoading}
+                                            >
+                                                <FaTrash className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div className="mb-2">
+                                            <span className="text-xs text-gray-500">Artículo</span>
+                                            <p className="text-sm">{detalle.art_nom}</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <span className="text-xs text-gray-500">Cant. Física</span>
+                                                {editingCantidad === detalle.art_cod ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="number"
+                                                            value={tempCantidad}
+                                                            onChange={(e) => setTempCantidad(e.target.value)}
+                                                            className="w-20 p-1 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                                                            min="0"
+                                                        />
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => handleUpdateCantidad(detalle.art_cod, tempCantidad)}
+                                                                className="text-green-600 hover:text-green-800 transition-colors"
+                                                                disabled={isLoading}
+                                                            >
+                                                                <FaCheckCircle className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={cancelEditing}
+                                                                className="text-red-600 hover:text-red-800 transition-colors"
+                                                            >
+                                                                <FaTimes className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-medium">{detalle.cantidad_fisica}</p>
+                                                        <button
+                                                            onClick={() => startEditingCantidad(detalle)}
+                                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                                        >
+                                                            <FaEdit className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Diferencia</span>
+                                                <p className={`text-sm font-medium text-right ${detalle.diferencia > 0 ? 'text-green-600' :
+                                                    detalle.diferencia < 0 ? 'text-red-600' :
+                                                        'text-gray-600'
+                                                    }`}>
+                                                    {detalle.diferencia}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {hasMoreSearch && !isSearching && (
+                                    <div className="text-center">
+                                        <button
+                                            onClick={loadMoreSearch}
+                                            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded text-sm border border-[#f58ea3] transition-colors"
+                                        >
+                                            Cargar más artículos
+                                        </button>
+                                    </div>
+                                )}
+                                {isSearching && searchPageNumber > 1 && (
+                                    <div className="text-center py-4">
+                                        <LoadingSpinner />
+                                    </div>
+                                )}
+                            </>
                         )}
-                        {detalles.map((detalle) => (
-                            <div key={detalle.art_sec} className="border rounded-lg p-3 bg-gray-50">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="grid grid-cols-2 gap-2 flex-1">
-                                        <div>
-                                            <span className="text-xs text-gray-500">Código</span>
-                                            <p className="text-sm font-medium">{detalle.art_cod}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-xs text-gray-500">Cant. Sistema</span>
-                                            <p className="text-sm font-medium text-right">{detalle.cantidad_sistema}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleEliminarDetalle(detalle.art_cod)}
-                                        className="p-2 text-red-500 hover:text-red-700 transition-colors"
-                                        disabled={isLoading}
-                                    >
-                                        <FaTrash className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <div className="mb-2">
-                                    <span className="text-xs text-gray-500">Artículo</span>
-                                    <p className="text-sm">{detalle.art_nom}</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <span className="text-xs text-gray-500">Cant. Física</span>
-                                        <p className="text-sm font-medium">{detalle.cantidad_fisica}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500">Diferencia</span>
-                                        <p className={`text-sm font-medium text-right ${detalle.diferencia > 0 ? 'text-green-600' :
-                                            detalle.diferencia < 0 ? 'text-red-600' :
-                                                'text-gray-600'
-                                            }`}>
-                                            {detalle.diferencia}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 </div>
 
@@ -544,42 +739,100 @@ const ConteoCreate = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading && (
+                            {isSearching && searchPageNumber === 1 ? (
                                 <tr>
                                     <td colSpan="6" className="text-center py-4">
                                         <LoadingSpinner />
                                     </td>
                                 </tr>
-                            )}
-                            {!isLoading && detalles.length === 0 && (
+                            ) : detalles.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="text-center py-4 text-gray-500">
-                                        No hay artículos agregados
+                                        {searchTerm ? 'No se encontraron artículos' : 'No hay artículos agregados'}
                                     </td>
                                 </tr>
+                            ) : (
+                                <>
+                                    {detalles.map((detalle) => (
+                                        <tr key={detalle.art_sec} className="hover:bg-[#fff5f7] transition-colors">
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{detalle.art_cod}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{detalle.art_nom}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{detalle.cantidad_sistema}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">
+                                                {editingCantidad === detalle.art_cod ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="number"
+                                                            value={tempCantidad}
+                                                            onChange={(e) => setTempCantidad(e.target.value)}
+                                                            className="w-20 p-1 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                                                            min="0"
+                                                        />
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => handleUpdateCantidad(detalle.art_cod, tempCantidad)}
+                                                                className="text-green-600 hover:text-green-800 transition-colors"
+                                                                disabled={isLoading}
+                                                            >
+                                                                <FaCheckCircle className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={cancelEditing}
+                                                                className="text-red-600 hover:text-red-800 transition-colors"
+                                                            >
+                                                                <FaTimes className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <span>{detalle.cantidad_fisica}</span>
+                                                        <button
+                                                            onClick={() => startEditingCantidad(detalle)}
+                                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                                        >
+                                                            <FaEdit className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
+                                                <span className={`font-medium ${detalle.diferencia > 0 ? 'text-green-600' : detalle.diferencia < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                                                    {detalle.diferencia}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-center">
+                                                <button
+                                                    onClick={() => handleEliminarDetalle(detalle.art_cod)}
+                                                    className="text-red-500 hover:text-red-700 transition-colors"
+                                                    disabled={isLoading}
+                                                >
+                                                    <FaTrash className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {hasMoreSearch && !isSearching && (
+                                        <tr>
+                                            <td colSpan="6" className="text-center py-4">
+                                                <button
+                                                    onClick={loadMoreSearch}
+                                                    className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded text-sm border border-[#f58ea3] transition-colors"
+                                                >
+                                                    Cargar más artículos
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {isSearching && searchPageNumber > 1 && (
+                                        <tr>
+                                            <td colSpan="6" className="text-center py-4">
+                                                <LoadingSpinner />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </>
                             )}
-                            {detalles.map((detalle) => (
-                                <tr key={detalle.art_sec} className="hover:bg-[#fff5f7] transition-colors">
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{detalle.art_cod}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{detalle.art_nom}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{detalle.cantidad_sistema}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{detalle.cantidad_fisica}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
-                                        <span className={`font-medium ${detalle.diferencia > 0 ? 'text-green-600' : detalle.diferencia < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                            {detalle.diferencia}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center">
-                                        <button
-                                            onClick={() => handleEliminarDetalle(detalle.art_cod)}
-                                            className="text-red-500 hover:text-red-700 transition-colors"
-                                            disabled={isLoading}
-                                        >
-                                            <FaTrash className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -600,7 +853,7 @@ const ConteoCreate = () => {
             />
 
             {/* Estilos globales */}
-            <style global jsx>{`
+            <style>{`
                 .focus-within\\:ring-2:focus-within {
                     --tw-ring-color: #f58ea3;
                 }

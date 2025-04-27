@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaEye, FaEdit, FaTrash, FaBroom } from 'react-icons/fa';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaBroom, FaBalanceScale } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import debounce from 'lodash/debounce';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
+import Swal from 'sweetalert2';
 
 const Conteos = () => {
     const navigate = useNavigate();
@@ -122,6 +123,124 @@ const Conteos = () => {
     const handleDelete = (conteo) => {
         // Implementar lógica de eliminación
         console.log("Eliminar conteo:", conteo.id);
+    };
+
+    const handleCuadrarInventario = async (conteo) => {
+        try {
+            // Mostrar confirmación
+            const result = await Swal.fire({
+                title: '¿Está seguro?',
+                text: "Esta acción creará un ajuste de inventario dejando en 0 todos los artículos que no están en el conteo. ¿Desea continuar?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f58ea3',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, cuadrar inventario',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!result.isConfirmed) return;
+
+            // Mostrar progreso
+            Swal.fire({
+                title: 'Cuadrando inventario...',
+                html: 'Por favor espere mientras se procesa la información.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Obtener todos los artículos
+            let page = 1;
+            let hasMore = true;
+            const detallesAjuste = [];
+
+            while (hasMore) {
+                const response = await axios.get(`${API_URL}/articulos`, {
+                    params: {
+                        PageNumber: page,
+                        PageSize: 100
+                    },
+                    headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+                });
+
+                if (response.data.success) {
+                    const articulos = response.data.data;
+
+                    // Verificar cada artículo
+                    for (const articulo of articulos) {
+                        // Verificar si el artículo está en el detalle del conteo
+                        const existeEnConteo = await axios.get(
+                            `${API_URL}/inventario-conteo/${conteo.id}/detalle/verificar/${articulo.codigo}`,
+                            {
+                                headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+                            }
+                        );
+
+                        if (!existeEnConteo.data) {
+                            // Obtener existencia actual
+                            const existencia = await axios.get(
+                                `${API_URL}/articulos/${articulo.codigo}/existencia`,
+                                {
+                                    params: { bodega: conteo.bodega },
+                                    headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+                                }
+                            );
+
+                            if (existencia.data.existencia > 0) {
+                                detallesAjuste.push({
+                                    articulo_codigo: articulo.codigo,
+                                    cantidad_anterior: existencia.data.existencia,
+                                    cantidad_nueva: 0,
+                                    observacion: `Ajuste por cuadre de inventario - Conteo #${conteo.id}`
+                                });
+                            }
+                        }
+                    }
+
+                    hasMore = articulos.length >= 100;
+                    page++;
+                } else {
+                    hasMore = false;
+                }
+            }
+
+            // Crear el ajuste de inventario
+            if (detallesAjuste.length > 0) {
+                await axios.post(`${API_URL}/inventario-ajuste`, {
+                    fecha: new Date().toISOString(),
+                    bodega: conteo.bodega,
+                    usuario: localStorage.getItem('user_pretty') || 'admin',
+                    tipo: 'CUADRE_INVENTARIO',
+                    detalles: detallesAjuste
+                }, {
+                    headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Inventario Cuadrado',
+                    text: `Se ha creado un ajuste de inventario con ${detallesAjuste.length} artículos.`,
+                    confirmButtonColor: '#f58ea3'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No se requieren ajustes',
+                    text: 'No se encontraron artículos que requieran ajuste.',
+                    confirmButtonColor: '#f58ea3'
+                });
+            }
+        } catch (error) {
+            console.error('Error al cuadrar inventario:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un error al cuadrar el inventario.',
+                confirmButtonColor: '#f58ea3'
+            });
+        }
     };
 
     const getEstadoColor = (estado) => {
@@ -247,6 +366,11 @@ const Conteos = () => {
                                         title="Editar">
                                         <FaEdit className="w-5 h-5" />
                                     </button>
+                                    <button onClick={() => handleCuadrarInventario(conteo)}
+                                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                                        title="Cuadrar Inventario">
+                                        <FaBalanceScale className="w-5 h-5" />
+                                    </button>
                                     <button onClick={() => handleDelete(conteo)}
                                         className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
                                         title="Eliminar">
@@ -304,6 +428,11 @@ const Conteos = () => {
                                             className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
                                             title="Editar">
                                             <FaEdit />
+                                        </button>
+                                        <button onClick={() => handleCuadrarInventario(conteo)}
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
+                                            title="Cuadrar Inventario">
+                                            <FaBalanceScale />
                                         </button>
                                         <button onClick={() => handleDelete(conteo)}
                                             className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"

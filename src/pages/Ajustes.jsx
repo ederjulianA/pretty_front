@@ -1,14 +1,15 @@
 // src/pages/Ajustes.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config';
+import { API_URL, baseUrl } from '../config';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import AjusteDetailModal from '../components/AjusteDetailModal'; // Componente de detalle (debe existir o ser creado)
-import { FaPlus, FaEdit, FaTrash, FaEye, FaBroom } from 'react-icons/fa'; // Iconos actualizados
+import { FaPlus, FaEdit, FaTrash, FaEye, FaBroom, FaSync } from 'react-icons/fa'; // Iconos actualizados
 import debounce from 'lodash/debounce';
 import AnularDocumentoModal from '../components/AnularDocumentoModal';
+import Swal from 'sweetalert2';
 
 const AjusteCard = ({ ajuste, onClick }) => {
   return (
@@ -221,6 +222,37 @@ const Ajustes = () => {
     return ['A', 'P'].includes(estado);
   };
 
+  const [isSyncing, setIsSyncing] = useState({});
+
+  // Función para sincronizar un ajuste
+  const handleSync = async (facNro) => {
+    setIsSyncing(prev => ({ ...prev, [facNro]: true }));
+    try {
+      const response = await axios.post(`${baseUrl}/SyncArticulosDoc`, {
+        fac_nro: facNro
+      });
+
+      if (response.data) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Sincronización exitosa',
+          text: response.data.resultado,
+          confirmButtonColor: '#f58ea3'
+        });
+      }
+    } catch (error) {
+      console.error('Error al sincronizar:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al sincronizar el ajuste',
+        confirmButtonColor: '#f58ea3'
+      });
+    } finally {
+      setIsSyncing(prev => ({ ...prev, [facNro]: false }));
+    }
+  };
+
   return (
     <div className="p-2 sm:p-4">
       {/* Header */}
@@ -329,6 +361,17 @@ const Ajustes = () => {
                       </button>
                     </>
                   )}
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      handleSync(ajuste.fac_nro); 
+                    }}
+                    className={`text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
+                    title="Sincronizar"
+                    disabled={isSyncing[ajuste.fac_nro]}
+                  >
+                    <FaSync className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -368,20 +411,33 @@ const Ajustes = () => {
                     </span>
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                    {canEditOrAnular(ajuste.fac_est_fac) && (
-                      <>
-                        <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }}
-                          className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
-                          title="Editar">
-                          <FaEdit className="w-5 h-5" />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }}
-                          className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
-                          title="Anular">
-                          <FaTrash className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
+                    <div className="flex justify-center items-center gap-2">
+                      {canEditOrAnular(ajuste.fac_est_fac) && (
+                        <>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }}
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                            title="Editar">
+                            <FaEdit className="w-5 h-5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }}
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                            title="Anular">
+                            <FaTrash className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          handleSync(ajuste.fac_nro); 
+                        }}
+                        className={`text-[#f58ea3] hover:text-[#f7b3c2] transition-colors ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
+                        title="Sincronizar"
+                        disabled={isSyncing[ajuste.fac_nro]}
+                      >
+                        <FaSync className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

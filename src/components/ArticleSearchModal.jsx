@@ -8,7 +8,7 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
   // Estados para los filtros
   const [filterCodigo, setFilterCodigo] = useState('');
   const [filterNombre, setFilterNombre] = useState('');
-  const [activeTab, setActiveTab] = useState('codigo'); // 'codigo' o 'nombre'
+  const [activeTab, setActiveTab] = useState('nombre'); // Cambiado a 'nombre' por defecto
 
   // Contenedor para el scroll infinito
   const containerRef = useRef(null);
@@ -40,6 +40,24 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
     };
   }, [filterCodigo, filterNombre, debouncedFetchProducts]);
 
+  // Efecto para limpiar filtros y enfocar el input cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setFilterCodigo('');
+      setFilterNombre('');
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }
+  }, [isOpen]);
+
+  // Función para cambiar de tab
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setFilterCodigo('');
+    setFilterNombre('');
+  };
+
   // Manejar el scroll infinito
   useEffect(() => {
     if (!containerRef.current) return;
@@ -62,13 +80,6 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
       }
     };
   }, [hasMore, isLoading, pageNumber, fetchProducts]);
-
-  // Efecto para enfocar el input cuando se abre el modal
-  useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -93,7 +104,7 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
               ? 'text-[#f58ea3] border-b-2 border-[#f58ea3]'
               : 'text-gray-500'
               }`}
-            onClick={() => setActiveTab('codigo')}
+            onClick={() => handleTabChange('codigo')}
           >
             <FaBarcode className="w-4 h-4" />
             <span className="text-sm font-medium">Código</span>
@@ -103,7 +114,7 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
               ? 'text-[#f58ea3] border-b-2 border-[#f58ea3]'
               : 'text-gray-500'
               }`}
-            onClick={() => setActiveTab('nombre')}
+            onClick={() => handleTabChange('nombre')}
           >
             <FaBox className="w-4 h-4" />
             <span className="text-sm font-medium">Nombre</span>

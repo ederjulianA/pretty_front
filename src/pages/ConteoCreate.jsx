@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
@@ -32,6 +32,9 @@ const ConteoCreate = () => {
     const [searchPageNumber, setSearchPageNumber] = useState(1);
     const [hasMoreSearch, setHasMoreSearch] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
+
+    // Referencia para el input de cantidad física
+    const cantidadFisicaRef = useRef(null);
 
     // Estado para el modal de búsqueda
     const [showArticleModal, setShowArticleModal] = useState(false);
@@ -355,6 +358,10 @@ const ConteoCreate = () => {
     const handleSelectArticle = (article) => {
         setCodigoArticulo(article.codigo);
         setShowArticleModal(false);
+        // Establecer el foco en el campo de cantidad física
+        setTimeout(() => {
+            cantidadFisicaRef.current?.focus();
+        }, 0);
     };
 
     // Función para eliminar detalle
@@ -552,17 +559,17 @@ const ConteoCreate = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Código Artículo</label>
-                        <div className="relative">
+                        <div className="flex gap-2">
                             <input
                                 type="text"
                                 value={codigoArticulo}
                                 onChange={(e) => setCodigoArticulo(e.target.value)}
                                 placeholder="Ingrese código"
-                                className="mt-1 block w-full p-2 pl-10 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                                className="mt-1 block w-full p-2 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                             />
                             <button
                                 onClick={() => setShowArticleModal(true)}
-                                className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#f58ea3] transition-colors"
+                                className="mt-1 p-2 border rounded bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] transition-colors"
                             >
                                 <FaSearch className="w-4 h-4" />
                             </button>
@@ -571,6 +578,7 @@ const ConteoCreate = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Cantidad Física</label>
                         <input
+                            ref={cantidadFisicaRef}
                             type="number"
                             value={cantidadFisica}
                             onChange={(e) => setCantidadFisica(e.target.value)}
@@ -726,16 +734,16 @@ const ConteoCreate = () => {
                 </div>
 
                 {/* Vista desktop */}
-                <div className="hidden sm:block overflow-x-auto">
+                <div className="hidden sm:block">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-[#fff5f7]">
                             <tr>
-                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th>
-                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Artículo</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Cant. Sistema</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Cant. Física</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Diferencia</th>
-                                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/6">Código</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-2/6">Artículo</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/6">Cant. Sistema</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/6">Cant. Física</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/6">Diferencia</th>
+                                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/6">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -756,11 +764,11 @@ const ConteoCreate = () => {
                                     {detalles.map((detalle) => (
                                         <tr key={detalle.art_sec} className="hover:bg-[#fff5f7] transition-colors">
                                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{detalle.art_cod}</td>
-                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{detalle.art_nom}</td>
+                                            <td className="px-4 py-2 text-sm text-gray-800">{detalle.art_nom}</td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{detalle.cantidad_sistema}</td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">
                                                 {editingCantidad === detalle.art_cod ? (
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 justify-end">
                                                         <input
                                                             type="number"
                                                             value={tempCantidad}

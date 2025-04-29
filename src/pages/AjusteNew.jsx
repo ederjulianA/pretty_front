@@ -190,7 +190,7 @@ const InventoryAdjustment = () => {
           art_sec: row.art_sec,
           kar_nat: row.kar_nat,
           kar_uni: Number(row.kar_uni),
-          kar_pre_pub: Number(row.saldo_actual) || 0 // Usando el saldo actual como precio público
+          kar_pre_pub:  0 // Usando el saldo actual como precio público
         }))
       };
 

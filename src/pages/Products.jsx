@@ -6,11 +6,13 @@ import { FaPlus, FaEdit, FaTrash, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClo
 import LoadingSpinner from '../components/LoadingSpinner';
 import ArticleMovementModal from '../components/ArticleMovementModal';
 import debounce from 'lodash/debounce';
+import { toast } from 'react-toastify';
 
 const Products = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [syncingProducts, setSyncingProducts] = useState({});
     const [pageNumber, setPageNumber] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [filterCodigo, setFilterCodigo] = useState('');
@@ -89,6 +91,29 @@ const Products = () => {
     const handleViewMovements = (articleCode) => {
         setSelectedArticleCode(articleCode);
         setIsMovementModalOpen(true);
+    };
+
+    const handleSyncProduct = async (productId, productCode) => {
+        try {
+            setSyncingProducts(prev => ({ ...prev, [productId]: true }));
+            const response = await axios.put(`${API_URL}/updateWooStock/${productCode}`, 
+                {},
+                { headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') } }
+            );
+
+            if (response.data.success) {
+                toast.success('Producto sincronizado exitosamente');
+                // Refresh the products list
+                fetchProducts(1);
+            } else {
+                toast.error(response.data.message || 'Error al sincronizar el producto');
+            }
+        } catch (error) {
+            console.error('Error syncing product:', error);
+            toast.error('Error al sincronizar el producto');
+        } finally {
+            setSyncingProducts(prev => ({ ...prev, [productId]: false }));
+        }
     };
 
     const renderSyncStatus = (status, message) => {
@@ -246,9 +271,19 @@ const Products = () => {
                                             <FaTrash />
                                         </button>
                                         <button onClick={() => handleViewMovements(product.art_cod)}
-                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
                                             title="Ver Movimientos">
                                             <FaHistory />
+                                        </button>
+                                        <button onClick={() => handleSyncProduct(product.art_sec, product.art_cod)}
+                                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                                            title="Sincronizar con WooCommerce"
+                                            disabled={syncingProducts[product.art_sec]}>
+                                            {syncingProducts[product.art_sec] ? (
+                                                <LoadingSpinner size="small" />
+                                            ) : (
+                                                <FaSyncAlt />
+                                            )}
                                         </button>
                                     </td>
                                 </tr>

@@ -16,7 +16,8 @@ const EditProduct = () => {
     subcategoria: '',
     precio_detal: '',
     precio_mayor: '',
-    art_woo_id: ''
+    art_woo_id: '',
+    actualiza_fecha: 'N'
   });
   
   // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
@@ -49,7 +50,8 @@ const EditProduct = () => {
             subcategoria: prod.inv_sub_gru_cod || 0,
             precio_detal: prod.precio_detal || '',
             precio_mayor: prod.precio_mayor || '',
-            art_woo_id: prod.art_woo_id || ''
+            art_woo_id: prod.art_woo_id || '',
+            actualiza_fecha: prod.actualiza_fecha || 'N'
           });
           // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
           setInitialArtCod(prod.art_cod || '');
@@ -139,7 +141,8 @@ const EditProduct = () => {
   }, [formData.categoria]);
 
   const handleChange = (e) => {
-    setFormData({...formData, [e.target.name]: e.target.value});
+    const value = e.target.type === 'checkbox' ? (e.target.checked ? 'S' : 'N') : e.target.value;
+    setFormData({...formData, [e.target.name]: value});
     // Reiniciar mensaje de error al editar
     if(e.target.name === 'art_cod') setErrorArtCod('');
     if(e.target.name === 'art_woo_id') setErrorArtWoo('');
@@ -200,8 +203,9 @@ const EditProduct = () => {
       precio_detal: Number(formData.precio_detal),
       precio_mayor: Number(formData.precio_mayor)
     };
-    
+    console.log(dataToSend);
     axios.put(`${API_URL}/editarArticulo/${id}`, dataToSend)
+
       .then(response => {
         const data = response.data;
         if(data.success) {
@@ -361,6 +365,19 @@ const EditProduct = () => {
               required
             />
             {errorArtWoo && <p className="text-red-500 text-xs mt-1">{errorArtWoo}</p>}
+          </div>
+          {/* Actualizar Fecha Woo */}
+          <div className="mb-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                name="actualiza_fecha"
+                checked={formData.actualiza_fecha === 'S'}
+                onChange={handleChange}
+                className="h-4 w-4 text-[#f58ea3] focus:ring-[#f58ea3] border-gray-300 rounded"
+              />
+              <span className="text-gray-700">Actualizar Fecha Woo</span>
+            </label>
           </div>
           {/* Botones de acción */}
           <div className="flex justify-end gap-3">

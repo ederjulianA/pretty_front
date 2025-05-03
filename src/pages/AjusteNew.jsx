@@ -26,7 +26,8 @@ const InventoryAdjustment = () => {
     proveedor: '', // Este será ahora para nit_ide
     proveedorNombre: '', // Nuevo campo para nit_nom
     observaciones: '',
-    nit_sec: ''
+    nit_sec: '',
+    actualiza_fecha: 'N' // Nuevo campo
   });
 
   // Estado para detalle: inicializamos con 10 filas
@@ -57,7 +58,8 @@ const InventoryAdjustment = () => {
               proveedor: header.nit_ide,
               proveedorNombre: header.nit_nom,
               observaciones: header.fac_obs,
-              nit_sec: header.nit_sec
+              nit_sec: header.nit_sec,
+              actualiza_fecha: header.actualiza_fecha
             });
 
             // Mapear los detalles a la estructura de rows
@@ -186,6 +188,7 @@ const InventoryAdjustment = () => {
         fac_usu_cod_cre: localStorage.getItem('user_pretty'),
         fac_obs: headerData.observaciones,
         fac_fec: headerData.fecha,
+        actualiza_fecha: headerData.actualiza_fecha,
         detalles: detallesValidos.map(row => ({
           art_sec: row.art_sec,
           kar_nat: row.kar_nat,
@@ -194,6 +197,7 @@ const InventoryAdjustment = () => {
         }))
       };
 
+      console.log(payload);
       let response;
       if (isEditing) {
         response = await axios.put(`${API_URL}/inventory/adjustment/${fac_nro}`, payload, {
@@ -481,6 +485,18 @@ const InventoryAdjustment = () => {
               className="mt-1 block w-full p-2 border rounded text-sm focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
               rows={2}
             ></textarea>
+          </div>
+          {/* Actualizar Fecha Woo */}
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={headerData.actualiza_fecha === 'S'}
+                onChange={(e) => setHeaderData({ ...headerData, actualiza_fecha: e.target.checked ? 'S' : 'N' })}
+                className="h-4 w-4 text-[#f58ea3] focus:ring-[#f58ea3] border-gray-300 rounded"
+              />
+              <span className="text-sm text-gray-700">Actualizar Fecha Woo</span>
+            </label>
           </div>
         </div>
       </div>

@@ -177,109 +177,110 @@ const Orders = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Órdenes</h1>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={handleClearFilters}
-            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors"
-            title="Limpiar Filtros"
-          >
-            <FaBroom className="text-[#f58ea3]" />
-          </button>
-          <button
-            className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow transition-colors"
-            onClick={() => navigate('/pos')}
-          >
-            <FaPlus className="mr-2 text-white" /> Nueva Orden
-          </button>
+    <div className="min-h-screen bg-[#f7f8fa] p-2 sm:p-6">
+      {/* Card de Header + Filtros */}
+      <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Órdenes</h1>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleClearFilters}
+              className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded-lg flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors shadow-sm"
+              title="Limpiar Filtros"
+            >
+              <FaBroom className="text-[#f58ea3]" />
+            </button>
+            <button
+              className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center text-sm sm:text-base flex-grow transition-colors shadow-sm"
+              onClick={() => navigate('/pos')}
+            >
+              <FaPlus className="mr-2 text-white" /> Nueva Orden
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 bg-white rounded shadow">
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
-          <input
-            type="date"
-            value={fechaDesde}
-            onChange={e => setFechaDesde(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
-          <input
-            type="date"
-            value={fechaHasta}
-            onChange={e => setFechaHasta(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select
-            value={facEstFac}
-            onChange={e => setFacEstFac(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          >
-            <option value="A">Activo</option>
-            <option value="P">Pendiente</option>
-            <option value="I">Inactivo</option>
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo Documento</label>
-          <select
-            value={fueCod}
-            onChange={e => setFueCod(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          >
-            <option value="4">COTIZACIONES</option>
-            <option value="1">FACTURAS</option>
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
-          <input
-            type="text"
-            value={nitIde}
-            onChange={e => setNitIde(e.target.value)}
-            placeholder="Ingrese NIT"
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Cliente</label>
-          <input
-            type="text"
-            value={nitNom}
-            onChange={e => setNitNom(e.target.value)}
-            placeholder="Ingrese nombre"
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1"># Pedido</label>
-          <input
-            type="text"
-            value={facNro}
-            onChange={e => setFacNro(e.target.value)}
-            placeholder="Ingrese número"
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1"># Pedido Woo</label>
-          <input
-            type="text"
-            value={facNroWoo}
-            onChange={e => setFacNroWoo(e.target.value)}
-            placeholder="Ingrese número"
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-          />
+        {/* Filtros */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 p-2 sm:p-4 bg-white rounded-xl">
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
+            <input
+              type="date"
+              value={fechaDesde}
+              onChange={e => setFechaDesde(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
+            <input
+              type="date"
+              value={fechaHasta}
+              onChange={e => setFechaHasta(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <select
+              value={facEstFac}
+              onChange={e => setFacEstFac(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            >
+              <option value="A">Activo</option>
+              <option value="P">Pendiente</option>
+              <option value="I">Inactivo</option>
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo Documento</label>
+            <select
+              value={fueCod}
+              onChange={e => setFueCod(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            >
+              <option value="4">COTIZACIONES</option>
+              <option value="1">FACTURAS</option>
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
+            <input
+              type="text"
+              value={nitIde}
+              onChange={e => setNitIde(e.target.value)}
+              placeholder="Ingrese NIT"
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Cliente</label>
+            <input
+              type="text"
+              value={nitNom}
+              onChange={e => setNitNom(e.target.value)}
+              placeholder="Ingrese nombre"
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1"># Pedido</label>
+            <input
+              type="text"
+              value={facNro}
+              onChange={e => setFacNro(e.target.value)}
+              placeholder="Ingrese número"
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1"># Pedido Woo</label>
+            <input
+              type="text"
+              value={facNroWoo}
+              onChange={e => setFacNroWoo(e.target.value)}
+              placeholder="Ingrese número"
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+            />
+          </div>
         </div>
       </div>
 
@@ -295,7 +296,7 @@ const Orders = () => {
             const isFacturado = order.documentos && order.documentos !== "";
             return (
               <div key={order.fac_sec}
-                className={`bg-white p-3 rounded shadow border transition-colors
+                className={`bg-white p-3 rounded-xl shadow border transition-colors
                      ${isFacturado ? 'border-[#f58ea3] bg-[#fff5f7]' : 'border-gray-200 hover:border-[#f58ea3]'}`}>
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1">
@@ -355,7 +356,7 @@ const Orders = () => {
         </div>
 
         {/* Vista Desktop (Tabla) */}
-        <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
+        <div className="hidden sm:block overflow-x-auto bg-white rounded-xl shadow">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-[#fff5f7]">
               <tr>

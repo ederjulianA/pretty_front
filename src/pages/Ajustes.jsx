@@ -254,86 +254,86 @@ const Ajustes = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Ajustes</h1>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={handleClearFilters}
-            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors"
-            title="Limpiar Filtros"
-          >
-            <FaBroom className="text-[#f58ea3]" />
-          </button>
-          <button
-            className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow transition-colors"
-            onClick={() => navigate('/ajustes/nuevo')}
-          >
-            <FaPlus className="mr-2 text-white" /> Nuevo Ajuste
-          </button>
+    <div className="min-h-screen bg-[#f7f8fa] p-2 sm:p-6">
+      {/* Card de Filtros + Header */}
+      <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Ajustes</h1>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleClearFilters}
+              className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded-lg flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors shadow-sm"
+              title="Limpiar Filtros"
+            >
+              <FaBroom className="text-[#f58ea3]" />
+            </button>
+            <button
+              className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center text-sm sm:text-base flex-grow transition-colors shadow-sm"
+              onClick={() => navigate('/ajustes/nuevo')}
+            >
+              <FaPlus className="mr-2 text-white" /> Nuevo Ajuste
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 bg-white rounded shadow">
-        {/* Columna Fecha Desde */}
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
-          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
-        </div>
-        {/* Columna Fecha Hasta */}
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
-          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
-        </div>
-        {/* Columna Nro Ajuste */}
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Nro Ajuste</label>
-          <input type="text" placeholder="Número..." value={facNro} onChange={e => setFacNro(e.target.value)}
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
-        </div>
-        {/* Columna NIT */}
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
-          <input type="text" placeholder="NIT..." value={nitIde} onChange={e => setNitIde(e.target.value)}
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
-        </div>
-        {/* Columna Proveedor */}
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-          <input type="text" placeholder="Nombre..." value={nitNom} onChange={e => setNitNom(e.target.value)}
-            className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
-        </div>
-        {/* Columna Estado */}
-        <div className="flex flex-col">
-          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select value={facEstFac} onChange={e => setFacEstFac(e.target.value)}
-            className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors">
-            <option value="">Todos</option>
-            <option value="A">Activo</option>
-            <option value="P">Pendiente</option>
-            <option value="I">Inactivo</option>
-          </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+          {/* Columna Fecha Desde */}
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
+            <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
+          </div>
+          {/* Columna Fecha Hasta */}
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
+            <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
+          </div>
+          {/* Columna Nro Ajuste */}
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Nro Ajuste</label>
+            <input type="text" placeholder="Número..." value={facNro} onChange={e => setFacNro(e.target.value)}
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
+          </div>
+          {/* Columna NIT */}
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">NIT</label>
+            <input type="text" placeholder="NIT..." value={nitIde} onChange={e => setNitIde(e.target.value)}
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
+          </div>
+          {/* Columna Proveedor */}
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+            <input type="text" placeholder="Nombre..." value={nitNom} onChange={e => setNitNom(e.target.value)}
+              className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors" />
+          </div>
+          {/* Columna Estado */}
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <select value={facEstFac} onChange={e => setFacEstFac(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors">
+              <option value="">Todos</option>
+              <option value="A">Activo</option>
+              <option value="P">Pendiente</option>
+              <option value="I">Inactivo</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Vista de Lista/Tabla */}
       <div>
         {/* Vista Móvil (Tarjetas) */}
-        <div className="block sm:hidden space-y-3">
+        <div className="block sm:hidden space-y-4">
           {isLoading && pageNumber === 1 && <div className="text-center py-4"><LoadingSpinner /></div>}
           {!isLoading && ajustes.length === 0 && pageNumber === 1 && (
             <p className="text-center py-4 text-gray-500">No hay ajustes para mostrar.</p>
           )}
           {ajustes.map((ajuste) => (
-            <div key={ajuste.fac_sec} className="bg-white p-3 rounded shadow border border-gray-200 hover:border-[#f58ea3] transition-colors" onClick={() => handleViewDetail(ajuste)}>
+            <div key={ajuste.fac_sec} className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 hover:border-[#f58ea3] transition-colors">
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold text-sm">{ajuste.fac_nro}</span>
+                    <span className="font-semibold text-base text-[#f58ea3]">{ajuste.fac_nro}</span>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ajuste.fac_est_fac === 'A'
                       ? 'bg-[#fff5f7] text-[#f58ea3]'
                       : 'bg-gray-100 text-gray-800'
@@ -350,12 +350,12 @@ const Ajustes = () => {
                   {canEditOrAnular(ajuste.fac_est_fac) && (
                     <>
                       <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }}
-                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
                         title="Editar">
                         <FaEdit className="w-5 h-5" />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }}
-                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
                         title="Anular">
                         <FaTrash className="w-4 h-4" />
                       </button>
@@ -366,7 +366,7 @@ const Ajustes = () => {
                       e.stopPropagation(); 
                       handleSync(ajuste.fac_nro); 
                     }}
-                    className={`text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
+                    className={`text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7] ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
                     title="Sincronizar"
                     disabled={isSyncing[ajuste.fac_nro]}
                   >
@@ -380,7 +380,7 @@ const Ajustes = () => {
         </div>
 
         {/* Vista Desktop (Tabla) */}
-        <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
+        <div className="hidden sm:block overflow-x-auto bg-white rounded-xl shadow-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-[#fff5f7]">
               <tr>
@@ -400,9 +400,9 @@ const Ajustes = () => {
                 <tr><td colSpan="6" className="text-center py-4 text-gray-500">No hay ajustes para mostrar.</td></tr>
               )}
               {ajustes.map((ajuste) => (
-                <tr key={ajuste.fac_sec} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleViewDetail(ajuste)}>
+                <tr key={ajuste.fac_sec} className="hover:bg-[#fff5f7] transition-colors">
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{format(new Date(ajuste.fac_fec), 'dd/MM/yyyy')}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{ajuste.fac_nro}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-sm text-[#f58ea3] font-bold">{ajuste.fac_nro}</td>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{ajuste.nit_ide}</td>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{ajuste.nit_nom}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-center">
@@ -415,12 +415,12 @@ const Ajustes = () => {
                       {canEditOrAnular(ajuste.fac_est_fac) && (
                         <>
                           <button onClick={(e) => { e.stopPropagation(); handleEdit(ajuste.fac_nro); }}
-                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
                             title="Editar">
                             <FaEdit className="w-5 h-5" />
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); handleAnularClick(ajuste); }}
-                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
                             title="Anular">
                             <FaTrash className="w-4 h-4" />
                           </button>
@@ -431,7 +431,7 @@ const Ajustes = () => {
                           e.stopPropagation(); 
                           handleSync(ajuste.fac_nro); 
                         }}
-                        className={`text-[#f58ea3] hover:text-[#f7b3c2] transition-colors ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
+                        className={`text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7] ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
                         title="Sincronizar"
                         disabled={isSyncing[ajuste.fac_nro]}
                       >
@@ -451,10 +451,10 @@ const Ajustes = () => {
 
       {/* Botón Cargar Más */}
       {hasMore && !isLoading && (
-        <div className="mt-4 text-center">
+        <div className="mt-6 text-center">
           <button
             onClick={handleLoadMore}
-            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors"
+            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-6 rounded-lg w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors shadow-sm"
           >
             Cargar Más Ajustes
           </button>

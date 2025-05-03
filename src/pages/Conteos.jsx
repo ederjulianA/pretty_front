@@ -257,69 +257,71 @@ const Conteos = () => {
     };
 
     return (
-        <div className="p-2 sm:p-4">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Conteos</h1>
-                <div className="flex gap-2 w-full sm:w-auto">
-                    <button
-                        onClick={handleClearFilters}
-                        className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors"
-                        title="Limpiar Filtros"
-                    >
-                        <FaBroom className="text-[#f58ea3]" />
-                    </button>
-                    <button
-                        className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center justify-center text-sm sm:text-base flex-grow transition-colors"
-                        onClick={() => navigate('/conteos/nuevo')}
-                    >
-                        <FaPlus className="mr-2 text-white" /> Nuevo Conteo
-                    </button>
+        <div className="min-h-screen bg-[#f7f8fa] p-2 sm:p-6">
+            {/* Card de Header + Filtros */}
+            <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Conteos</h1>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={handleClearFilters}
+                            className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-3 rounded-lg flex items-center justify-center text-sm sm:text-base border border-[#f58ea3] transition-colors shadow-sm"
+                            title="Limpiar Filtros"
+                        >
+                            <FaBroom className="text-[#f58ea3]" />
+                        </button>
+                        <button
+                            className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center text-sm sm:text-base flex-grow transition-colors shadow-sm"
+                            onClick={() => navigate('/conteos/nuevo')}
+                        >
+                            <FaPlus className="mr-2 text-white" /> Nuevo Conteo
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* Filtros */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 bg-white rounded shadow">
-                <div className="flex flex-col">
-                    <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
-                    <input
-                        type="date"
-                        value={fechaDesde}
-                        onChange={e => setFechaDesde(e.target.value)}
-                        className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                    />
-                </div>
-                <div className="flex flex-col">
-                    <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                    <input
-                        type="date"
-                        value={fechaHasta}
-                        onChange={e => setFechaHasta(e.target.value)}
-                        className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                    />
-                </div>
-                <div className="flex flex-col">
-                    <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
-                    <select
-                        value={estado}
-                        onChange={e => setEstado(e.target.value)}
-                        className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                    >
-                        <option value="TODOS">Todos</option>
-                        <option value="PENDIENTE">Pendiente</option>
-                        <option value="COMPLETADO">Completado</option>
-                        <option value="CANCELADO">Cancelado</option>
-                    </select>
-                </div>
-                <div className="flex flex-col">
-                    <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Bodega</label>
-                    <input
-                        type="text"
-                        value={bodega}
-                        onChange={e => setBodega(e.target.value)}
-                        placeholder="Ingrese bodega"
-                        className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                    />
+                {/* Filtros */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 p-2 sm:p-4 bg-white rounded-xl">
+                    <div className="flex flex-col">
+                        <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Desde</label>
+                        <input
+                            type="date"
+                            value={fechaDesde}
+                            onChange={e => setFechaDesde(e.target.value)}
+                            className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                        <input
+                            type="date"
+                            value={fechaHasta}
+                            onChange={e => setFechaHasta(e.target.value)}
+                            className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <select
+                            value={estado}
+                            onChange={e => setEstado(e.target.value)}
+                            className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                        >
+                            <option value="TODOS">Todos</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="COMPLETADO">Completado</option>
+                            <option value="CANCELADO">Cancelado</option>
+                        </select>
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Bodega</label>
+                        <input
+                            type="text"
+                            value={bodega}
+                            onChange={e => setBodega(e.target.value)}
+                            placeholder="Ingrese bodega"
+                            className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -332,7 +334,7 @@ const Conteos = () => {
                         <p className="text-center py-4 text-gray-500">No hay conteos para mostrar.</p>
                     )}
                     {conteos.map((conteo) => (
-                        <div key={conteo.id} className="bg-white p-3 rounded shadow border border-gray-200 hover:border-[#f58ea3] transition-colors">
+                        <div key={conteo.id} className="bg-white p-3 rounded-xl shadow border border-gray-200 hover:border-[#f58ea3] transition-colors">
                             <div className="flex justify-between items-start gap-2">
                                 <div className="flex-1">
                                     <div className="flex justify-between items-center mb-1">
@@ -384,7 +386,7 @@ const Conteos = () => {
                 </div>
 
                 {/* Vista Desktop (Tabla) */}
-                <div className="hidden sm:block overflow-x-auto bg-white rounded shadow">
+                <div className="hidden sm:block overflow-x-auto bg-white rounded-xl shadow">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-[#fff5f7]">
                             <tr>
@@ -455,7 +457,7 @@ const Conteos = () => {
                 <div className="mt-4 text-center">
                     <button
                         onClick={() => fetchConteos(pageNumber + 1)}
-                        className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors"
+                        className="bg-[#fff5f7] hover:bg-[#fce7eb] text-[#f58ea3] font-bold py-2 px-4 rounded-lg w-full sm:w-auto text-sm sm:text-base border border-[#f58ea3] transition-colors shadow-sm"
                     >
                         Cargar Más Conteos
                     </button>

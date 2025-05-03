@@ -135,41 +135,43 @@ const Products = () => {
     };
 
     return (
-        <div className="p-2 sm:p-4">
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">Gestión de Productos</h1>
-                <button
-                    className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded flex items-center w-full sm:w-auto justify-center text-sm sm:text-base transition-colors"
-                    onClick={() => navigate('/products/create')}
-                >
-                    <FaPlus className="mr-2 text-white" /> Crear Producto
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 bg-white rounded shadow">
-                <input
-                    type="text"
-                    placeholder="Código..."
-                    value={filterCodigo}
-                    onChange={(e) => setFilterCodigo(e.target.value)}
-                    className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                />
-                <input
-                    type="text"
-                    placeholder="Nombre..."
-                    value={filterNombre}
-                    onChange={(e) => setFilterNombre(e.target.value)}
-                    className="p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                />
-                <select
-                    value={selectedExistencia}
-                    onChange={(e) => setSelectedExistencia(e.target.value)}
-                    className="p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                >
-                    <option value="todas">Todas existencias</option>
-                    <option value="con_existencia">Con existencia</option>
-                    <option value="sin_existencia">Sin existencia</option>
-                </select>
+        <div className="min-h-screen bg-[#f7f8fa] p-2 sm:p-6">
+            {/* Card de Filtros + Header */}
+            <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Productos</h1>
+                    <button
+                        className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2 px-4 rounded-lg flex items-center w-full sm:w-auto justify-center text-sm sm:text-base transition-colors shadow-sm"
+                        onClick={() => navigate('/products/create')}
+                    >
+                        <FaPlus className="mr-2 text-white" /> Crear Producto
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <input
+                        type="text"
+                        placeholder="Código..."
+                        value={filterCodigo}
+                        onChange={(e) => setFilterCodigo(e.target.value)}
+                        className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Nombre..."
+                        value={filterNombre}
+                        onChange={(e) => setFilterNombre(e.target.value)}
+                        className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                    />
+                    <select
+                        value={selectedExistencia}
+                        onChange={(e) => setSelectedExistencia(e.target.value)}
+                        className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                    >
+                        <option value="todas">Todas existencias</option>
+                        <option value="con_existencia">Con existencia</option>
+                        <option value="sin_existencia">Sin existencia</option>
+                    </select>
+                </div>
             </div>
 
             <div>

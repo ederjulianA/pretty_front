@@ -1,7 +1,7 @@
 // src/components/OrderDrawer.js
 import React from 'react';
 import OrderSummary from './OrderSummary';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaUser, FaUserPlus, FaShoppingCart } from 'react-icons/fa';
 
 const OrderDrawer = ({
   order,
@@ -11,112 +11,158 @@ const OrderDrawer = ({
   onClose,
   selectedClient,
   onShowClientModal,
-  onCreateClient,         // [NUEVO] Callback para crear cliente
+  onCreateClient,
   onPlaceOrder,
-  selectedPriceType,      // [NUEVO] Tipo de precio ("mayor" o "detal")
-  onPriceTypeChange,      // [NUEVO] Función para cambiar el tipo de precio
-  discountPercent,        // [NUEVO] % de descuento actual
-  onDiscountChange,       // [NUEVO] Función para actualizar el % de descuento
-  discountValue,          // [NUEVO] Valor calculado del descuento
-  finalTotal              // [NUEVO] Total final de la compra (totalValue - discountValue)
+  onFacturarOrder,
+  selectedPriceType,
+  onPriceTypeChange,
+  discountPercent,
+  onDiscountChange,
+  discountValue,
+  finalTotal,
+  isEditing,
+  orderType
 }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end cursor-pointer">
-      <div className="w-4/5 bg-white p-4 overflow-y-auto transform transition-transform duration-300 cursor-pointer">
-        <div className="flex justify-between items-center mb-4 cursor-pointer">
-          <h2 className="text-xl font-bold text-gray-800 cursor-pointer">Resumen de Pedidos</h2>
-          <button onClick={onClose} className="text-2xl text-gray-600 cursor-pointer">
-            <FaTimes />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col md:hidden">
+      {/* Header con gradiente */}
+      <div className="bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] p-3 text-white">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-bold">Resumen de Pedido</h2>
+          <button 
+            onClick={onClose}
+            className="p-1 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+          >
+            <FaTimes className="w-5 h-5" />
           </button>
         </div>
-        {/* [NUEVO] Combo para seleccionar el tipo de precio */}
-        <div className="mb-4">
-          <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
-            Seleccione tipo de precio:
-          </label>
-          <select
-            value={selectedPriceType}
-            onChange={onPriceTypeChange}
-            className="w-full p-2 border rounded cursor-pointer"
-          >
-            <option value="mayor">Precios al Mayor</option>
-            <option value="detal">Precios al Detal</option>
-          </select>
-        </div>
-        {/* [NUEVO] Input para ingresar % de descuento */}
-        <div className="mb-4">
-          <label className="block text-sm text-gray-700 mb-1 cursor-pointer">
-            Descuento (%):
-          </label>
-          <input
-            type="number"
-            value={discountPercent}
-            onChange={onDiscountChange}
-            className="w-full p-2 border rounded cursor-pointer"
-          />
-        </div>
-        {/* Sección de selección de cliente */}
-        <div className="mb-4 p-4 border rounded-lg cursor-pointer">
-          <p className="text-sm text-gray-600 mb-1 cursor-pointer">Cliente:</p>
-          {selectedClient ? (
-            <div className="flex justify-between items-center cursor-pointer">
-              <div className="cursor-pointer">
-                <p className="font-medium cursor-pointer">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
-                <p className="text-xs text-gray-500 cursor-pointer">{selectedClient.nit_ide}</p>
+        {isEditing && order.length > 0 && (
+          <p className="text-center text-xs mt-1 bg-white/20 px-2 py-0.5 rounded-full inline-block">
+            Editando Pedido: {selectedClient?.fac_nro || "N/A"}
+          </p>
+        )}
+      </div>
+
+      {/* Contenido scrollable */}
+      <div className="flex-1 bg-white overflow-y-auto">
+        <div className="p-2 space-y-2">
+          {/* Sección de cliente */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <p className="text-xs font-medium text-gray-700 mb-1">Cliente</p>
+            {selectedClient ? (
+              <div className="space-y-2">
+                <div className="bg-white p-2 rounded-lg shadow-sm">
+                  <p className="font-medium text-gray-900 text-sm">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
+                  <p className="text-xs text-gray-500">{selectedClient.nit_ide}</p>
+                  <p className="text-xs text-gray-500">{selectedClient.nit_tel}</p>
+                  <p className="text-xs text-gray-500">{selectedClient.nit_dir}</p>
+                </div>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={onShowClientModal}
+                    className="flex-1 bg-[#f58ea3] text-white py-1 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 text-xs font-medium flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <FaUser className="w-3 h-3" />
+                    Cambiar
+                  </button>
+                  <button 
+                    onClick={onCreateClient}
+                    className="flex-1 bg-white border border-[#f58ea3] text-[#f58ea3] py-1 rounded-lg hover:bg-[#f58ea3] hover:text-white transition-all duration-200 text-xs font-medium flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <FaUserPlus className="w-3 h-3" />
+                    Crear
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <button
+            ) : (
+              <div className="space-y-1">
+                <button 
                   onClick={onShowClientModal}
-                  className="text-blue-600 underline text-sm cursor-pointer"
+                  className="w-full bg-[#f58ea3] text-white py-1.5 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 flex items-center justify-center gap-1 text-xs cursor-pointer"
                 >
-                  Cambiar
+                  <FaUser className="w-4 h-4" />
+                  Seleccionar Cliente
                 </button>
-                {/* [NUEVO] Botón para crear cliente */}
-                <button
+                <button 
                   onClick={onCreateClient}
-                  className="text-blue-600 underline text-sm cursor-pointer"
+                  className="w-full bg-white border border-[#f58ea3] text-[#f58ea3] py-1.5 rounded-lg hover:bg-[#f58ea3] hover:text-white transition-all duration-200 flex items-center justify-center gap-1 text-xs cursor-pointer"
                 >
+                  <FaUserPlus className="w-4 h-4" />
                   Crear Cliente
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <button
-                onClick={onShowClientModal}
-                className="w-full bg-blue-500 text-white py-2 rounded-md cursor-pointer"
+            )}
+          </div>
+
+          {/* Configuración de precios y descuento */}
+          <div className="space-y-2">
+            <div className="bg-gray-50 p-2 rounded-lg">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Tipo de Precio
+              </label>
+              <select
+                value={selectedPriceType}
+                onChange={onPriceTypeChange}
+                className="w-full p-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
               >
-                Seleccionar Cliente
-              </button>
-              {/* [NUEVO] Botón para crear cliente cuando no hay uno seleccionado */}
-              <button
-                onClick={onCreateClient}
-                className="w-full bg-[#f58ea3] text-white py-2 rounded-md cursor-pointer"
-              >
-                Crear Cliente
-              </button>
+                <option value="mayor">Precios al Mayor</option>
+                <option value="detal">Precios al Detal</option>
+              </select>
             </div>
-          )}
+
+            <div className="bg-gray-50 p-2 rounded-lg">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Descuento (%)
+              </label>
+              <input
+                type="number"
+                value={discountPercent}
+                onChange={onDiscountChange}
+                className="w-full p-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+
+          {/* Resumen de pedido */}
+          <div className="bg-gray-50 p-2 rounded-lg">
+            <OrderSummary
+              order={order}
+              onRemove={onRemove}
+              onAdd={onAdd}
+              totalValue={totalValue}
+              selectedPriceType={selectedPriceType}
+              discountValue={discountValue}
+              finalTotal={finalTotal}
+            />
+          </div>
         </div>
-        {/* Resumen de Pedidos */}
-        <OrderSummary
-          order={order}
-          onRemove={onRemove}
-          onAdd={onAdd}
-          totalValue={totalValue}
-          selectedPriceType={selectedPriceType} // [NUEVO]
-          discountValue={discountValue}         // [NUEVO]
-          finalTotal={finalTotal}               // [NUEVO]
-        />
-        {/* Botón para Realizar Pedido */}
-        <div className="mt-6 border-t pt-4 cursor-pointer">
-          <button
-            onClick={onPlaceOrder}
-            className="w-full bg-[#f58ea3] text-white px-4 py-2 rounded-md shadow-lg hover:bg-[#a5762f] mt-4 cursor-pointer"
-          >
-            Realizar Pedido
-          </button>
-        </div>
+      </div>
+
+      {/* Footer con botones de acción */}
+      <div className="bg-white border-t p-2 space-y-2">
+        <button 
+          onClick={onPlaceOrder}
+          disabled={isEditing && orderType === "VTA"}
+          className={`w-full px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 text-sm cursor-pointer ${
+            isEditing && orderType === "VTA" 
+              ? "bg-gray-300 cursor-not-allowed" 
+              : "bg-[#f58ea3] text-white hover:bg-[#f7b3c2]"
+          }`}
+        >
+          <FaShoppingCart className="w-4 h-4" />
+          {isEditing ? "Editar Pedido" : "Realizar Pedido"}
+        </button>
+        <button
+          onClick={onFacturarOrder}
+          className="w-full bg-green-600 text-white px-3 py-2 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 flex items-center justify-center gap-2 text-sm cursor-pointer"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {isEditing && orderType === "VTA" ? "Editar Factura" : "Facturar"}
+        </button>
       </div>
     </div>
   );

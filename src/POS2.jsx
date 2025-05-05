@@ -131,14 +131,39 @@ const POS = () => {
   const discountValue = totalValue * (discountPercent / 100);
   const finalTotal = totalValue - discountValue;
 
-  // Scroll infinite for products grid
-  const handleScroll = () => {
-    if (!containerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 5 && !isLoading && hasMore) {
+  // Función para manejar el scroll infinito
+  const handleLoadMore = () => {
+    console.log('Loading more...', { isLoading, hasMore, pageNumber }); // Debug log
+    if (!isLoading && hasMore) {
       fetchProducts(pageNumber + 1);
     }
   };
+
+  // Función para manejar el scroll
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+    
+    console.log('Scroll event:', { 
+      scrollTop, 
+      scrollHeight, 
+      clientHeight, 
+      isNearBottom,
+      isLoading,
+      hasMore 
+    }); // Debug log
+
+    if (isNearBottom && !isLoading && hasMore) {
+      handleLoadMore();
+    }
+  };
+
+  // Efecto para reiniciar la búsqueda cuando cambian los filtros
+  useEffect(() => {
+    console.log('Filters changed, resetting search...'); // Debug log
+    fetchProducts(1);
+  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory]);
 
   // Pointer events for dragging categories horizontally
   const [isDragging, setIsDragging] = useState(false);
@@ -557,7 +582,11 @@ const POS = () => {
         </div>
       )}
       <div className="h-screen bg-[#fff9e9] flex flex-col md:flex-row">
-        <section ref={containerRef} onScroll={handleScroll} className="w-full md:w-2/3 p-6 overflow-y-auto">
+        <section
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="w-full md:w-2/3 p-6 overflow-y-auto"
+        >
           <Header title="Pedidos Pretty" />
           <Filters
             filterCodigo={filterCodigo}
@@ -566,7 +595,10 @@ const POS = () => {
             setFilterNombre={setFilterNombre}
             filterExistencia={filterExistencia}
             setFilterExistencia={setFilterExistencia}
-            onSearch={() => fetchProducts(1)}
+            onSearch={() => {
+              console.log('Search button clicked'); // Debug log
+              fetchProducts(1);
+            }}
           />
           <Categories
             categories={categories}
@@ -578,125 +610,182 @@ const POS = () => {
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
           />
-          <ProductsGrid products={products} onAdd={addToOrder} isLoading={isLoading} order={order} />
+          <ProductsGrid 
+            products={products} 
+            onAdd={addToOrder} 
+            isLoading={isLoading} 
+            order={order}
+            hasMore={hasMore}
+            onLoadMore={handleLoadMore}
+          />
         </section>
 
         {/* Panel fijo para Desktop */}
-        <aside className="hidden md:block w-full md:w-1/3 bg-white rounded-l-lg shadow p-6">
-        <div className="mb-4 flex gap-2">
-          <button 
-            onClick={handleNewOrder}
-            className="w-1/2 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition cursor-pointer"
-          >
-            Nuevo Pedido
-          </button>
-          <button 
-            onClick={() => navigate('/orders')}
-            className="w-1/2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition cursor-pointer"
-          >
-            Volver a órdenes
-          </button>
-        </div>
-          <div className="bg-[#a5762f] p-4 rounded-md mb-4">
+        <aside className="hidden md:flex md:flex-col w-full md:w-1/3 bg-white rounded-l-lg shadow-lg">
+          {/* Header del Resumen - Fijo */}
+          <div className="bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] p-4 flex-shrink-0">
             <h2 className="text-xl font-bold text-center text-white">Resumen de Pedido</h2>
             {isEditing && order.length > 0 && (
-              <p className="text-center text-sm text-white mt-2">
+              <p className="text-center text-sm text-white mt-2 bg-white/20 px-3 py-1 rounded-full inline-block">
                 Editando Pedido: {selectedClient.fac_nro || "N/A"}
               </p>
             )}
           </div>
-          <OrderSummary 
-            order={order} 
-            onRemove={removeFromOrder} 
-            onAdd={addToOrder} 
-            totalValue={totalValue} 
-            selectedPriceType={selectedPriceType}
-            discountValue={discountValue}
-            finalTotal={finalTotal}
-          />
-          <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-1">
-              Seleccione tipo de precio:
-            </label>
-            <select
-              value={selectedPriceType}
-              onChange={(e) => setSelectedPriceType(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
-              <option value="mayor">Precios al Mayor</option>
-              <option value="detal">Precios al Detal</option>
-            </select>
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-1">
-              Descuento (%):
-            </label>
-            <input
-              type="number"
-              value={discountPercent}
-              onChange={(e) => setDiscountPercent(Number(e.target.value))}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div className="mb-4 p-4 border rounded-lg">
-            <p className="text-sm text-gray-600 mb-1">Cliente:</p>
-            {selectedClient ? (
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.nit_ide}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.nit_tel}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.nit_dir}</p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => setShowClientModal(true)} className="text-blue-600 underline text-sm">
-                    Cambiar
-                  </button>
-                  <button onClick={() => setShowCreateClientModal(true)} className="text-blue-600 underline text-sm">
-                    Crear Cliente
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1">
-                <button onClick={() => setShowClientModal(true)} className="w-full bg-[#f7b3c2] text-white py-2 rounded">
-                  Seleccionar Cliente
+
+          {/* Contenido del Resumen - Scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              <div className="flex gap-3">
+                <button 
+                  onClick={handleNewOrder}
+                  className="w-1/2 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-200 transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Nuevo Pedido
                 </button>
-                <button onClick={() => setShowCreateClientModal(true)} className="w-full bg-[#f58ea3] text-white py-2 rounded">
-                  Crear Cliente
+                <button 
+                  onClick={() => navigate('/orders')}
+                  className="w-1/2 bg-[#f58ea3] text-white px-4 py-2.5 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  Volver
                 </button>
               </div>
-            )}
-          </div>
-          
-          {/* Sección de botones para realizar pedido y facturar */}
-          <div className="mt-6 border-t pt-4 flex gap-2">
-            <button 
-              onClick={handlePlaceOrder}
-              disabled={isEditing && orderType === "VTA"}
-              className={`w-1/2 px-4 py-2 rounded-md shadow-lg ${
-                isEditing && orderType === "VTA" 
-                  ? "bg-gray-400 cursor-not-allowed" 
-                  : "bg-[#f58ea3] text-white hover:bg-[#a5762f] cursor-pointer"
-              }`}
-            >
-              {isEditing ? "Editar Pedido" : "Realizar Pedido"}
-            </button>
-            <button
-              onClick={handleFacturarOrder}
-              className="w-1/2 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg hover:bg-green-700 cursor-pointer"
-            >
-              {isEditing && orderType === "VTA" ? "Editar Factura" : "Facturar"}
-            </button>
+
+              <OrderSummary 
+                order={order} 
+                onRemove={removeFromOrder} 
+                onAdd={addToOrder} 
+                totalValue={totalValue} 
+                selectedPriceType={selectedPriceType}
+                discountValue={discountValue}
+                finalTotal={finalTotal}
+              />
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Precio
+                  </label>
+                  <select
+                    value={selectedPriceType}
+                    onChange={(e) => setSelectedPriceType(e.target.value)}
+                    className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                  >
+                    <option value="mayor">Precios al Mayor</option>
+                    <option value="detal">Precios al Detal</option>
+                  </select>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descuento (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={discountPercent}
+                    onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                    className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-3">Cliente</p>
+                {selectedClient ? (
+                  <div className="space-y-3">
+                    <div className="bg-white p-3 rounded-lg shadow-sm">
+                      <p className="font-medium text-gray-900">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
+                      <p className="text-sm text-gray-500">{selectedClient.nit_ide}</p>
+                      <p className="text-sm text-gray-500">{selectedClient.nit_tel}</p>
+                      <p className="text-sm text-gray-500">{selectedClient.nit_dir}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowClientModal(true)} 
+                        className="flex-1 bg-[#f58ea3] text-white py-2 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 text-sm font-medium"
+                      >
+                        Cambiar Cliente
+                      </button>
+                      <button 
+                        onClick={() => setShowCreateClientModal(true)} 
+                        className="flex-1 bg-white border border-[#f58ea3] text-[#f58ea3] py-2 rounded-lg hover:bg-[#f58ea3] hover:text-white transition-all duration-200 text-sm font-medium"
+                      >
+                        Crear Cliente
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => setShowClientModal(true)} 
+                      className="w-full bg-[#f58ea3] text-white py-2.5 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Seleccionar Cliente
+                    </button>
+                    <button 
+                      onClick={() => setShowCreateClientModal(true)} 
+                      className="w-full bg-white border border-[#f58ea3] text-[#f58ea3] py-2.5 rounded-lg hover:bg-[#f58ea3] hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Crear Cliente
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Sección de botones para realizar pedido y facturar */}
+              <div className="space-y-3">
+                <button 
+                  onClick={handlePlaceOrder}
+                  disabled={isEditing && orderType === "VTA"}
+                  className={`w-full px-4 py-3 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                    isEditing && orderType === "VTA" 
+                      ? "bg-gray-300 cursor-not-allowed" 
+                      : "bg-[#f58ea3] text-white hover:bg-[#f7b3c2]"
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  {isEditing ? "Editar Pedido" : "Realizar Pedido"}
+                </button>
+                <button
+                  onClick={handleFacturarOrder}
+                  className="w-full bg-green-600 text-white px-4 py-3 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {isEditing && orderType === "VTA" ? "Editar Factura" : "Facturar"}
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
 
         {/* Botón fijo para Mobile */}
         <button
           onClick={() => setShowOrderDrawer(true)}
-          className="fixed bottom-4 left-4 z-80 md:hidden bg-[#f58ea3] text-white p-4 rounded-full shadow-lg"
+          className="fixed bottom-4 left-4 z-80 md:hidden bg-[#f58ea3] text-white p-4 rounded-full shadow-lg hover:bg-[#f7b3c2] transition-all duration-200"
         >
-          <FaShoppingCart /> {order.length}
+          <FaShoppingCart className="w-6 h-6" />
+          {order.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {order.length}
+            </span>
+          )}
         </button>
 
         {showOrderDrawer && (
@@ -726,7 +815,15 @@ const POS = () => {
             setClientSearch={setClientSearch}
             clientResults={clientResults}
             onSelectClient={(client) => {
-              setSelectedClient(client);
+              if (isEditing && selectedClient?.fac_nro) {
+                setSelectedClient({
+                  ...client,
+                  fac_nro: selectedClient.fac_nro,
+                  fac_nro_woo: selectedClient.fac_nro_woo,
+                });
+              } else {
+                setSelectedClient(client);
+              }
               setShowClientModal(false);
             }}
             onClose={() => setShowClientModal(false)}
@@ -738,7 +835,15 @@ const POS = () => {
           <CreateClientModal
             onClose={() => setShowCreateClientModal(false)}
             onClientCreated={(newClientData) => {
-              setSelectedClient(newClientData);
+              if (isEditing && selectedClient?.fac_nro) {
+                setSelectedClient({
+                  ...newClientData,
+                  fac_nro: selectedClient.fac_nro,
+                  fac_nro_woo: selectedClient.fac_nro_woo,
+                });
+              } else {
+                setSelectedClient(newClientData);
+              }
               setShowCreateClientModal(false);
             }}
           />

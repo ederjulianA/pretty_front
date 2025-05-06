@@ -386,7 +386,7 @@ const Orders = () => {
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro_woo || '-'}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.nit_ide}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.nit_nom}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 max-w-[180px] truncate overflow-hidden">{order.nit_nom}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">
                       ${parseFloat(order.total_pedido).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>

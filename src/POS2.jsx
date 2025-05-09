@@ -1,5 +1,5 @@
 // src/POS.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from './config';
 import Swal from 'sweetalert2';
@@ -39,6 +39,7 @@ const POS = () => {
   const [filterNombre, setFilterNombre] = useState('');
   const [filterExistencia, setFilterExistencia] = useState('');
   const [selectedCategory, setSelectedCategory] = useState("todas");
+  const searchTimeoutRef = useRef(null);
 
   // Price type and discount
   const [selectedPriceType, setSelectedPriceType] = useState("mayor");
@@ -54,7 +55,7 @@ const POS = () => {
   const categoriesRef = useRef(null);
 
   // Custom hooks for products and categories
-  const { products, fetchProducts, pageNumber, hasMore, isLoading } = useProducts(
+  const { products, fetchProducts, pageNumber, hasMore, isLoading, setProducts } = useProducts(
     { filterCodigo, filterNombre, filterExistencia },
     selectedCategory
   );
@@ -133,7 +134,6 @@ const POS = () => {
 
   // Función para manejar el scroll infinito
   const handleLoadMore = () => {
-    console.log('Loading more...', { isLoading, hasMore, pageNumber }); // Debug log
     if (!isLoading && hasMore) {
       fetchProducts(pageNumber + 1);
     }
@@ -145,25 +145,56 @@ const POS = () => {
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
     const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
     
-    console.log('Scroll event:', { 
-      scrollTop, 
-      scrollHeight, 
-      clientHeight, 
-      isNearBottom,
-      isLoading,
-      hasMore 
-    }); // Debug log
-
     if (isNearBottom && !isLoading && hasMore) {
       handleLoadMore();
     }
   };
 
-  // Efecto para reiniciar la búsqueda cuando cambian los filtros
+  // Función debounce para la búsqueda
+  const debouncedSearch = useCallback((filters) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchProducts(1);
+    }, 300); // 300ms de delay
+  }, [fetchProducts]);
+
+  // Manejadores de cambio de filtros
+  const handleFilterChange = useCallback((type, value) => {
+    switch(type) {
+      case 'codigo':
+        setFilterCodigo(value);
+        break;
+      case 'nombre':
+        setFilterNombre(value);
+        break;
+      case 'existencia':
+        setFilterExistencia(value);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  // Efecto para manejar cambios en los filtros
   useEffect(() => {
-    console.log('Filters changed, resetting search...'); // Debug log
-    fetchProducts(1);
-  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory]);
+    const filters = {
+      codigo: filterCodigo.trim(),
+      nombre: filterNombre.trim(),
+      existencia: filterExistencia.trim(),
+      categoria: selectedCategory
+    };
+    
+    debouncedSearch(filters);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, debouncedSearch]);
 
   // Pointer events for dragging categories horizontally
   const [isDragging, setIsDragging] = useState(false);
@@ -392,9 +423,6 @@ const POS = () => {
       return;
     }
 
-    console.log("Orden actual:", order);
-    console.log("Cliente seleccionado:", selectedClient);
-
     const fac_usu_cod = localStorage.getItem('user_pretty');
     const payload = {
       nit_sec: selectedClient.nit_sec,
@@ -404,46 +432,31 @@ const POS = () => {
       descuento: discountPercent,
       lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
-      detalles: order.map(item => {
-        // Para debugging, imprimir cada item individualmente
-        console.log("Detalle del item:", item);
-        
-        return {
-          art_sec: item.id,
-          kar_uni: item.quantity,
-          kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
-          kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
-          kar_nat: "-",
-          kar_kar_sec_ori: item.kar_sec || null,
-          kar_fac_sec_ori: item.fac_sec || null
-        };
-      }),
+      detalles: order.map(item => ({
+        art_sec: item.id,
+        kar_uni: item.quantity,
+        kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
+        kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+        kar_nat: "-",
+        kar_kar_sec_ori: item.kar_sec || null,
+        kar_fac_sec_ori: item.fac_sec || null
+      })),
     };
-
-    // Log para verificar el payload completo
-    console.log("Payload a enviar:", payload);
-    console.log("Detalles de payload:", payload.detalles);
 
     setIsSubmitting(true);
 
     // Si estamos en modo edición y es una factura
     if (isEditing && orderType === "VTA") {
-      // Aquí necesitamos preservar los campos originales kar_kar_sec_ori y kar_fac_sec_ori
-      // Crear una copia del payload donde mantenemos estos campos iguales
-      
-      // Primero, hacemos un GET para obtener los datos actuales de la factura
       axios.get(`${API_URL}/order/${selectedClient.fac_nro}`, {
         headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
       })
       .then(getResponse => {
         if (getResponse.data.success) {
           const currentOrderData = getResponse.data.order;
-          console.log("Datos actuales de la factura:", currentOrderData);
           
           // Crear un mapa de los detalles actuales para acceder fácilmente a los valores originales
           const detailsMap = {};
           currentOrderData.details.forEach(detail => {
-            // Usamos art_sec como clave para mapear los detalles actuales
             detailsMap[detail.art_sec] = {
               kar_kar_sec_ori: detail.kar_kar_sec_ori,
               kar_fac_sec_ori: detail.kar_fac_sec_ori
@@ -457,23 +470,18 @@ const POS = () => {
               const originalDetail = detailsMap[item.art_sec];
               return {
                 ...item,
-                // Si existe el detalle original, usamos sus valores, si no, usamos los actuales
                 kar_kar_sec_ori: originalDetail ? originalDetail.kar_kar_sec_ori : item.kar_kar_sec_ori,
                 kar_fac_sec_ori: originalDetail ? originalDetail.kar_fac_sec_ori : item.kar_fac_sec_ori
               };
             })
           };
           
-          console.log("Payload con valores originales preservados:", preservedPayload);
-          
-          // Ahora enviamos el payload modificado
           return axios.put(`${API_URL}/order/${selectedClient.fac_nro}`, preservedPayload);
         } else {
           throw new Error("No se pudo obtener la información actual de la factura");
         }
       })
       .then(putResponse => {
-        console.log("Respuesta del servidor (edición):", putResponse.data);
         const data = putResponse.data;
         if (data.success) {
           const facturaNumero = selectedClient.fac_nro;
@@ -526,7 +534,6 @@ const POS = () => {
       // Crear nueva factura
       axios.post(`${API_URL}/order`, payload)
         .then(response => {
-          console.log("Respuesta del servidor (creación):", response.data);
           const data = response.data;
           if (data.success) {
             Swal.fire({
@@ -574,6 +581,18 @@ const POS = () => {
     }
   };
 
+  const handleProductUpdate = (productId, updates) => {
+    if (setProducts) {
+      setProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.id === productId 
+            ? { ...product, ...updates }
+            : product
+        )
+      );
+    }
+  };
+
   return (
     <>
       {isSubmitting && (
@@ -595,10 +614,7 @@ const POS = () => {
             setFilterNombre={setFilterNombre}
             filterExistencia={filterExistencia}
             setFilterExistencia={setFilterExistencia}
-            onSearch={() => {
-              console.log('Search button clicked'); // Debug log
-              fetchProducts(1);
-            }}
+            onSearch={() => fetchProducts(1)}
           />
           <Categories
             categories={categories}
@@ -617,6 +633,7 @@ const POS = () => {
             order={order}
             hasMore={hasMore}
             onLoadMore={handleLoadMore}
+            onProductUpdate={handleProductUpdate}
           />
         </section>
 

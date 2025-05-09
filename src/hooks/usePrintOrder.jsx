@@ -65,7 +65,7 @@ const usePrintOrder = () => {
 
       doc.setFontSize(8.5); // Info secundaria
       doc.setFont('helvetica', 'bold');
-      doc.text((header.ciu_nom ? header.ciu_nom.toUpperCase() : 'BUCARAMANGA'), textBlockRight, textBlockTop + 19, { align: 'right' });
+      doc.text('BUCARAMANGA, COLOMBIA', textBlockRight, textBlockTop + 19, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       doc.text('PEDIDOS - 3214207398', textBlockRight, textBlockTop + 24, { align: 'right' });
 

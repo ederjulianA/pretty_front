@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import ProductCard from './ProductCard';
 
-const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore }) => {
+const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore, onProductUpdate }) => {
   const observerRef = useRef(null);
   const loadingRef = useRef(null);
 
@@ -30,6 +30,12 @@ const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore }
     };
   }, [hasMore, isLoading, onLoadMore]);
 
+  const handleImageUpdate = (productId, newImageUrl) => {
+    if (onProductUpdate) {
+      onProductUpdate(productId, { imgUrl: newImageUrl });
+    }
+  };
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
       {products.map((product) => {
@@ -40,7 +46,8 @@ const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore }
             key={product.id}
             product={product}
             onAdd={onAdd}
-            orderQuantity={orderQuantity} 
+            orderQuantity={orderQuantity}
+            onImageUpdate={handleImageUpdate}
           />
         );
       })}

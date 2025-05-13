@@ -17,7 +17,7 @@ import useClients from './hooks/useClients';
 import usePersistentState from './hooks/usePersistentState';
 import usePedidoMinimo from './hooks/usePedidoMinimo';
 import { formatValue } from './utils';
-import { FaShoppingCart } from 'react-icons/fa';
+import { FaShoppingCart, FaSpinner } from 'react-icons/fa';
 import usePrintOrder from './hooks/usePrintOrder';
 import LoadingSpinner from './components/LoadingSpinner';
 import CreateClientModal from './components/CreateClientModal';
@@ -38,7 +38,12 @@ const POS = () => {
   const [filterCodigo, setFilterCodigo] = useState('');
   const [filterNombre, setFilterNombre] = useState('');
   const [filterExistencia, setFilterExistencia] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState("todas");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
   const searchTimeoutRef = useRef(null);
 
   // Price type and discount
@@ -57,16 +62,17 @@ const POS = () => {
   // Custom hooks for products and categories
   const { products, fetchProducts, pageNumber, hasMore, isLoading, setProducts } = useProducts(
     { filterCodigo, filterNombre, filterExistencia },
-    selectedCategory
+    selectedCategory,
+    selectedSubcategory
   );
-  const { categories } = useCategories();
+  const { categories: categoryList, isLoadingCategories: isLoadingCategoryList } = useCategories();
   const { clientResults, fetchClients } = useClients();
   const { pedidoMinimo, isLoading: isLoadingPedidoMinimo } = usePedidoMinimo();
 
   // Editing mode state
   const [isEditing, setIsEditing] = useState(false);
-
   const [orderType, setOrderType] = useState(null);
+
   // Load order for editing if facNroToEdit exists
   useEffect(() => {
     if (facNroToEdit) {
@@ -102,9 +108,9 @@ const POS = () => {
           setSelectedPriceType(initialListaPrecio);
           // Map details to order items
           const mergedDetails = orderData.details.map(item => {
-            console.log("Item original:", item); // Para debugging
             return {
               id: item.art_sec,
+              codigo: item.art_cod,
               name: item.art_nom,
               price: item.precio_mayor,
               price_detal: item.precio_detal,
@@ -112,7 +118,8 @@ const POS = () => {
               existencia: item.existencia || 1,
               kar_des_uno: item.kar_des_uno || 0,
               kar_sec: item.kar_sec,
-              fac_sec: item.fac_sec
+              fac_sec: item.fac_sec,
+              imgUrl: item.art_url_img_servi
             };
           });
           
@@ -184,7 +191,8 @@ const POS = () => {
       codigo: filterCodigo.trim(),
       nombre: filterNombre.trim(),
       existencia: filterExistencia.trim(),
-      categoria: selectedCategory
+      categoria: selectedCategory,
+      subcategoria: selectedSubcategory
     };
     
     debouncedSearch(filters);
@@ -194,7 +202,7 @@ const POS = () => {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, debouncedSearch]);
+  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, selectedSubcategory, debouncedSearch]);
 
   // Pointer events for dragging categories horizontally
   const [isDragging, setIsDragging] = useState(false);
@@ -593,6 +601,69 @@ const POS = () => {
     }
   };
 
+  // Cargar listado de categorías
+  useEffect(() => {
+    setIsLoadingCategories(true);
+    axios.get(`${API_URL}/categorias`)
+      .then(response => {
+        const data = response.data;
+        if (data.success && data.result && data.result.data) {
+          setCategories(data.result.data);
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron cargar las categorías.',
+            confirmButtonColor: '#f58ea3'
+          });
+        }
+      })
+      .catch(error => {
+        console.error("Error al obtener categorías:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al cargar las categorías.',
+          confirmButtonColor: '#f58ea3'
+        });
+      })
+      .finally(() => setIsLoadingCategories(false));
+  }, []);
+
+  // Cargar subcategorías cuando cambia la categoría seleccionada
+  useEffect(() => {
+    if (selectedCategory) {
+      setIsLoadingSubcategories(true);
+      axios.get(`${API_URL}/subcategorias`, { params: { inv_gru_cod: selectedCategory } })
+        .then(response => {
+          const data = response.data;
+          if (data.success && data.subcategorias) {
+            setSubcategories(data.subcategorias);
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudieron cargar las subcategorías.',
+              confirmButtonColor: '#f58ea3'
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Error al obtener subcategorías:", error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al cargar las subcategorías.',
+            confirmButtonColor: '#f58ea3'
+          });
+        })
+        .finally(() => setIsLoadingSubcategories(false));
+    } else {
+      setSubcategories([]);
+      setSelectedSubcategory("");
+    }
+  }, [selectedCategory]);
+
   return (
     <>
       {isSubmitting && (
@@ -614,18 +685,13 @@ const POS = () => {
             setFilterNombre={setFilterNombre}
             filterExistencia={filterExistencia}
             setFilterExistencia={setFilterExistencia}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            selectedSubcategory={selectedSubcategory}
+            setSelectedSubcategory={setSelectedSubcategory}
             onSearch={() => fetchProducts(1)}
           />
-          <Categories
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            categoriesRef={categoriesRef}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-          />
+          
           <ProductsGrid 
             products={products} 
             onAdd={addToOrder} 

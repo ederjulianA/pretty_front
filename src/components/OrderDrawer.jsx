@@ -38,7 +38,7 @@ const OrderDrawer = ({
         </div>
         {isEditing && order.length > 0 && (
           <p className="text-center text-xs mt-1 bg-white/20 px-2 py-0.5 rounded-full inline-block">
-            Editando Pedido: {selectedClient?.fac_nro || "N/A"}
+            Editando {orderType === "VTA" ? "Factura" : "Pedido"}: {selectedClient?.fac_nro || "N/A"}
           </p>
         )}
       </div>
@@ -135,6 +135,8 @@ const OrderDrawer = ({
               selectedPriceType={selectedPriceType}
               discountValue={discountValue}
               finalTotal={finalTotal}
+              isEditing={isEditing}
+              orderType={orderType}
             />
           </div>
         </div>

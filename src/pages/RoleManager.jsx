@@ -39,12 +39,12 @@ const RoleManager = () => {
           active: true
         }
       });
-      console.log('Respuesta del servidor PERMISOS##############:', response.data);
-      if (response.data.success) {
+      console.log('Respuesta de roles:', response.data);
+      if (response.success) {
         // Actualizar para usar la estructura correcta de la respuesta
-        setRoles(response.data.roles || []);
+        setRoles(response.roles || []);
       } else {
-        throw new Error(response.data.message || 'Error al cargar roles');
+        throw new Error(response.message || 'Error al cargar roles');
       }
     } catch (error) {
       console.error('Error al cargar roles:', error);

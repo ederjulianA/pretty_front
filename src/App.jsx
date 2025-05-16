@@ -19,6 +19,7 @@ import POS from './POS2';
 import Conteos from './pages/Conteos';
 import ConteosNew from './pages/ConteoCreate';
 import RoleManager from './pages/RoleManager';
+import UserManager from './pages/UserManager';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -170,6 +171,16 @@ function App() {
             element={
               <ProtectedRoute requiredModule="admin" requiredPermission="manage_roles">
                 <RoleManager />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* User Manager - Solo accesible para administradores */}
+          <Route 
+            path="admin/users" 
+            element={
+              <ProtectedRoute requiredModule="admin" requiredPermission="manage_users">
+                <UserManager />
               </ProtectedRoute>
             } 
           />

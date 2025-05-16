@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const { user, hasAccess, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -161,18 +162,44 @@ const AdminLayout = () => {
               </li>
             )}
 
-            {/* Administración de Roles - Solo para administradores */}
-            {hasAccess('admin') && hasPermission('admin', 'manage_roles') && (
+            {/* Seguridad - Solo visible si tiene acceso al módulo admin */}
+            {hasAccess('admin') && (
               <li>
-                <NavLink
-                  to="/admin/roles"
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                  }
-                  onClick={handleNavClick}
+                <button
+                  onClick={() => setIsSecurityOpen(!isSecurityOpen)}
+                  className="w-full flex items-center justify-between px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors text-gray-700"
                 >
-                  <FaUsersCog className="w-5 h-5" /> Roles y Permisos
-                </NavLink>
+                  <span className="flex items-center gap-3">
+                    <FaUsersCog className="w-5 h-5" /> Seguridad
+                  </span>
+                  {isSecurityOpen ? <FaChevronDown /> : <FaChevronRight />}
+                </button>
+                <div className={`pl-8 mt-2 space-y-2 ${isSecurityOpen ? 'block' : 'hidden'}`}>
+                  {/* Roles y Permisos */}
+                  {hasPermission('admin', 'manage_roles') && (
+                    <NavLink
+                      to="/admin/roles"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                      }
+                      onClick={handleNavClick}
+                    >
+                      <FaUsersCog className="w-4 h-4" /> Roles y Permisos
+                    </NavLink>
+                  )}
+                  {/* Usuarios */}
+                  {hasPermission('admin', 'manage_users') && (
+                    <NavLink
+                      to="/admin/users"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                      }
+                      onClick={handleNavClick}
+                    >
+                      <FaUsers className="w-4 h-4" /> Usuarios
+                    </NavLink>
+                  )}
+                </div>
               </li>
             )}
             

@@ -175,33 +175,22 @@ export const AuthProvider = ({ children }) => {
   // Función para verificar si un usuario tiene acceso a un módulo
   const hasAccess = (module) => {
     if (!permissions) {
-      console.log('No hay permisos disponibles');
       return false;
     }
-    console.log('Verificando acceso al módulo:', module);
-    console.log('Permisos actuales:', permissions);
-    const hasModuleAccess = permissions[module]?.access === true;
-    console.log('¿Tiene acceso?', hasModuleAccess);
-    return hasModuleAccess;
+    return permissions[module]?.access === true;
   };
 
   // Función para verificar si un usuario tiene permiso para realizar una acción
   const hasPermission = (module, action) => {
     if (!permissions) {
-      console.log('No hay permisos disponibles');
       return false;
     }
-    console.log('Verificando permiso:', { module, action });
-    console.log('Permisos actuales:', permissions);
     // Primero verificar si tiene acceso al módulo
     if (!hasAccess(module)) {
-      console.log('No tiene acceso al módulo');
       return false;
     }
     // Luego verificar si tiene el permiso específico
-    const hasActionPermission = permissions[module]?.actions?.includes(action);
-    console.log('¿Tiene permiso?', hasActionPermission);
-    return hasActionPermission;
+    return permissions[module]?.actions?.includes(action);
   };
 
   // Función para verificar si el usuario tiene un rol específico

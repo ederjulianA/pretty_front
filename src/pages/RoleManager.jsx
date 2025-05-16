@@ -40,11 +40,11 @@ const RoleManager = () => {
         }
       });
       console.log('Respuesta de roles:', response.data);
-      if (response.success) {
+      if (response.data.success) {
         // Actualizar para usar la estructura correcta de la respuesta
-        setRoles(response.roles || []);
+        setRoles(response.data.roles || []);
       } else {
-        throw new Error(response.message || 'Error al cargar roles');
+        throw new Error(response.data.message || 'Error al cargar roles');
       }
     } catch (error) {
       console.error('Error al cargar roles:', error);

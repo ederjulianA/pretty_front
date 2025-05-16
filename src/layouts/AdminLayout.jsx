@@ -1,76 +1,23 @@
 // src/layouts/AdminLayout.jsx
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle } from 'react-icons/fa';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
-import axiosInstance from '../axiosConfig';
-import Swal from 'sweetalert2';
+import { useAuth } from '../contexts/AuthContext';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
-  const [isValidatingToken, setIsValidatingToken] = useState(true);
-  const [userPretty, setUserPretty] = useState('');
+  const { user, hasAccess, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
-
-  const validateToken = async () => {
-    const token = localStorage.getItem('pedidos_pretty_token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const response = await axiosInstance.get('/articulos', {
-        headers: {
-          'x-access-token': token
-        },
-        params: {
-          PageNumber: 1,
-          PageSize: 1
-        }
-      });
-
-      if (!response.data.success) {
-        throw new Error('Token inválido');
-      }
-    } catch (error) {
-      console.error('Error de validación:', error);
-      localStorage.removeItem('pedidos_pretty_token');
-      localStorage.removeItem('user_pretty');
-      Swal.fire({
-        icon: 'error',
-        title: 'Sesión expirada',
-        text: 'Por favor, inicie sesión nuevamente.',
-        confirmButtonColor: '#f58ea3',
-      }).then(() => {
-        navigate('/login');
-      });
-    } finally {
-      setIsValidatingToken(false);
-    }
-  };
-
-  useEffect(() => {
-    validateToken();
-    setUserPretty(localStorage.getItem('user_pretty') || 'Usuario');
-  }, []);
-
-  if (isValidatingToken) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#f58ea3]"></div>
-      </div>
-    );
-  }
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
 
   // Cierra el sidebar en mobile al seleccionar una opción
   const handleNavClick = () => {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
   return (
@@ -91,90 +38,152 @@ const AdminLayout = () => {
         </div>
         <nav className="flex-1 px-4 py-6 overflow-y-auto">
           <ul className="space-y-2">
-            {/* Dashboard con submenú */}
-            <li>
+            {/* Dashboard con submenú - Solo visible si tiene permiso */}
+            {hasAccess('dashboard') && (
+              <li>
+                <button
+                  onClick={() => setIsDashboardOpen(!isDashboardOpen)}
+                  className="w-full flex items-center justify-between px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors text-gray-700"
+                >
+                  <span className="flex items-center gap-3"><FaHome className="w-5 h-5" /> Dashboard</span>
+                  {isDashboardOpen ? <FaChevronDown /> : <FaChevronRight />}
+                </button>
+                <div className={`pl-8 mt-2 space-y-2 ${isDashboardOpen ? 'block' : 'hidden'}`}> 
+                  <NavLink
+                    to="/dashboard"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                    }
+                    onClick={handleNavClick}
+                  >
+                    <FaClipboardCheck className="w-4 h-4" /> Sync Pedidos Woo
+                  </NavLink>
+                  <NavLink
+                    to="/dashboard/ventas"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                    }
+                    onClick={handleNavClick}
+                  >
+                    <FaClipboardList className="w-4 h-4" /> Dashboard Ventas
+                  </NavLink>
+                </div>
+              </li>
+            )}
+            
+            {/* Productos - Solo visible si tiene permiso */}
+            {hasAccess('products') && (
+              <li>
+                <NavLink
+                  to="/products"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaBoxOpen className="w-5 h-5" /> Productos
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Clientes - Solo visible si tiene permiso */}
+            {hasAccess('clients') && (
+              <li>
+                <NavLink
+                  to="/clients"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaUsers className="w-5 h-5" /> Clientes
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Órdenes - Solo visible si tiene permiso */}
+            {hasAccess('orders') && (
+              <li>
+                <NavLink
+                  to="/orders"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaClipboardList className="w-5 h-5" /> Órdenes
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Ajustes - Solo visible si tiene permiso */}
+            {hasAccess('ajustes') && (
+              <li>
+                <NavLink
+                  to="/ajustes"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaCogs className="w-5 h-5" /> Ajustes
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Conteos - Solo visible si tiene permiso */}
+            {hasAccess('conteos') && (
+              <li>
+                <NavLink
+                  to="/conteos"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaClipboardList className="w-5 h-5" /> Conteos
+                </NavLink>
+              </li>
+            )}
+            
+            {/* POS - Acceso rápido solo si tiene permiso */}
+            {hasAccess('pos') && (
+              <li>
+                <NavLink
+                  to="/pos"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaClipboardCheck className="w-5 h-5" /> POS
+                </NavLink>
+              </li>
+            )}
+
+            {/* Administración de Roles - Solo para administradores */}
+            {hasAccess('admin') && hasPermission('admin', 'manage_roles') && (
+              <li>
+                <NavLink
+                  to="/admin/roles"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaUsersCog className="w-5 h-5" /> Roles y Permisos
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Cerrar sesión */}
+            <li className="mt-auto">
               <button
-                onClick={() => setIsDashboardOpen(!isDashboardOpen)}
-                className="w-full flex items-center justify-between px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors text-gray-700"
+                onClick={logout}
+                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-medium text-gray-700 hover:bg-gray-100 transition-colors"
               >
-                <span className="flex items-center gap-3"><FaHome className="w-5 h-5" /> Dashboard</span>
-                {isDashboardOpen ? <FaChevronDown /> : <FaChevronRight />}
+                <FaSignOutAlt className="w-5 h-5" /> Cerrar Sesión
               </button>
-              <div className={`pl-8 mt-2 space-y-2 ${isDashboardOpen ? 'block' : 'hidden'}`}> 
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                  }
-                  onClick={handleNavClick}
-                >
-                  <FaClipboardCheck className="w-4 h-4" /> Sync Pedidos Woo
-                </NavLink>
-                <NavLink
-                  to="/dashboard/ventas"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                  }
-                  onClick={handleNavClick}
-                >
-                  <FaClipboardList className="w-4 h-4" /> Dashboard Ventas
-                </NavLink>
-              </div>
-            </li>
-            <li>
-              <NavLink
-                to="/products"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                }
-                onClick={handleNavClick}
-              >
-                <FaBoxOpen className="w-5 h-5" /> Productos
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/clients"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                }
-                onClick={handleNavClick}
-              >
-                <FaUsers className="w-5 h-5" /> Clientes
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/orders"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                }
-                onClick={handleNavClick}
-              >
-                <FaClipboardList className="w-5 h-5" /> Órdenes
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/ajustes"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                }
-                onClick={handleNavClick}
-              >
-                <FaCogs className="w-5 h-5" /> Ajustes
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/conteos"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
-                }
-                onClick={handleNavClick}
-              >
-                <FaClipboardList className="w-5 h-5" /> Conteos
-              </NavLink>
             </li>
           </ul>
         </nav>
@@ -195,12 +204,10 @@ const AdminLayout = () => {
           <div className="flex items-center gap-4">
             <button className="relative p-2 rounded-full hover:bg-[#fff5f7] transition-colors">
               <FaBell className="text-xl text-[#f58ea3]" />
-              {/* Badge de notificaciones (opcional) */}
-              {/* <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full px-1">3</span> */}
             </button>
             <div className="flex items-center gap-2">
               <FaUserCircle className="text-2xl text-[#f58ea3]" />
-              <span className="hidden sm:block font-medium text-gray-700">{userPretty}</span>
+              <span className="hidden sm:block font-medium text-gray-700">{user || 'Usuario'}</span>
             </div>
           </div>
         </header>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { FaPlus, FaMinus, FaSearch } from 'react-icons/fa';
+import { API_URL } from '../config';
 
 // Función para formatear números sin decimales y con separador de miles
 const formatValue = (value) =>
@@ -57,7 +58,7 @@ const POS = () => {
   const fetchProducts = (page = 1) => {
     setIsLoading(true);
     axios
-      .get('http://192.168.1.7:3000/api/articulos', {
+      .get(`${API_URL}/articulos`, {
         params: {
           codigo: filterCodigo,
           nombre: filterNombre,
@@ -97,7 +98,7 @@ const POS = () => {
   // Función para consumir el API de categorías
   const fetchCategories = () => {
     axios
-      .get('http://192.168.1.7:3000/api/categorias')
+      .get(`${API_URL}/categorias`)
       .then((response) => {
         const data = response.data;
         if (data.success && data.result && data.result.data) {
@@ -114,7 +115,7 @@ const POS = () => {
   // Función para consumir el API de clientes (nits) con búsqueda y paginación
   const fetchClients = (page = 1) => {
     axios
-      .get('http://192.168.1.7:3000/api/nits', {
+      .get(`${API_URL}/nits`, {
         params: {
           nit_nom: clientSearch,
           pageNumber: page,

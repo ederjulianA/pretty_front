@@ -30,7 +30,8 @@ const Orders = () => {
       facNro: '',
       facNroWoo: '',
       facEstFac: 'A',
-      fueCod: '4'
+      fueCod: '4',
+      facUsuCodCre: ''
     };
   };
 
@@ -43,6 +44,7 @@ const Orders = () => {
   const [facNroWoo, setFacNroWoo] = useState(getInitialFilters().facNroWoo);
   const [facEstFac, setFacEstFac] = useState(getInitialFilters().facEstFac);
   const [fueCod, setFueCod] = useState(getInitialFilters().fueCod);
+  const [facUsuCodCre, setFacUsuCodCre] = useState(getInitialFilters().facUsuCodCre);
 
   // Estados para datos y paginación
   const [orders, setOrders] = useState([]);
@@ -64,6 +66,50 @@ const Orders = () => {
 
   const [showAnularModal, setShowAnularModal] = useState(false);
 
+  // Estados para usuarios
+  const [users, setUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [userRol, setUserRol] = useState(null);
+
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    const loadUsers = async () => {
+      setIsLoadingUsers(true);
+      try {
+        const response = await axios.get(`${API_URL}/users`, {
+          headers: { 
+            'x-access-token': localStorage.getItem('pedidos_pretty_token')
+          }
+        });
+        if (response.data) {
+          const currentUser = localStorage.getItem('user_pretty');
+          // Buscar por id o por código
+          const userRolId = response.data.find(user => user.id === currentUser || user.codigo === currentUser)?.rol_id;
+          setUserRol(userRolId);
+
+          if (userRolId === 1 || userRolId === 3) {
+            setUsers(response.data);
+          } else {
+            const currentUserData = response.data.find(user => user.id === currentUser || user.codigo === currentUser);
+            if (currentUserData) {
+              setUsers([currentUserData]);
+              setFacUsuCodCre(currentUserData.id || currentUserData.codigo);
+            } else {
+              setUsers([]);
+              setFacUsuCodCre(currentUser); // Siempre setear el filtro
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar usuarios:", error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
   const fetchOrders = async (page = 1) => {
     setIsLoading(true);
     try {
@@ -77,6 +123,7 @@ const Orders = () => {
           fac_nro_woo: facNroWoo,
           fac_est_fac: facEstFac,
           fue_cod: fueCod,
+          fac_usu_cod_cre: facUsuCodCre,
           PageNumber: page,
           PageSize: pageSize,
         },
@@ -108,10 +155,11 @@ const Orders = () => {
       facNro,
       facNroWoo,
       facEstFac,
-      fueCod
+      fueCod,
+      facUsuCodCre
     };
     localStorage.setItem('ordersFilters', JSON.stringify(filters));
-  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
+  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod, facUsuCodCre]);
 
   // Guardar filtros cuando cambien
   useEffect(() => {
@@ -121,7 +169,7 @@ const Orders = () => {
   // Debounce para la búsqueda al cambiar filtros
   const debouncedFetch = useCallback(debounce(() => {
     fetchOrders(1);
-  }, 500), [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
+  }, 500), [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod, facUsuCodCre]);
 
   // Efecto para re-buscar cuando cambian los filtros (debounced)
   useEffect(() => {
@@ -132,7 +180,7 @@ const Orders = () => {
     return () => {
       debouncedFetch.cancel();
     };
-  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod]);
+  }, [fechaDesde, fechaHasta, nitIde, nitNom, facNro, facNroWoo, facEstFac, fueCod, facUsuCodCre]);
 
   // Función para limpiar filtros
   const handleClearFilters = () => {
@@ -144,6 +192,7 @@ const Orders = () => {
     setFacNroWoo('');
     setFacEstFac('A');
     setFueCod('4');
+    setFacUsuCodCre('');
     localStorage.removeItem('ordersFilters');
   };
 
@@ -281,6 +330,24 @@ const Orders = () => {
               className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
             />
           </div>
+          <div className="flex flex-col">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Usuario</label>
+            <select
+              value={facUsuCodCre}
+              onChange={e => setFacUsuCodCre(e.target.value)}
+              className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+              disabled={isLoadingUsers || (userRol !== 1 && userRol !== 3)}
+            >
+              {(userRol === 1 || userRol === 3) && (
+                <option value="">TODOS</option>
+              )}
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -368,15 +435,16 @@ const Orders = () => {
                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documentos</th>
                 <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario Creador</th>
                 <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading && pageNumber === 1 && (
-                <tr><td colSpan="9" className="text-center py-4"><LoadingSpinner /></td></tr>
+                <tr><td colSpan="10" className="text-center py-4"><LoadingSpinner /></td></tr>
               )}
               {!isLoading && orders.length === 0 && pageNumber === 1 && (
-                <tr><td colSpan="9" className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</td></tr>
+                <tr><td colSpan="10" className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</td></tr>
               )}
               {orders.map((order) => {
                 const isFacturado = order.documentos && order.documentos !== "";
@@ -404,6 +472,9 @@ const Orders = () => {
                         }`}>
                         {order.fac_est_fac || 'N/A'}
                       </span>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      {order.fac_usu_cod_cre || '-'}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
                       <button onClick={() => handleViewDetail(order)}
@@ -435,7 +506,7 @@ const Orders = () => {
                 );
               })}
               {isLoading && pageNumber > 1 && (
-                <tr><td colSpan="9" className="text-center py-4"><LoadingSpinner /></td></tr>
+                <tr><td colSpan="10" className="text-center py-4"><LoadingSpinner /></td></tr>
               )}
             </tbody>
           </table>

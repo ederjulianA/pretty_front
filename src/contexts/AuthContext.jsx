@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [permissions, setPermissions] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [cambiaPass, setCambiaPass] = useState(false);
   const navigate = useNavigate();
 
   // Comprobar si hay un usuario autenticado al cargar
@@ -26,6 +27,7 @@ export const AuthProvider = ({ children }) => {
     const userStored = localStorage.getItem('user_pretty');
     const roleStored = localStorage.getItem('user_role');
     const permissionsStored = localStorage.getItem('user_permissions');
+    const cambiaPassStored = localStorage.getItem('cambia_pass');
 
     if (token) {
       setUser(userStored);
@@ -36,6 +38,8 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       // Recargar permisos del servidor para asegurar que están actualizados
       fetchPermissions();
+      // Leer cambiaPass de localStorage
+      setCambiaPass(cambiaPassStored === 'true');
     }
     
     setIsLoading(false);
@@ -62,20 +66,30 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('user_permissions', JSON.stringify(data.permisos));
           setPermissions(data.permisos);
         }
-        
         setUser(data.usuario);
         setRole(data.rol);
         setIsAuthenticated(true);
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'Login exitoso',
-          text: `Bienvenido ${data.usuario}`,
-          confirmButtonColor: '#f58ea3',
-        });
-        
-        navigate('/dashboard');
-        return true;
+        setCambiaPass(data.cambia_pass === 1);
+        localStorage.setItem('cambia_pass', data.cambia_pass === 1 ? 'true' : 'false');
+        if (data.cambia_pass === 1) {
+          // No navegar, forzar cambio de contraseña
+          Swal.fire({
+            icon: 'warning',
+            title: 'Cambio de contraseña requerido',
+            text: 'Debes cambiar tu contraseña para continuar.',
+            confirmButtonColor: '#f58ea3',
+          });
+          return { success: true, cambiaPass: true };
+        } else {
+          Swal.fire({
+            icon: 'success',
+            title: 'Login exitoso',
+            text: `Bienvenido ${data.usuario}`,
+            confirmButtonColor: '#f58ea3',
+          });
+          navigate('/dashboard');
+          return { success: true, cambiaPass: false };
+        }
       } else {
         Swal.fire({
           icon: 'error',
@@ -83,19 +97,22 @@ export const AuthProvider = ({ children }) => {
           text: data.message || 'Credenciales inválidas',
           confirmButtonColor: '#f58ea3',
         });
-        return false;
+        setCambiaPass(false);
+        localStorage.setItem('cambia_pass', 'false');
+        return { success: false, cambiaPass: false };
       }
     } catch (error) {
       console.error('Error en login:', error);
       const errorMessage = error.response?.data?.message || 'Error al iniciar sesión, por favor intente nuevamente.';
-      
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: errorMessage,
         confirmButtonColor: '#f58ea3',
       });
-      return false;
+      setCambiaPass(false);
+      localStorage.setItem('cambia_pass', 'false');
+      return { success: false, cambiaPass: false };
     } finally {
       setIsLoading(false);
     }
@@ -203,6 +220,12 @@ export const AuthProvider = ({ children }) => {
     return roleNames.includes(role);
   };
 
+  // Función para actualizar cambiaPass a false después de cambiar la contraseña
+  const setCambiaPassAndPersist = (value) => {
+    setCambiaPass(value);
+    localStorage.setItem('cambia_pass', value ? 'true' : 'false');
+  };
+
   // Valor a proveer en el contexto
   const value = {
     user,
@@ -217,7 +240,9 @@ export const AuthProvider = ({ children }) => {
     hasRole,
     hasAnyRole,
     fetchPermissions,
-    updatePermissions
+    updatePermissions,
+    cambiaPass,
+    setCambiaPass: setCambiaPassAndPersist
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

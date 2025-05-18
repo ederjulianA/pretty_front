@@ -1,18 +1,34 @@
 // src/components/Login.js
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const Login = () => {
   const [usuCod, setUsuCod] = useState('');
   const [usuPass, setUsuPass] = useState('');
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, cambiaPass, setCambiaPass } = useAuth();
+  const [forceChangeModal, setForceChangeModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!usuCod || !usuPass) {
       return;
     }
-    await login(usuCod, usuPass);
+    const result = await login(usuCod, usuPass);
+    if (result && result.cambiaPass) {
+      setForceChangeModal(true);
+      setShowModal(true);
+    }
+  };
+
+  // Cuando el cambio de contraseña es exitoso, cerrar el modal y permitir acceso
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setForceChangeModal(false);
+    setCambiaPass(false);
+    // Redirigir al dashboard después del cambio exitoso
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -31,6 +47,7 @@ const Login = () => {
             placeholder="Ingrese su usuario"
             className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent"
             required
+            disabled={forceChangeModal}
           />
         </div>
 
@@ -45,14 +62,15 @@ const Login = () => {
             placeholder="Ingrese su contraseña"
             className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent"
             required
+            disabled={forceChangeModal}
           />
         </div>
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || forceChangeModal}
           className={`w-full bg-[#f58ea3] text-white p-3 rounded font-bold hover:bg-[#a5762f] transition-colors ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            isLoading || forceChangeModal ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
           {isLoading ? (
@@ -65,6 +83,12 @@ const Login = () => {
           )}
         </button>
       </form>
+      {/* Modal de cambio de contraseña forzado */}
+      <ChangePasswordModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        forceChange={forceChangeModal}
+      />
     </div>
   );
 };

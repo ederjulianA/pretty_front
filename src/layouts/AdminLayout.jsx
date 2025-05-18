@@ -1,15 +1,19 @@
 // src/layouts/AdminLayout.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
 import { useAuth } from '../contexts/AuthContext';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
-  const { user, hasAccess, hasPermission, logout } = useAuth();
+  const [showMenu, setShowMenu] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const menuRef = useRef(null);
+  const { user, hasAccess, hasPermission, logout, cambiaPass, setCambiaPass } = useAuth();
   const navigate = useNavigate();
 
   // Cierra el sidebar en mobile al seleccionar una opción
@@ -20,6 +24,42 @@ const AdminLayout = () => {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  // Cerrar el menú cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Handler para cierre exitoso del cambio de contraseña forzado
+  const handleForceChangeClose = () => {
+    setCambiaPass(false); // Esto ahora persiste en localStorage
+    // Opcional: recargar permisos o usuario si es necesario
+  };
+
+  // Si el usuario debe cambiar la contraseña, mostrar solo el modal y bloquear el resto
+  if (cambiaPass) {
+    return (
+      <ChangePasswordModal
+        isOpen={true}
+        onClose={handleForceChangeClose}
+        forceChange={true}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#f7f8fa] overflow-hidden">
@@ -232,9 +272,43 @@ const AdminLayout = () => {
             <button className="relative p-2 rounded-full hover:bg-[#fff5f7] transition-colors">
               <FaBell className="text-xl text-[#f58ea3]" />
             </button>
-            <div className="flex items-center gap-2">
-              <FaUserCircle className="text-2xl text-[#f58ea3]" />
-              <span className="hidden sm:block font-medium text-gray-700">{user || 'Usuario'}</span>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="flex items-center gap-2 hover:bg-[#fff5f7] p-2 rounded-lg transition-colors"
+              >
+                <FaUserCircle className="text-2xl text-[#f58ea3]" />
+                <span className="hidden sm:block font-medium text-gray-700">{user || 'Usuario'}</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${showMenu ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Menú desplegable */}
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                  <button
+                    onClick={() => {
+                      setShowChangePassword(true);
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cambiar Contraseña
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Cerrar Sesión
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -242,6 +316,12 @@ const AdminLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Modal de cambio de contraseña */}
+      <ChangePasswordModal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
     </div>
   );
 };

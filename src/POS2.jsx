@@ -283,6 +283,15 @@ const POS = () => {
       return;
     }
     const fac_usu_cod = localStorage.getItem('user_pretty');
+    if (!fac_usu_cod) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se encontró el código de usuario. Por favor, inicie sesión nuevamente.',
+        confirmButtonColor: '#f58ea3',
+      });
+      return;
+    }
     
     const payload = {
       nit_sec: selectedClient.nit_sec,
@@ -432,6 +441,16 @@ const POS = () => {
     }
 
     const fac_usu_cod = localStorage.getItem('user_pretty');
+    if (!fac_usu_cod) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se encontró el código de usuario. Por favor, inicie sesión nuevamente.',
+        confirmButtonColor: '#f58ea3',
+      });
+      return;
+    }
+
     const payload = {
       nit_sec: selectedClient.nit_sec,
       fac_usu_cod_cre: fac_usu_cod,

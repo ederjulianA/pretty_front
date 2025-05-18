@@ -11,6 +11,12 @@ export default defineConfig({
     host: true,
     port:5174,
     proxy: {
+      '/api': {
+        target: 'http://154.53.62.220:3000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      },
       '/mipuntoV1': {
         target: 'http://localhost:8088',
         changeOrigin: true,

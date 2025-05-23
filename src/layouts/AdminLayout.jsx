@@ -108,6 +108,15 @@ const AdminLayout = () => {
                   >
                     <FaClipboardList className="w-4 h-4" /> Dashboard Ventas
                   </NavLink>
+                  <NavLink
+                    to="/dashboard/inventario"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                    }
+                    onClick={handleNavClick}
+                  >
+                    <FaBoxOpen className="w-4 h-4" /> Diferencia Inventario
+                  </NavLink>
                 </div>
               </li>
             )}

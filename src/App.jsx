@@ -20,6 +20,7 @@ import Conteos from './pages/Conteos';
 import ConteosNew from './pages/ConteoCreate';
 import RoleManager from './pages/RoleManager';
 import UserManager from './pages/UserManager';
+import DiferenciaInventario from './pages/DiferenciaInventario';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -53,7 +54,7 @@ function App() {
           <Route 
             path="dashboard" 
             element={
-              <ProtectedRoute requiredModule="dashboard">
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
                 <Dashboard />
               </ProtectedRoute>
             } 
@@ -61,8 +62,16 @@ function App() {
           <Route 
             path="dashboard/ventas" 
             element={
-              <ProtectedRoute requiredModule="dashboard">
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
                 <DashboardVentas />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="dashboard/inventario" 
+            element={
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
+                <DiferenciaInventario />
               </ProtectedRoute>
             } 
           />

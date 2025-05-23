@@ -221,7 +221,12 @@ const Orders = () => {
     ));
   };
 
-  const canEditOrAnular = (estado) => {
+  const canEditOrAnular = (estado, fac_tip_cod, documentos) => {
+    // Si es una cotización y tiene documentos, no permitir editar/anular
+    if (fac_tip_cod === 'COT' && documentos !== null) {
+      return false;
+    }
+    // Solo permitir editar/anular si está activo o pendiente
     return ['A', 'P'].includes(estado);
   };
 
@@ -400,7 +405,7 @@ const Orders = () => {
                       title="Imprimir">
                       <FaPrint className="w-5 h-5" />
                     </button>
-                    {canEditOrAnular(order.fac_est_fac) && (
+                    {canEditOrAnular(order.fac_est_fac, order.fac_tip_cod, order.documentos) && (
                       <>
                         <button onClick={() => handleEditOrder(order)}
                           className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
@@ -487,7 +492,7 @@ const Orders = () => {
                         title="Imprimir">
                         <FaPrint />
                       </button>
-                      {canEditOrAnular(order.fac_est_fac) && (
+                      {canEditOrAnular(order.fac_est_fac, order.fac_tip_cod, order.documentos) && (
                         <>
                           <button onClick={() => handleEditOrder(order)}
                             className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"

@@ -40,7 +40,7 @@ const DiferenciaInventario = () => {
     try {
       const response = await axios.get(`${API_URL}/inventory-differences/differences`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('pedidos_pretty_token')}`
         }
       });
       if (response.data.success) {
@@ -80,7 +80,7 @@ const DiferenciaInventario = () => {
     try {
       const response = await axios.post(`${API_URL}/woo/sync`, {}, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('pedidos_pretty_token')}`
         }
       });
 

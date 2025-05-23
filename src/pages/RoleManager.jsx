@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 const RoleManager = () => {
   const [roles, setRoles] = useState([]);
   const [modules, setModules] = useState([
-    { id: 'dashboard', name: 'Dashboard', actions: ['view', 'export'] },
+    { id: 'dashboard', name: 'Dashboard', actions: ['view', 'export','edit'] },
     { id: 'products', name: 'Productos', actions: ['view', 'create', 'edit', 'delete'] },
     { id: 'clients', name: 'Clientes', actions: ['view', 'create', 'edit', 'delete'] },
     { id: 'orders', name: 'Órdenes', actions: ['view', 'create', 'cancel'] },

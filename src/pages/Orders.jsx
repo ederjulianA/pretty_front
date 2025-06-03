@@ -8,9 +8,10 @@ import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
 import usePrintOrder from '../hooks/usePrintOrder';
-import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt, FaTrash, FaSync } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import AnularDocumentoModal from '../components/AnularDocumentoModal';
+import SyncWooModal from '../components/SyncWooModal';
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -70,6 +71,11 @@ const Orders = () => {
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userRol, setUserRol] = useState(null);
+
+  // Estados para SyncWooModal
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncData, setSyncData] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Cargar usuarios al montar el componente
   useEffect(() => {
@@ -228,6 +234,36 @@ const Orders = () => {
     }
     // Solo permitir editar/anular si está activo o pendiente
     return ['A', 'P'].includes(estado);
+  };
+
+  // Update the handleSyncWoo function
+  const handleSyncWoo = async (facNro) => {
+    setIsSyncing(true);
+    setShowSyncModal(true);
+    try {
+      const response = await axios.post(`${API_URL}/documento-inventario`, {
+        fac_nro: facNro
+      });
+      
+      if (response.data.success) {
+        setSyncData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error syncing with WooCommerce:', error);
+      setSyncData({
+        messages: ['Error al sincronizar con WooCommerce'],
+        summary: {
+          totalItems: 0,
+          successCount: 0,
+          errorCount: 1,
+          skippedCount: 0,
+          duration: '0 segundos',
+          fac_nro: facNro
+        }
+      });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -419,6 +455,18 @@ const Orders = () => {
                         </button>
                       </>
                     )}
+                    <button 
+                      onClick={() => handleSyncWoo(order.fac_nro)}
+                      className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Sync Woo"
+                      disabled={isSyncing}
+                    >
+                      {isSyncing ? (
+                        <div className="w-5 h-5 border-2 border-[#f58ea3] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <FaSync className="w-5 h-5" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -506,6 +554,18 @@ const Orders = () => {
                           </button>
                         </>
                       )}
+                      <button 
+                        onClick={() => handleSyncWoo(order.fac_nro)}
+                        className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Sync Woo"
+                        disabled={isSyncing}
+                      >
+                        {isSyncing ? (
+                          <div className="w-4 h-4 border-2 border-[#f58ea3] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <FaSync />
+                        )}
+                      </button>
                     </td>
                   </tr>
                 );
@@ -546,6 +606,19 @@ const Orders = () => {
           fac_nro={selectedOrder.fac_nro}
           fac_tip_cod={selectedOrder.fac_tip_cod}
           onSuccess={handleAnularSuccess}
+        />
+      )}
+
+      {/* Add the SyncWooModal */}
+      {showSyncModal && (
+        <SyncWooModal
+          isOpen={showSyncModal}
+          onClose={() => {
+            setShowSyncModal(false);
+            setSyncData(null);
+          }}
+          syncData={syncData}
+          isSyncing={isSyncing}
         />
       )}
     </div>

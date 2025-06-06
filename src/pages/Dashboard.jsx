@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { formatDate } from '../utils/dateUtils';
-import { baseUrl } from '../config.js';
+import { baseUrl, API_URL } from '../config.js'; 
 
 const Dashboard = () => {
   // Estados para los filtros
@@ -36,12 +36,11 @@ const Dashboard = () => {
     setSyncMessages([]);
 
     try {
-      const endpoint = 'syncpedidos';
-      const response = await axios.post(`${baseUrl}/${endpoint}`, {
-        per_page: perPage,
-        woo_status: wooStatus,
-        after: `${dateFrom}T00:00:00`,
-        before: `${dateTo}T23:59:59`
+      const endpoint = '/woo/sync-orders';
+      const response = await axios.post(`${API_URL}/woo/sync-orders`, {
+        FechaDesde: dateFrom,
+        FechaHasta: dateTo,
+        Estado: wooStatus
       });
 
       if (response.data && response.data.messages) {

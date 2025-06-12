@@ -4,7 +4,7 @@ import { API_URL } from '../config';
 import Swal from 'sweetalert2';
 import { FaEye, FaEyeSlash, FaCheck, FaTimes } from 'react-icons/fa';
 
-const ChangePasswordModal = ({ isOpen, onClose, forceChange = false }) => {
+const ChangePasswordModal = ({ isOpen, onClose, forceChange = false, userId = null, isAdmin = false }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,7 +28,7 @@ const ChangePasswordModal = ({ isOpen, onClose, forceChange = false }) => {
         uppercase: /[A-Z]/.test(newPassword),
         lowercase: /[a-z]/.test(newPassword),
         number: /[0-9]/.test(newPassword),
-        special: /[!@#$%^&amp;*()_+\-=\[\]{}|;:,.&lt;&gt;?]/.test(newPassword)
+        special: /[!@#$%^&*()_+\[\]{}|;:,.<>?\-]/.test(newPassword)
       });
     } else {
       setPasswordRequirements({
@@ -45,7 +45,17 @@ const ChangePasswordModal = ({ isOpen, onClose, forceChange = false }) => {
     e.preventDefault();
     
     // Validaciones
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (!isAdmin && !currentPassword) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'La contraseña actual es obligatoria',
+        confirmButtonColor: '#f58ea3'
+      });
+      return;
+    }
+
+    if (!newPassword || !confirmPassword) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -78,9 +88,11 @@ const ChangePasswordModal = ({ isOpen, onClose, forceChange = false }) => {
 
     setIsSubmitting(true);
     try {
-      const response = await axios.post(`${API_URL}/auth/change-password`, {
-        currentPassword,
-        newPassword
+      const endpoint = isAdmin ? '/auth/change-password-admin' : '/auth/change-password';
+      const response = await axios.post(`${API_URL}${endpoint}`, {
+        currentPassword: isAdmin ? undefined : currentPassword,
+        newPassword,
+        usu_cod: userId
       }, {
         headers: {
           'x-access-token': localStorage.getItem('pedidos_pretty_token')
@@ -129,27 +141,29 @@ const ChangePasswordModal = ({ isOpen, onClose, forceChange = false }) => {
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña Actual
-            </label>
-            <div className="relative">
-              <input
-                type={showCurrentPassword ? "text" : "password"}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent pr-10"
-                placeholder="Ingrese su contraseña actual"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
+          {!isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contraseña Actual
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent pr-10"
+                  placeholder="Ingrese su contraseña actual"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nueva Contraseña
@@ -190,7 +204,7 @@ const ChangePasswordModal = ({ isOpen, onClose, forceChange = false }) => {
               </div>
               <div className={`flex items-center gap-2 ${passwordRequirements.special ? 'text-green-600' : 'text-gray-500'}`}>
                 {passwordRequirements.special ? <FaCheck /> : <FaTimes />}
-                <span>Al menos un carácter especial (!@#$%^&amp;*()_+-=[]{}|;:,.&lt;&gt;?)</span>
+                <span>Al menos un carácter especial (!@#$%^&amp;*()_+[]&#123;&#125;|;:,.&lt;&gt;?-)</span>
               </div>
             </div>
           </div>

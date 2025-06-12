@@ -9,6 +9,7 @@ import AjusteDetailModal from '../components/AjusteDetailModal'; // Componente d
 import { FaPlus, FaEdit, FaTrash, FaEye, FaBroom, FaSync } from 'react-icons/fa'; // Iconos actualizados
 import debounce from 'lodash/debounce';
 import AnularDocumentoModal from '../components/AnularDocumentoModal';
+import SyncWooModal from '../components/SyncWooModal';
 import Swal from 'sweetalert2';
 
 const AjusteCard = ({ ajuste, onClick }) => {
@@ -88,6 +89,11 @@ const Ajustes = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedAjuste, setSelectedAjuste] = useState(null);
   const [showAnularModal, setShowAnularModal] = useState(false);
+
+  // Estados para SyncWooModal
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncData, setSyncData] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Función para obtener ajustes
   const fetchAjustes = useCallback(async (page, currentAjustes = []) => {
@@ -222,34 +228,33 @@ const Ajustes = () => {
     return ['A', 'P'].includes(estado);
   };
 
-  const [isSyncing, setIsSyncing] = useState({});
-
   // Función para sincronizar un ajuste
   const handleSync = async (facNro) => {
-    setIsSyncing(prev => ({ ...prev, [facNro]: true }));
+    setIsSyncing(true);
+    setShowSyncModal(true);
     try {
-      const response = await axios.post(`${baseUrl}/SyncArticulosDoc`, {
+      const response = await axios.post(`${API_URL}/documento-inventario`, {
         fac_nro: facNro
       });
-
-      if (response.data) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Sincronización exitosa',
-          text: response.data.resultado,
-          confirmButtonColor: '#f58ea3'
-        });
+      
+      if (response.data.success) {
+        setSyncData(response.data.data);
       }
     } catch (error) {
-      console.error('Error al sincronizar:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Error al sincronizar el ajuste',
-        confirmButtonColor: '#f58ea3'
+      console.error('Error syncing with WooCommerce:', error);
+      setSyncData({
+        messages: ['Error al sincronizar con WooCommerce'],
+        summary: {
+          totalItems: 0,
+          successCount: 0,
+          errorCount: 1,
+          skippedCount: 0,
+          duration: '0 segundos',
+          fac_nro: facNro
+        }
       });
     } finally {
-      setIsSyncing(prev => ({ ...prev, [facNro]: false }));
+      setIsSyncing(false);
     }
   };
 
@@ -366,9 +371,9 @@ const Ajustes = () => {
                       e.stopPropagation(); 
                       handleSync(ajuste.fac_nro); 
                     }}
-                    className={`text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7] ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
+                    className={`text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7] ${isSyncing ? 'animate-spin' : ''}`}
                     title="Sincronizar"
-                    disabled={isSyncing[ajuste.fac_nro]}
+                    disabled={isSyncing}
                   >
                     <FaSync className="w-4 h-4" />
                   </button>
@@ -431,9 +436,9 @@ const Ajustes = () => {
                           e.stopPropagation(); 
                           handleSync(ajuste.fac_nro); 
                         }}
-                        className={`text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7] ${isSyncing[ajuste.fac_nro] ? 'animate-spin' : ''}`}
+                        className={`text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7] ${isSyncing ? 'animate-spin' : ''}`}
                         title="Sincronizar"
-                        disabled={isSyncing[ajuste.fac_nro]}
+                        disabled={isSyncing}
                       >
                         <FaSync className="w-4 h-4" />
                       </button>
@@ -477,6 +482,19 @@ const Ajustes = () => {
           fac_nro={selectedAjuste.fac_nro}
           fac_tip_cod={selectedAjuste.fac_tip_cod}
           onSuccess={handleAnularSuccess}
+        />
+      )}
+
+      {/* Modal de Sincronización */}
+      {showSyncModal && (
+        <SyncWooModal
+          isOpen={showSyncModal}
+          onClose={() => {
+            setShowSyncModal(false);
+            setSyncData(null);
+          }}
+          syncData={syncData}
+          isSyncing={isSyncing}
         />
       )}
     </div>

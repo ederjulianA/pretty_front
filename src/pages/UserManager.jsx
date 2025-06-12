@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaTrash, FaPlus, FaSave, FaTimes, FaCheck } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSave, FaTimes, FaCheck, FaKey } from 'react-icons/fa';
 import axiosInstance from '../axiosConfig';
 import Swal from 'sweetalert2';
 import { useAuth } from '../contexts/AuthContext';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const UserManager = () => {
   const [users, setUsers] = useState([]);
@@ -13,6 +14,7 @@ const UserManager = () => {
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   // Cargar usuarios y roles al iniciar
   useEffect(() => {
@@ -174,7 +176,7 @@ const UserManager = () => {
       setIsLoading(false);
     }
   };
-
+ 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Administración de Usuarios</h1>
@@ -218,12 +220,24 @@ const UserManager = () => {
                         <button
                           onClick={() => editUser(user)}
                           className="text-[#f58ea3] hover:text-[#e57a91] mr-4"
+                          title="Editar Usuario"
                         >
                           <FaEdit />
                         </button>
                         <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowPasswordModal(true);
+                          }}
+                          className="text-[#f58ea3] hover:text-[#e57a91] mr-4"
+                          title="Cambiar Contraseña"
+                        >
+                          <FaKey />
+                        </button>
+                        <button
                           onClick={() => deleteUser(user.id)}
                           className="text-red-600 hover:text-red-800"
+                          title="Eliminar Usuario"
                         >
                           <FaTrash />
                         </button>
@@ -298,6 +312,19 @@ const UserManager = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Modal de Cambio de Contraseña */}
+      {showPasswordModal && selectedUser && (
+        <ChangePasswordModal
+          isOpen={showPasswordModal}
+          onClose={() => {
+            setShowPasswordModal(false);
+            setSelectedUser(null);
+          }}
+          userId={selectedUser.id}
+          isAdmin={true}
+        />
       )}
     </div>
   );

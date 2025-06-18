@@ -4,7 +4,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { FaUpload, FaTrash, FaSpinner } from 'react-icons/fa';
+import { FaUpload, FaTrash, FaSpinner, FaSyncAlt } from 'react-icons/fa';
 
 const CreateProduct = () => {
   const navigate = useNavigate();
@@ -25,6 +25,7 @@ const CreateProduct = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCodigo, setIsLoadingCodigo] = useState(false);
 
   // Estados para los errores de validación
   const [errorArtCod, setErrorArtCod] = useState('');
@@ -93,6 +94,28 @@ const CreateProduct = () => {
       setFormData(prev => ({ ...prev, subcategoria: '' }));
     }
   }, [formData.categoria]);
+
+  // Obtener código sugerido al montar
+  useEffect(() => {
+    const fetchCodigoSugerido = async () => {
+      setIsLoadingCodigo(true);
+      try {
+        const token = localStorage.getItem('pedidos_pretty_token');
+        const response = await axios.get(`${API_URL}/articulos/next-codigo/generate`, {
+          headers: token ? { 'x-access-token': token } : {}
+        });
+        if (response.data && response.data.art_cod && !formData.art_cod) {
+          setFormData(prev => ({ ...prev, art_cod: response.data.art_cod }));
+        }
+      } catch (error) {
+        console.error('Error obteniendo código sugerido:', error);
+      } finally {
+        setIsLoadingCodigo(false);
+      }
+    };
+    fetchCodigoSugerido();
+    // eslint-disable-next-line
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -174,6 +197,29 @@ const CreateProduct = () => {
       if (exists) {
         setErrorArtWoo('El código de WooCommerce ya existe.');
       }
+    }
+  };
+
+  // Función para refrescar el código sugerido
+  const handleRefreshCodigo = async () => {
+    setIsLoadingCodigo(true);
+    try {
+      const token = localStorage.getItem('pedidos_pretty_token');
+      const response = await axios.get(`${API_URL}/articulos/next-codigo/generate`, {
+        headers: token ? { 'x-access-token': token } : {}
+      });
+      if (response.data && response.data.art_cod) {
+        setFormData(prev => ({ ...prev, art_cod: response.data.art_cod }));
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo obtener un código sugerido',
+        confirmButtonColor: '#f58ea3'
+      });
+    } finally {
+      setIsLoadingCodigo(false);
     }
   };
 
@@ -431,34 +477,44 @@ const CreateProduct = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6 relative">
+    <div className="min-h-screen bg-[#edf3f9] p-4 flex items-center justify-center">
+      <div className="w-full max-w-2xl mx-auto bg-white/80 shadow-xl rounded-2xl p-6 sm:p-10 border border-[#f5cad4] backdrop-blur-md relative">
         {isSubmitting && (
-          <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center rounded-lg z-50">
+          <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center rounded-2xl z-50">
             <FaSpinner className="animate-spin text-4xl text-[#f58ea3] mb-4" />
             <p className="text-gray-600 font-medium">Creando producto...</p>
             <p className="text-sm text-gray-500 mt-2">Por favor espere mientras procesamos su solicitud</p>
           </div>
         )}
-        <h2 className="text-2xl font-bold mb-6 text-center">Crear Nuevo Producto</h2>
-        <form onSubmit={handleSubmit} className={isSubmitting ? 'opacity-50 pointer-events-none' : ''}>
+        <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 tracking-tight">Crear Nuevo Producto</h2>
+        <form onSubmit={handleSubmit} className={`space-y-6 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Código */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Código</label>
-            <input
-              type="text"
-              name="art_cod"
-              value={formData.art_cod}
-              onChange={handleChange}
-              onBlur={handleBlurArtCod}
-              placeholder="Ingrese código"
-              className={`w-full p-2 border rounded disabled:bg-gray-100 ${errorArtCod ? 'border-red-500 focus:border-red-500' : ''
-                }`}
-              required
-              disabled={isSubmitting}
-            />
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Código</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                name="art_cod"
+                value={formData.art_cod}
+                onChange={handleChange}
+                onBlur={handleBlurArtCod}
+                placeholder="Ingrese código"
+                className={`w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition ${errorArtCod ? 'border-red-500 focus:border-red-500' : ''}`}
+                required
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                onClick={handleRefreshCodigo}
+                className="p-3 rounded-xl bg-[#f7b3c2]/40 hover:bg-[#f58ea3] text-[#f58ea3] hover:text-white shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Obtener código sugerido"
+                disabled={isLoadingCodigo || isSubmitting}
+              >
+                {isLoadingCodigo ? <FaSpinner className="animate-spin" /> : <FaSyncAlt />}
+              </button>
+            </div>
             {errorArtCod && (
-              <div className="mt-1 flex items-center text-red-500 text-sm">
+              <div className="mt-1 flex items-center text-[#f58ea3] text-xs">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -467,24 +523,24 @@ const CreateProduct = () => {
             )}
           </div>
           {/* Nombre */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Nombre</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Nombre</label>
             <input
               type="text"
               name="art_nom"
               value={formData.art_nom}
               onChange={handleChange}
               placeholder="Ingrese nombre"
-              className="w-full p-2 border rounded disabled:bg-gray-100"
+              className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
               required
               disabled={isSubmitting}
             />
           </div>
           {/* Categoría */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Categoría</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Categoría</label>
             {isLoadingCategories ? (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-[#f58ea3]">
                 <FaSpinner className="animate-spin" />
                 <span>Cargando categorías...</span>
               </div>
@@ -493,7 +549,7 @@ const CreateProduct = () => {
                 name="categoria"
                 value={formData.categoria}
                 onChange={handleChange}
-                className="w-full p-2 border rounded disabled:bg-gray-100"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
                 disabled={isSubmitting}
               >
@@ -507,10 +563,10 @@ const CreateProduct = () => {
             )}
           </div>
           {/* Subcategoría */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Subcategoría</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Subcategoría</label>
             {isLoadingSubcategories ? (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-[#f58ea3]">
                 <FaSpinner className="animate-spin" />
                 <span>Cargando subcategorías...</span>
               </div>
@@ -519,7 +575,7 @@ const CreateProduct = () => {
                 name="subcategoria"
                 value={formData.subcategoria}
                 onChange={handleChange}
-                className="w-full p-2 border rounded disabled:bg-gray-100"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
                 disabled={isSubmitting}
               >
@@ -533,37 +589,37 @@ const CreateProduct = () => {
             )}
           </div>
           {/* Precios */}
-          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 mb-1">Precio Detal</label>
+              <label className="block text-gray-700 mb-2 font-medium">Precio Detal</label>
               <input
                 type="number"
                 name="precio_detal"
                 value={formData.precio_detal}
                 onChange={handleChange}
                 placeholder="0"
-                className="w-full p-2 border rounded disabled:bg-gray-100"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label className="block text-gray-700 mb-1">Precio Mayor</label>
+              <label className="block text-gray-700 mb-2 font-medium">Precio Mayor</label>
               <input
                 type="number"
                 name="precio_mayor"
                 value={formData.precio_mayor}
                 onChange={handleChange}
                 placeholder="0"
-                className="w-full p-2 border rounded disabled:bg-gray-100"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
                 disabled={isSubmitting}
               />
             </div>
           </div>
           {/* Código WooCommerce */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Código WooCommerce</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
             <input
               type="text"
               name="art_woo_id"
@@ -571,12 +627,11 @@ const CreateProduct = () => {
               onChange={handleChange}
               onBlur={handleBlurArtWoo}
               placeholder="Ingrese código WooCommerce (opcional)"
-              className={`w-full p-2 border rounded disabled:bg-gray-100 ${errorArtWoo ? 'border-red-500 focus:border-red-500' : ''
-                }`}
+              className={`w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-500 focus:border-red-500' : ''}`}
               disabled={isSubmitting}
             />
             {errorArtWoo && (
-              <div className="mt-1 flex items-center text-red-500 text-sm">
+              <div className="mt-1 flex items-center text-[#f58ea3] text-xs">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -585,9 +640,9 @@ const CreateProduct = () => {
             )}
           </div>
           {/* Imágenes */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Imágenes (Máximo 4)</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Imágenes (Máximo 4)</label>
+            <div className="border-2 border-dashed border-[#f5cad4] rounded-xl p-4 text-center bg-[#fffafe]">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -600,7 +655,7 @@ const CreateProduct = () => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current.click()}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#f7b3c2]/40 hover:bg-[#f58ea3] text-[#f58ea3] hover:text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 mx-auto font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 <FaUpload />
@@ -618,12 +673,12 @@ const CreateProduct = () => {
                     <img
                       src={url}
                       alt={`Previsualización ${index + 1}`}
-                      className="w-full h-32 object-cover rounded"
+                      className="w-full h-32 object-cover rounded-xl border border-[#f5cad4] bg-[#fffafe] shadow-sm"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="absolute top-1 right-1 bg-[#f58ea3] text-white p-1 rounded-full opacity-80 hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                       title="Eliminar imagen"
                       disabled={isSubmitting}
                     >
@@ -635,11 +690,11 @@ const CreateProduct = () => {
             )}
           </div>
           {/* Botones de acción */}
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
               onClick={() => navigate('/products')}
-              className="px-4 py-2 border rounded hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 border border-[#f58ea3] text-[#f58ea3] rounded-xl bg-[#fffafe] hover:bg-[#f7b3c2]/40 hover:text-[#a5762f] transition font-semibold shadow-sm"
               disabled={isSubmitting}
             >
               Cancelar
@@ -647,7 +702,7 @@ const CreateProduct = () => {
             <button
               type="submit"
               disabled={isSubmitting || errorArtCod || errorArtWoo}
-              className="px-4 py-2 bg-[#f58ea3] text-white rounded hover:bg-[#a5762f] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] text-white font-semibold shadow-md hover:from-[#a5762f] hover:to-[#f7b3c2] transition cursor-pointer disabled:opacity-60 flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

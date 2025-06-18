@@ -4,6 +4,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import ProductPhotoGallery from '../components/product/ProductPhotoGallery';
 
 const EditProduct = () => {
   const { id } = useParams(); // id del producto (usamos art_sec como id)
@@ -241,20 +242,20 @@ const EditProduct = () => {
 
   if(isLoadingProduct) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p>Cargando producto...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#edf3f9]">
+        <p className="text-lg text-[#f58ea3] font-semibold">Cargando producto...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-6 text-center">Editar Producto</h2>
-        <form onSubmit={handleSubmit}>
+    <div className="min-h-screen bg-[#edf3f9] p-4 flex items-center justify-center">
+      <div className="w-full max-w-2xl mx-auto bg-white/80 shadow-xl rounded-2xl p-6 sm:p-10 border border-[#f5cad4] backdrop-blur-md">
+        <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 tracking-tight">Editar Producto</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Código */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Código</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Código</label>
             <input 
               type="text"
               name="art_cod"
@@ -262,35 +263,35 @@ const EditProduct = () => {
               onChange={handleChange}
               onBlur={handleBlurArtCod}
               placeholder="Ingrese código"
-              className="w-full p-2 border rounded"
+              className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
               required
             />
-            {errorArtCod && <p className="text-red-500 text-xs mt-1">{errorArtCod}</p>}
+            {errorArtCod && <p className="text-[#f58ea3] text-xs mt-1">{errorArtCod}</p>}
           </div>
           {/* Nombre */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Nombre</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Nombre</label>
             <input 
               type="text"
               name="art_nom"
               value={formData.art_nom}
               onChange={handleChange}
               placeholder="Ingrese nombre"
-              className="w-full p-2 border rounded"
+              className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
               required
             />
           </div>
           {/* Categoría */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Categoría</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Categoría</label>
             {isLoadingCategories ? (
-              <p>Cargando categorías...</p>
+              <p className="text-[#f58ea3]">Cargando categorías...</p>
             ) : (
               <select 
                 name="categoria"
                 value={formData.categoria}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
               >
                 <option value="">Seleccione categoría</option>
@@ -303,16 +304,16 @@ const EditProduct = () => {
             )}
           </div>
           {/* Subcategoría */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Subcategoría</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Subcategoría</label>
             {isLoadingSubcategorias ? (
-              <p>Cargando subcategorías...</p>
+              <p className="text-[#f58ea3]">Cargando subcategorías...</p>
             ) : (
               <select 
                 name="subcategoria"
                 value={formData.subcategoria}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
               >
                 <option value="">Seleccione subcategoría</option>
@@ -325,35 +326,35 @@ const EditProduct = () => {
             )}
           </div>
           {/* Precios */}
-          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 mb-1">Precio Detal</label>
+              <label className="block text-gray-700 mb-2 font-medium">Precio Detal</label>
               <input 
                 type="number"
                 name="precio_detal"
                 value={formData.precio_detal}
                 onChange={handleChange}
                 placeholder="0"
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-700 mb-1">Precio Mayor</label>
+              <label className="block text-gray-700 mb-2 font-medium">Precio Mayor</label>
               <input 
                 type="number"
                 name="precio_mayor"
                 value={formData.precio_mayor}
                 onChange={handleChange}
                 placeholder="0"
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
               />
             </div>
           </div>
           {/* Código WooCommerce */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-1">Código WooCommerce</label>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
             <input 
               type="text"
               name="art_woo_id"
@@ -361,37 +362,42 @@ const EditProduct = () => {
               onChange={handleChange}
               onBlur={handleBlurArtWoo}
               placeholder="Ingrese código WooCommerce"
-              className="w-full p-2 border rounded"
+              className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
               required
             />
-            {errorArtWoo && <p className="text-red-500 text-xs mt-1">{errorArtWoo}</p>}
+            {errorArtWoo && <p className="text-[#f58ea3] text-xs mt-1">{errorArtWoo}</p>}
           </div>
           {/* Actualizar Fecha Woo */}
-          <div className="mb-4">
+          <div>
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 name="actualiza_fecha"
                 checked={formData.actualiza_fecha === 'S'}
                 onChange={handleChange}
-                className="h-4 w-4 text-[#f58ea3] focus:ring-[#f58ea3] border-gray-300 rounded"
+                className="h-4 w-4 text-[#f58ea3] focus:ring-[#f58ea3] border-[#f5cad4] rounded"
               />
               <span className="text-gray-700">Actualizar Fecha Woo</span>
             </label>
           </div>
+          {/* Sección de Fotos */}
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">Fotos del Producto</label>
+            <ProductPhotoGallery productId={id} />
+          </div>
           {/* Botones de acción */}
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-4 pt-4">
             <button 
               type="button"
               onClick={() => navigate('/products')}
-              className="px-4 py-2 border rounded hover:bg-gray-200 transition cursor-pointer"
+              className="px-6 py-2 border border-[#f58ea3] text-[#f58ea3] rounded-xl bg-[#fffafe] hover:bg-[#f7b3c2]/40 hover:text-[#a5762f] transition font-semibold shadow-sm"
             >
               Cancelar
             </button>
             <button 
               type="submit"
               disabled={isSubmitting || errorArtCod || errorArtWoo}
-              className="px-4 py-2 bg-[#f58ea3] text-white rounded hover:bg-[#a5762f] transition cursor-pointer"
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] text-white font-semibold shadow-md hover:from-[#a5762f] hover:to-[#f7b3c2] transition cursor-pointer disabled:opacity-60"
             >
               {isSubmitting ? "Editando..." : "Editar Producto"}
             </button>

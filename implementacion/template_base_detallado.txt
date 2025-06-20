@@ -1,0 +1,757 @@
+TEMPLATE BASE DETALLADO - HEADER Y MENÚ LATERAL
+===============================================
+
+1. ESTRUCTURA DEL LAYOUT PRINCIPAL
+----------------------------------
+El template base debe tener una estructura de 3 columnas:
+- Header (fijo en la parte superior)
+- Sidebar (fijo en el lado izquierdo)
+- Main Content (área principal de contenido)
+
+2. COMPONENTE LAYOUT PRINCIPAL
+------------------------------
+```jsx
+// src/components/layout/Layout.jsx
+import React from 'react';
+import Header from './Header';
+import Sidebar from './Sidebar';
+
+const Layout = ({ children }) => {
+  return (
+    <div className="min-h-screen bg-background-blue">
+      {/* Header fijo en la parte superior */}
+      <Header />
+      
+      <div className="flex">
+        {/* Sidebar fijo en el lado izquierdo */}
+        <Sidebar />
+        
+        {/* Contenido principal */}
+        <main className="flex-1 ml-64 pt-16 p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Layout;
+```
+
+3. COMPONENTE HEADER
+--------------------
+```jsx
+// src/components/layout/Header.jsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FaBars, 
+  FaBell, 
+  FaUser, 
+  FaSignOutAlt, 
+  FaCog,
+  FaSearch 
+} from 'react-icons/fa';
+import Swal from 'sweetalert2';
+
+const Header = () => {
+  const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleLogout = () => {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: "¿Deseas cerrar sesión?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#f58ea3',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.removeItem('pedidos_pretty_token');
+        navigate('/login');
+      }
+    });
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    // Implementar búsqueda global
+    console.log('Búsqueda:', searchQuery);
+  };
+
+  return (
+    <header className="fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-md border-b border-primary-lighter z-50">
+      <div className="flex items-center justify-between h-full px-6">
+        {/* Logo y título */}
+        <div className="flex items-center gap-4">
+          <button className="p-2 rounded-lg hover:bg-primary-light/20 transition">
+            <FaBars className="text-primary text-xl" />
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary-light rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">P</span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-800">Pedidos Pretty</h1>
+          </div>
+        </div>
+
+        {/* Barra de búsqueda */}
+        <div className="flex-1 max-w-md mx-8">
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-primary-lighter rounded-xl bg-background-light focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+            />
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </form>
+        </div>
+
+        {/* Acciones del usuario */}
+        <div className="flex items-center gap-4">
+          {/* Notificaciones */}
+          <button className="relative p-2 rounded-lg hover:bg-primary-light/20 transition">
+            <FaBell className="text-primary text-xl" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+          </button>
+
+          {/* Menú de usuario */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary-light/20 transition"
+            >
+              <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary-light rounded-full flex items-center justify-center">
+                <FaUser className="text-white text-sm" />
+              </div>
+              <span className="text-gray-700 font-medium">Usuario</span>
+            </button>
+
+            {/* Dropdown del menú de usuario */}
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-primary-lighter py-2 z-50">
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-primary-light/10 transition"
+                >
+                  <FaUser className="text-primary" />
+                  <span>Mi Perfil</span>
+                </button>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-primary-light/10 transition"
+                >
+                  <FaCog className="text-primary" />
+                  <span>Configuración</span>
+                </button>
+                <hr className="my-2 border-primary-lighter" />
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-red-50 text-red-600 transition"
+                >
+                  <FaSignOutAlt />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;
+```
+
+4. COMPONENTE SIDEBAR
+---------------------
+```jsx
+// src/components/layout/Sidebar.jsx
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { 
+  FaHome, 
+  FaBox, 
+  FaShoppingCart, 
+  FaUsers, 
+  FaChartBar,
+  FaCog,
+  FaChevronDown,
+  FaChevronRight
+} from 'react-icons/fa';
+
+const Sidebar = () => {
+  const location = useLocation();
+  const [expandedMenus, setExpandedMenus] = useState({});
+
+  // Configuración del menú
+  const menuItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: FaHome,
+      path: '/',
+      exact: true
+    },
+    {
+      id: 'products',
+      label: 'Productos',
+      icon: FaBox,
+      path: '/products',
+      submenu: [
+        { label: 'Listar Productos', path: '/products' },
+        { label: 'Crear Producto', path: '/products/create' },
+        { label: 'Categorías', path: '/categories' }
+      ]
+    },
+    {
+      id: 'orders',
+      label: 'Pedidos',
+      icon: FaShoppingCart,
+      path: '/orders',
+      submenu: [
+        { label: 'Todos los Pedidos', path: '/orders' },
+        { label: 'Nuevo Pedido', path: '/orders/create' },
+        { label: 'Historial', path: '/orders/history' }
+      ]
+    },
+    {
+      id: 'customers',
+      label: 'Clientes',
+      icon: FaUsers,
+      path: '/customers'
+    },
+    {
+      id: 'reports',
+      label: 'Reportes',
+      icon: FaChartBar,
+      path: '/reports',
+      submenu: [
+        { label: 'Ventas', path: '/reports/sales' },
+        { label: 'Productos', path: '/reports/products' },
+        { label: 'Clientes', path: '/reports/customers' }
+      ]
+    },
+    {
+      id: 'settings',
+      label: 'Configuración',
+      icon: FaCog,
+      path: '/settings'
+    }
+  ];
+
+  const toggleSubmenu = (menuId) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuId]: !prev[menuId]
+    }));
+  };
+
+  const isActive = (path, exact = false) => {
+    if (exact) {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
+  };
+
+  return (
+    <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white/90 backdrop-blur-md border-r border-primary-lighter overflow-y-auto">
+      <nav className="p-4">
+        <ul className="space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const hasSubmenu = item.submenu && item.submenu.length > 0;
+            const isExpanded = expandedMenus[item.id];
+            const active = isActive(item.path, item.exact);
+
+            return (
+              <li key={item.id}>
+                {hasSubmenu ? (
+                  // Elemento con submenú
+                  <div>
+                    <button
+                      onClick={() => toggleSubmenu(item.id)}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition ${
+                        active 
+                          ? 'bg-primary text-white' 
+                          : 'text-gray-700 hover:bg-primary-light/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="text-lg" />
+                        <span className="font-medium">{item.label}</span>
+                      </div>
+                      {isExpanded ? (
+                        <FaChevronDown className="text-sm" />
+                      ) : (
+                        <FaChevronRight className="text-sm" />
+                      )}
+                    </button>
+                    
+                    {/* Submenú */}
+                    {isExpanded && (
+                      <ul className="mt-2 ml-8 space-y-1">
+                        {item.submenu.map((subItem, index) => (
+                          <li key={index}>
+                            <NavLink
+                              to={subItem.path}
+                              className={({ isActive }) =>
+                                `block p-2 rounded-lg transition ${
+                                  isActive
+                                    ? 'bg-primary-light/20 text-primary font-medium'
+                                    : 'text-gray-600 hover:bg-primary-light/10'
+                                }`
+                              }
+                            >
+                              {subItem.label}
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : (
+                  // Elemento simple
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 p-3 rounded-xl transition ${
+                        isActive
+                          ? 'bg-primary text-white'
+                          : 'text-gray-700 hover:bg-primary-light/20'
+                      }`
+                    }
+                  >
+                    <Icon className="text-lg" />
+                    <span className="font-medium">{item.label}</span>
+                  </NavLink>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </aside>
+  );
+};
+
+export default Sidebar;
+```
+
+5. COMPONENTE BREADCRUMB
+------------------------
+```jsx
+// src/components/layout/Breadcrumb.jsx
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { FaHome, FaChevronRight } from 'react-icons/fa';
+
+const Breadcrumb = () => {
+  const location = useLocation();
+  
+  const generateBreadcrumbs = () => {
+    const paths = location.pathname.split('/').filter(Boolean);
+    const breadcrumbs = [
+      { name: 'Inicio', path: '/', icon: FaHome }
+    ];
+
+    let currentPath = '';
+    paths.forEach((path, index) => {
+      currentPath += `/${path}`;
+      const name = path.charAt(0).toUpperCase() + path.slice(1);
+      breadcrumbs.push({
+        name,
+        path: currentPath,
+        isLast: index === paths.length - 1
+      });
+    });
+
+    return breadcrumbs;
+  };
+
+  const breadcrumbs = generateBreadcrumbs();
+
+  return (
+    <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+      {breadcrumbs.map((breadcrumb, index) => (
+        <React.Fragment key={breadcrumb.path}>
+          {index > 0 && <FaChevronRight className="text-gray-400" />}
+          {breadcrumb.isLast ? (
+            <span className="text-primary font-medium">{breadcrumb.name}</span>
+          ) : (
+            <Link
+              to={breadcrumb.path}
+              className="flex items-center gap-1 hover:text-primary transition"
+            >
+              {breadcrumb.icon && <breadcrumb.icon className="text-sm" />}
+              {breadcrumb.name}
+            </Link>
+          )}
+        </React.Fragment>
+      ))}
+    </nav>
+  );
+};
+
+export default Breadcrumb;
+```
+
+6. COMPONENTE PAGE CONTAINER
+----------------------------
+```jsx
+// src/components/layout/PageContainer.jsx
+import React from 'react';
+import Breadcrumb from './Breadcrumb';
+
+const PageContainer = ({ children, title, subtitle, actions }) => {
+  return (
+    <div className="space-y-6">
+      {/* Header de la página */}
+      <div className="flex items-center justify-between">
+        <div>
+          {title && (
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">{title}</h1>
+          )}
+          {subtitle && (
+            <p className="text-gray-600">{subtitle}</p>
+          )}
+        </div>
+        {actions && (
+          <div className="flex items-center gap-3">
+            {actions}
+          </div>
+        )}
+      </div>
+
+      {/* Breadcrumb */}
+      <Breadcrumb />
+
+      {/* Contenido de la página */}
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-primary-lighter p-6">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default PageContainer;
+```
+
+7. ACTUALIZACIÓN DEL APP.JS
+---------------------------
+```jsx
+// src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/layout/Layout';
+import PageContainer from './components/layout/PageContainer';
+import Home from './pages/Home';
+import Products from './pages/Products';
+import CreateProduct from './pages/CreateProduct';
+import EditProduct from './pages/EditProduct';
+import Orders from './pages/Orders';
+import Customers from './pages/Customers';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
+import Login from './pages/Login';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        {/* Ruta de login sin layout */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Rutas con layout */}
+        <Route path="/" element={
+          <Layout>
+            <PageContainer title="Dashboard" subtitle="Bienvenido al panel de control">
+              <Home />
+            </PageContainer>
+          </Layout>
+        } />
+        
+        <Route path="/products" element={
+          <Layout>
+            <PageContainer 
+              title="Productos" 
+              subtitle="Gestiona tu catálogo de productos"
+              actions={
+                <button className="btn-primary">
+                  Nuevo Producto
+                </button>
+              }
+            >
+              <Products />
+            </PageContainer>
+          </Layout>
+        } />
+        
+        <Route path="/products/create" element={
+          <Layout>
+            <CreateProduct />
+          </Layout>
+        } />
+        
+        <Route path="/products/edit/:id" element={
+          <Layout>
+            <EditProduct />
+          </Layout>
+        } />
+        
+        <Route path="/orders" element={
+          <Layout>
+            <PageContainer title="Pedidos" subtitle="Gestiona los pedidos de tus clientes">
+              <Orders />
+            </PageContainer>
+          </Layout>
+        } />
+        
+        <Route path="/customers" element={
+          <Layout>
+            <PageContainer title="Clientes" subtitle="Administra tu base de clientes">
+              <Customers />
+            </PageContainer>
+          </Layout>
+        } />
+        
+        <Route path="/reports" element={
+          <Layout>
+            <PageContainer title="Reportes" subtitle="Analiza el rendimiento de tu negocio">
+              <Reports />
+            </PageContainer>
+          </Layout>
+        } />
+        
+        <Route path="/settings" element={
+          <Layout>
+            <PageContainer title="Configuración" subtitle="Personaliza tu aplicación">
+              <Settings />
+            </PageContainer>
+          </Layout>
+        } />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+```
+
+8. HOOK PARA MANEJO DE AUTENTICACIÓN
+------------------------------------
+```jsx
+// src/hooks/useAuth.js
+import { useState, useEffect, createContext, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem('pedidos_pretty_token');
+    if (token) {
+      try {
+        const response = await api.get('/auth/me');
+        setUser(response.data.user);
+      } catch (error) {
+        localStorage.removeItem('pedidos_pretty_token');
+        navigate('/login');
+      }
+    } else {
+      navigate('/login');
+    }
+    setLoading(false);
+  };
+
+  const login = async (credentials) => {
+    const response = await api.post('/auth/login', credentials);
+    const { token, user } = response.data;
+    localStorage.setItem('pedidos_pretty_token', token);
+    setUser(user);
+    navigate('/');
+  };
+
+  const logout = () => {
+    localStorage.removeItem('pedidos_pretty_token');
+    setUser(null);
+    navigate('/login');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+```
+
+9. COMPONENTE PROTECTED ROUTE
+-----------------------------
+```jsx
+// src/components/common/ProtectedRoute.jsx
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { FaSpinner } from 'react-icons/fa';
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background-blue">
+        <div className="text-center">
+          <FaSpinner className="animate-spin text-4xl text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+export default ProtectedRoute;
+```
+
+10. ESTILOS ADICIONALES PARA EL LAYOUT
+--------------------------------------
+```css
+/* Agregar a src/index.css */
+@layer components {
+  /* Scrollbar personalizada para el sidebar */
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: #f5cad4;
+    border-radius: 2px;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #f58ea3;
+  }
+  
+  /* Animaciones para el menú */
+  .menu-item-enter {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  
+  .menu-item-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 200ms, transform 200ms;
+  }
+  
+  .menu-item-exit {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  .menu-item-exit-active {
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 200ms, transform 200ms;
+  }
+}
+```
+
+11. CONFIGURACIÓN RESPONSIVE
+---------------------------
+Para hacer el layout responsive, agregar estas clases al Sidebar:
+
+```jsx
+// En Sidebar.jsx, agregar estado para móvil
+const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+// Clases condicionales
+className={`fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white/90 backdrop-blur-md border-r border-primary-lighter overflow-y-auto transition-transform duration-300 ${
+  isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+} lg:translate-x-0`}
+```
+
+12. USO DEL TEMPLATE
+--------------------
+```jsx
+// Ejemplo de uso en una página
+import React from 'react';
+import Layout from '../components/layout/Layout';
+import PageContainer from '../components/layout/PageContainer';
+import { FaPlus } from 'react-icons/fa';
+
+const ProductsPage = () => {
+  return (
+    <Layout>
+      <PageContainer 
+        title="Productos" 
+        subtitle="Gestiona tu catálogo de productos"
+        actions={
+          <button className="btn-primary flex items-center gap-2">
+            <FaPlus />
+            Nuevo Producto
+          </button>
+        }
+      >
+        {/* Contenido de la página */}
+        <div className="space-y-4">
+          <p>Aquí va el contenido de la página de productos...</p>
+        </div>
+      </PageContainer>
+    </Layout>
+  );
+};
+
+export default ProductsPage;
+```
+
+CARACTERÍSTICAS DEL TEMPLATE:
+----------------------------
+✅ Header fijo con logo, búsqueda y menú de usuario
+✅ Sidebar con navegación y submenús expandibles
+✅ Breadcrumb automático
+✅ Layout responsive
+✅ Autenticación integrada
+✅ Estilos tipo macOS con glassmorphism
+✅ Componentes reutilizables
+✅ Navegación fluida
+✅ Estados de carga
+✅ Menú de usuario con logout
+✅ Notificaciones
+✅ Búsqueda global
+
+Este template proporciona una base sólida y profesional para cualquier aplicación web moderna. 

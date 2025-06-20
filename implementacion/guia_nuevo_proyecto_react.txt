@@ -1,0 +1,490 @@
+GUÍA PARA CREAR UN NUEVO PROYECTO REACT + TAILWIND
+==================================================
+
+1. CREACIÓN DEL PROYECTO BASE
+-----------------------------
+```bash
+# Crear nuevo proyecto React
+npx create-react-app mi-proyecto
+cd mi-proyecto
+
+# Instalar dependencias base
+npm install react-router-dom axios sweetalert2 react-icons react-dropzone
+```
+
+2. CONFIGURACIÓN DE TAILWIND CSS
+--------------------------------
+```bash
+# Instalar Tailwind CSS
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+```
+
+3. CONFIGURAR TAILWIND (tailwind.config.js)
+-------------------------------------------
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Paleta de colores de marca (personalizar según tu proyecto)
+        primary: {
+          DEFAULT: '#f58ea3',
+          light: '#f7b3c2',
+          lighter: '#f5cad4',
+          lightest: '#f4dbe1',
+          dark: '#a5762f'
+        },
+        background: {
+          light: '#fffafe',
+          lighter: '#fff9e9',
+          blue: '#edf3f9'
+        }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      backdropBlur: {
+        xs: '2px',
+      }
+    },
+  },
+  plugins: [],
+}
+```
+
+4. CONFIGURAR CSS GLOBAL (src/index.css)
+----------------------------------------
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fuentes personalizadas */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Estilos base personalizados */
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Clases utilitarias personalizadas */
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2 rounded-xl bg-gradient-to-r from-primary to-primary-light text-white font-semibold shadow-md hover:from-primary-dark hover:to-primary-light transition cursor-pointer;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-2 border border-primary text-primary rounded-xl bg-background-light hover:bg-primary-light/40 hover:text-primary-dark transition font-semibold shadow-sm;
+  }
+  
+  .input-field {
+    @apply w-full p-3 border border-primary-lighter rounded-xl bg-background-light focus:ring-2 focus:ring-primary focus:border-primary outline-none transition;
+  }
+  
+  .card-glass {
+    @apply bg-white/80 shadow-xl rounded-2xl border border-primary-lighter backdrop-blur-md;
+  }
+}
+```
+
+5. ESTRUCTURA DE CARPETAS RECOMENDADA
+------------------------------------
+```
+src/
+├── components/
+│   ├── common/
+│   │   ├── Button.jsx
+│   │   ├── Input.jsx
+│   │   ├── Modal.jsx
+│   │   └── Loading.jsx
+│   ├── layout/
+│   │   ├── Header.jsx
+│   │   ├── Sidebar.jsx
+│   │   └── Footer.jsx
+│   └── [feature]/
+│       ├── ComponentName/
+│       │   ├── index.js
+│       │   ├── ComponentName.jsx
+│       │   └── ComponentNameItem.jsx
+│       └── hooks/
+│           └── useFeatureName.js
+├── pages/
+│   ├── Home.jsx
+│   ├── Login.jsx
+│   └── [Feature]/
+│       ├── CreateFeature.jsx
+│       ├── EditFeature.jsx
+│       └── ListFeature.jsx
+├── services/
+│   ├── api.js
+│   ├── authService.js
+│   └── [feature]Service.js
+├── hooks/
+│   ├── useAuth.js
+│   └── useApi.js
+├── utils/
+│   ├── constants.js
+│   ├── helpers.js
+│   └── validators.js
+├── config/
+│   └── index.js
+└── assets/
+    ├── images/
+    └── icons/
+```
+
+6. CONFIGURACIÓN DE RUTAS (src/App.js)
+-------------------------------------
+```jsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import CreateFeature from './pages/Feature/CreateFeature';
+import EditFeature from './pages/Feature/EditFeature';
+import ListFeature from './pages/Feature/ListFeature';
+
+function App() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-background-blue">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/feature" element={<ListFeature />} />
+          <Route path="/feature/create" element={<CreateFeature />} />
+          <Route path="/feature/edit/:id" element={<EditFeature />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
+```
+
+7. CONFIGURACIÓN DE API (src/config/index.js)
+---------------------------------------------
+```javascript
+// Configuración de la API
+export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
+// Configuración de autenticación
+export const AUTH_TOKEN_KEY = 'mi_proyecto_token';
+export const AUTH_HEADER = 'x-access-token';
+```
+
+8. SERVICIO DE API BASE (src/services/api.js)
+---------------------------------------------
+```javascript
+import axios from 'axios';
+import { API_URL, AUTH_TOKEN_KEY, AUTH_HEADER } from '../config';
+
+// Crear instancia de axios
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 10000,
+});
+
+// Interceptor para agregar token automáticamente
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      config.headers[AUTH_HEADER] = token;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para manejar errores de respuesta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Redirigir a login si no está autenticado
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+9. HOOK PERSONALIZADO PARA API (src/hooks/useApi.js)
+---------------------------------------------------
+```javascript
+import { useState, useCallback } from 'react';
+import api from '../services/api';
+import Swal from 'sweetalert2';
+
+export const useApi = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const request = useCallback(async (config) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await api(config);
+      return response.data;
+    } catch (err) {
+      const message = err.response?.data?.message || 'Error en la operación';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const showError = useCallback((message) => {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: message,
+      confirmButtonColor: '#f58ea3'
+    });
+  }, []);
+
+  const showSuccess = useCallback((message) => {
+    Swal.fire({
+      icon: 'success',
+      title: 'Éxito',
+      text: message,
+      confirmButtonColor: '#f58ea3'
+    });
+  }, []);
+
+  return {
+    loading,
+    error,
+    request,
+    showError,
+    showSuccess
+  };
+};
+```
+
+10. COMPONENTE BASE PARA FORMULARIOS
+-----------------------------------
+```jsx
+// src/components/common/FormContainer.jsx
+import React from 'react';
+
+const FormContainer = ({ children, title, maxWidth = "max-w-2xl" }) => {
+  return (
+    <div className="min-h-screen bg-background-blue p-4 flex items-center justify-center">
+      <div className={`w-full ${maxWidth} mx-auto card-glass p-6 sm:p-10`}>
+        {title && (
+          <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 tracking-tight">
+            {title}
+          </h2>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default FormContainer;
+```
+
+11. EJEMPLO DE PÁGINA CON ESTILO MACOS
+--------------------------------------
+```jsx
+// src/pages/Example.jsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import FormContainer from '../components/common/FormContainer';
+import { useApi } from '../hooks/useApi';
+import { FaSpinner } from 'react-icons/fa';
+
+const Example = () => {
+  const navigate = useNavigate();
+  const { loading, request, showError, showSuccess } = useApi();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await request({
+        method: 'POST',
+        url: '/example',
+        data: formData
+      });
+      showSuccess('Operación exitosa');
+      navigate('/');
+    } catch (error) {
+      showError('Error en la operación');
+    }
+  };
+
+  return (
+    <FormContainer title="Ejemplo de Formulario">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-gray-700 mb-2 font-medium">Nombre</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            className="input-field"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 mb-2 font-medium">Email</label>
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            className="input-field"
+            required
+          />
+        </div>
+
+        <div className="flex justify-end gap-4 pt-4">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="btn-secondary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <FaSpinner className="animate-spin" />
+                <span>Guardando...</span>
+              </>
+            ) : (
+              'Guardar'
+            )}
+          </button>
+        </div>
+      </form>
+    </FormContainer>
+  );
+};
+
+export default Example;
+```
+
+12. CONFIGURACIÓN DE ENTORNO (.env)
+----------------------------------
+```env
+# .env.local
+REACT_APP_API_URL=http://localhost:3001/api
+REACT_APP_ENV=development
+```
+
+13. SCRIPTS ÚTILES (package.json)
+---------------------------------
+```json
+{
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "lint:fix": "eslint src/**/*.{js,jsx} --fix"
+  }
+}
+```
+
+14. DEPENDENCIAS ADICIONALES RECOMENDADAS
+----------------------------------------
+```bash
+# Para desarrollo
+npm install -D eslint prettier eslint-config-prettier eslint-plugin-prettier
+
+# Para funcionalidades adicionales
+npm install react-hook-form yup @hookform/resolvers/yup
+npm install react-query
+npm install date-fns
+npm install clsx
+```
+
+15. CONFIGURACIÓN DE ESLINT (.eslintrc.js)
+-----------------------------------------
+```javascript
+module.exports = {
+  extends: [
+    'react-app',
+    'react-app/jest',
+    'prettier'
+  ],
+  plugins: ['prettier'],
+  rules: {
+    'prettier/prettier': 'error',
+    'no-unused-vars': 'warn',
+    'no-console': 'warn'
+  }
+};
+```
+
+16. CONFIGURACIÓN DE PRETTIER (.prettierrc)
+------------------------------------------
+```json
+{
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2
+}
+```
+
+NOTAS IMPORTANTES:
+-----------------
+1. Personaliza la paleta de colores en tailwind.config.js según tu marca
+2. Ajusta las rutas en App.js según tu estructura de navegación
+3. Modifica la configuración de API según tu backend
+4. Adapta los componentes base según tus necesidades específicas
+5. Considera agregar TypeScript si necesitas tipado estático
+6. Implementa lazy loading para optimizar el rendimiento
+7. Agrega tests unitarios con Jest y React Testing Library
+
+ESTRUCTURA FINAL RECOMENDADA:
+----------------------------
+```
+mi-proyecto/
+├── public/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   ├── hooks/
+│   ├── utils/
+│   ├── config/
+│   ├── assets/
+│   ├── App.js
+│   └── index.js
+├── .env.local
+├── .eslintrc.js
+├── .prettierrc
+├── tailwind.config.js
+└── package.json
+``` 

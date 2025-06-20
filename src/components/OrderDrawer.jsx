@@ -24,70 +24,74 @@ const OrderDrawer = ({
   orderType
 }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col md:hidden">
-      {/* Header con gradiente */}
-      <div className="bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] p-3 text-white">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col md:hidden">
+      {/* Header con glassmorphism y sombra */}
+      <div className="bg-white/90 backdrop-blur-xl px-6 py-4 shadow-sm">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-bold">Resumen de Pedido</h2>
+          <h2 className="text-xl font-semibold text-gray-900 font-system">Resumen de Pedido</h2>
           <button 
             onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+            className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 cursor-pointer group"
           >
-            <FaTimes className="w-5 h-5" />
+            <FaTimes className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
           </button>
         </div>
         {isEditing && order.length > 0 && (
-          <p className="text-center text-xs mt-1 bg-white/20 px-2 py-0.5 rounded-full inline-block">
-            Editando {orderType === "VTA" ? "Factura" : "Pedido"}: {selectedClient?.fac_nro || "N/A"}
-          </p>
+          <div className="mt-3 flex justify-center">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#f58ea3]/10 text-[#c53051] border border-[#f58ea3]/50">
+              Editando {orderType === "VTA" ? "Factura" : "Pedido"}: {selectedClient?.fac_nro || "N/A"}
+            </span>
+          </div>
         )}
       </div>
 
-      {/* Contenido scrollable */}
-      <div className="flex-1 bg-white overflow-y-auto">
-        <div className="p-2 space-y-2">
+      {/* Contenido scrollable con glassmorphism */}
+      <div className="flex-1 bg-gray-50/80 backdrop-blur-sm overflow-y-auto">
+        <div className="p-6 space-y-6">
           {/* Sección de cliente */}
-          <div className="bg-gray-50 rounded-lg p-2">
-            <p className="text-xs font-medium text-gray-700 mb-1">Cliente</p>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4 font-system">Cliente</h3>
             {selectedClient ? (
-              <div className="space-y-2">
-                <div className="bg-white p-2 rounded-lg shadow-sm">
-                  <p className="font-medium text-gray-900 text-sm">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.nit_ide}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.nit_tel}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.nit_dir}</p>
+              <div className="space-y-4">
+                <div className="bg-gray-50/80 p-4 rounded-xl border border-gray-200/50">
+                  <p className="font-semibold text-gray-900 text-base mb-2 font-system">{selectedClient.nit_nom.trim() || "Sin nombre"}</p>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-600 font-system">{selectedClient.nit_ide}</p>
+                    <p className="text-sm text-gray-600 font-system">{selectedClient.nit_tel}</p>
+                    <p className="text-sm text-gray-600 font-system">{selectedClient.nit_dir}</p>
+                  </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-3">
                   <button 
                     onClick={onShowClientModal}
-                    className="flex-1 bg-[#f58ea3] text-white py-1 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 text-xs font-medium flex items-center justify-center gap-1 cursor-pointer"
+                    className="flex-1 bg-[#f58ea3] text-white py-3 px-4 rounded-xl hover:bg-[#f7b3c2] active:bg-[#e67a90] transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow-md"
                   >
-                    <FaUser className="w-3 h-3" />
+                    <FaUser className="w-4 h-4" />
                     Cambiar
                   </button>
                   <button 
                     onClick={onCreateClient}
-                    className="flex-1 bg-white border border-[#f58ea3] text-[#f58ea3] py-1 rounded-lg hover:bg-[#f58ea3] hover:text-white transition-all duration-200 text-xs font-medium flex items-center justify-center gap-1 cursor-pointer"
+                    className="flex-1 bg-white border border-[#f58ea3] text-[#f58ea3] py-3 px-4 rounded-xl hover:bg-[#f58ea3]/10 active:bg-[#f58ea3]/20 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow-md"
                   >
-                    <FaUserPlus className="w-3 h-3" />
+                    <FaUserPlus className="w-4 h-4" />
                     Crear
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-3">
                 <button 
                   onClick={onShowClientModal}
-                  className="w-full bg-[#f58ea3] text-white py-1.5 rounded-lg hover:bg-[#f7b3c2] transition-all duration-200 flex items-center justify-center gap-1 text-xs cursor-pointer"
+                  className="w-full bg-[#f58ea3] text-white py-4 px-6 rounded-xl hover:bg-[#f7b3c2] active:bg-[#e67a90] transition-all duration-200 flex items-center justify-center gap-3 text-sm font-medium cursor-pointer shadow-sm hover:shadow-md"
                 >
-                  <FaUser className="w-4 h-4" />
+                  <FaUser className="w-5 h-5" />
                   Seleccionar Cliente
                 </button>
                 <button 
                   onClick={onCreateClient}
-                  className="w-full bg-white border border-[#f58ea3] text-[#f58ea3] py-1.5 rounded-lg hover:bg-[#f58ea3] hover:text-white transition-all duration-200 flex items-center justify-center gap-1 text-xs cursor-pointer"
+                  className="w-full bg-white border border-[#f58ea3] text-[#f58ea3] py-4 px-6 rounded-xl hover:bg-[#f58ea3]/10 active:bg-[#f58ea3]/20 transition-all duration-200 flex items-center justify-center gap-3 text-sm font-medium cursor-pointer shadow-sm hover:shadow-md"
                 >
-                  <FaUserPlus className="w-4 h-4" />
+                  <FaUserPlus className="w-5 h-5" />
                   Crear Cliente
                 </button>
               </div>
@@ -95,30 +99,30 @@ const OrderDrawer = ({
           </div>
 
           {/* Configuración de precios y descuento */}
-          <div className="space-y-2">
-            <div className="bg-gray-50 p-2 rounded-lg">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+          <div className="space-y-4">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
+              <label className="block text-sm font-semibold text-gray-900 mb-3 font-system">
                 Tipo de Precio
               </label>
               <select
                 value={selectedPriceType}
                 onChange={onPriceTypeChange}
-                className="w-full p-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                className="w-full p-4 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 bg-white/90 backdrop-blur-sm font-system"
               >
                 <option value="mayor">Precios al Mayor</option>
                 <option value="detal">Precios al Detal</option>
               </select>
             </div>
 
-            <div className="bg-gray-50 p-2 rounded-lg">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
+              <label className="block text-sm font-semibold text-gray-900 mb-3 font-system">
                 Descuento (%)
               </label>
               <input
                 type="number"
                 value={discountPercent}
                 onChange={onDiscountChange}
-                className="w-full p-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                className="w-full p-4 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 bg-white/90 backdrop-blur-sm font-system"
                 min="0"
                 max="100"
               />
@@ -126,7 +130,7 @@ const OrderDrawer = ({
           </div>
 
           {/* Resumen de pedido */}
-          <div className="bg-gray-50 p-2 rounded-lg">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
             <OrderSummary
               order={order}
               onRemove={onRemove}
@@ -142,25 +146,25 @@ const OrderDrawer = ({
         </div>
       </div>
 
-      {/* Footer con botones de acción */}
-      <div className="bg-white border-t p-2 space-y-2">
+      {/* Footer con botones de acción y sombra */}
+      <div className="bg-white/95 backdrop-blur-xl p-6 space-y-4 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)]">
         <button 
           onClick={onPlaceOrder}
           disabled={isEditing && orderType === "VTA"}
-          className={`w-full px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 text-sm cursor-pointer ${
+          className={`w-full px-6 py-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-sm font-medium cursor-pointer ${
             isEditing && orderType === "VTA" 
-              ? "bg-gray-300 cursor-not-allowed" 
-              : "bg-[#f58ea3] text-white hover:bg-[#f7b3c2]"
+              ? "bg-gray-200 text-gray-500 cursor-not-allowed" 
+              : "bg-[#f58ea3] text-white hover:bg-[#f7b3c2] active:bg-[#e67a90]"
           }`}
         >
-          <FaShoppingCart className="w-4 h-4" />
+          <FaShoppingCart className="w-5 h-5" />
           {isEditing ? "Editar Pedido" : "Realizar Pedido"}
         </button>
         <button
           onClick={onFacturarOrder}
-          className="w-full bg-green-600 text-white px-3 py-2 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 flex items-center justify-center gap-2 text-sm cursor-pointer"
+          className="w-full bg-green-500 text-white px-6 py-4 rounded-xl shadow-sm hover:shadow-md hover:bg-green-600 active:bg-green-700 transition-all duration-200 flex items-center justify-center gap-3 text-sm font-medium cursor-pointer"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           {isEditing && orderType === "VTA" ? "Editar Factura" : "Facturar"}

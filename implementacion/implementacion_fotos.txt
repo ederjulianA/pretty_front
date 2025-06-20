@@ -90,7 +90,7 @@ Tabla: producto_fotos
 
 CREATE TABLE producto_fotos (
     id VARCHAR(36) PRIMARY KEY,          -- Identificador único de la foto
-    art_sec VARCHAR(36),                 -- Referencia al artículo (FK)
+    art_sec VARCHAR(30),                 -- Referencia al artículo (FK)
     nombre VARCHAR(255),                 -- Nombre original del archivo
     url VARCHAR(255),                    -- URL donde está almacenada la foto
     tipo VARCHAR(50),                    -- Tipo de archivo (jpg, png, etc)

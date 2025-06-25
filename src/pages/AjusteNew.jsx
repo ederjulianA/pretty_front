@@ -5,6 +5,7 @@ import { FaSearch, FaSpinner } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import ArticleSearchModal from '../components/ArticleSearchModal';
+import ProviderSearchModal from '../components/ProviderSearchModal';
 
 const initialRow = {
   art_cod: '',
@@ -22,7 +23,7 @@ const InventoryAdjustment = () => {
 
   // Estado para encabezado
   const [headerData, setHeaderData] = useState({
-    fecha: '',
+    fecha: new Date().toISOString().split('T')[0], // Fecha actual por defecto
     proveedor: '', // Este será ahora para nit_ide
     proveedorNombre: '', // Nuevo campo para nit_nom
     observaciones: '',
@@ -35,6 +36,7 @@ const InventoryAdjustment = () => {
 
   // Agregar estos nuevos estados
   const [showArticleModal, setShowArticleModal] = useState(false);
+  const [showProviderModal, setShowProviderModal] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -257,8 +259,17 @@ const InventoryAdjustment = () => {
 
   // Función para abrir búsqueda de proveedor (popup)
   const buscarProveedor = () => {
-    // Aquí se puede implementar la lógica para levantar un prompt o modal de búsqueda
-    console.log("Buscar proveedor");
+    setShowProviderModal(true);
+  };
+
+  // Función para manejar la selección del proveedor
+  const handleSelectProvider = (provider) => {
+    setHeaderData(prev => ({
+      ...prev,
+      proveedor: provider.nit_ide,
+      proveedorNombre: provider.nit_nom,
+      nit_sec: provider.nit_sec
+    }));
   };
 
   // Función para abrir búsqueda de artículo (popup)
@@ -707,6 +718,12 @@ const InventoryAdjustment = () => {
         isOpen={showArticleModal}
         onClose={() => setShowArticleModal(false)}
         onSelectArticle={handleSelectArticle}
+      />
+
+      <ProviderSearchModal
+        isOpen={showProviderModal}
+        onClose={() => setShowProviderModal(false)}
+        onSelectProvider={handleSelectProvider}
       />
 
       {/* Estilos globales */}

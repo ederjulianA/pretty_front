@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaSync, FaExclamationTriangle } from 'react-icons/fa';
+import { FaSync, FaExclamationTriangle, FaHistory } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import ArticleMovementModal from '../components/ArticleMovementModal';
 
 const DiferenciaInventario = () => {
   const { user, hasPermission } = useAuth();
@@ -14,6 +15,8 @@ const DiferenciaInventario = () => {
   const [stats, setStats] = useState(null);
   const [differences, setDifferences] = useState([]);
   const [isLoadingDifferences, setIsLoadingDifferences] = useState(false);
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [selectedArticleCode, setSelectedArticleCode] = useState(null);
 
   // Verificar permisos al montar el componente
   useEffect(() => {
@@ -61,7 +64,7 @@ const DiferenciaInventario = () => {
       setIsLoadingDifferences(false);
     }
   };
-
+ 
   // Cargar diferencias al montar el componente
   useEffect(() => {
     fetchDifferences();
@@ -142,6 +145,12 @@ const DiferenciaInventario = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Función para manejar la visualización de movimientos
+  const handleViewMovements = (articleCode) => {
+    setSelectedArticleCode(articleCode);
+    setIsMovementModalOpen(true);
   };
 
   return (
@@ -236,6 +245,7 @@ const DiferenciaInventario = () => {
                       <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Venta</th>
                       <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Mayorista</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Modificación</th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -257,6 +267,15 @@ const DiferenciaInventario = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{formatCurrency(item.retailPrice)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{formatCurrency(item.wholesalePrice)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(item.lastModified)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <button
+                            onClick={() => handleViewMovements(item.sku)}
+                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                            title="Ver Movimientos"
+                          >
+                            <FaHistory className="w-4 h-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -295,6 +314,13 @@ const DiferenciaInventario = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Movimientos */}
+      <ArticleMovementModal
+        isOpen={isMovementModalOpen}
+        onClose={() => setIsMovementModalOpen(false)}
+        articleCode={selectedArticleCode}
+      />
     </div>
   );
 };

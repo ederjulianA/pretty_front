@@ -15,6 +15,8 @@ import Unauthorized from '../pages/Unauthorized';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Roles from '../pages/admin/Roles';
 import Users from '../pages/admin/Users';
+import Promociones from '../pages/Promociones';
+import PromocionNew from '../pages/PromocionNew';
 
 const AppRoutes = () => {
   return (
@@ -97,6 +99,20 @@ const AppRoutes = () => {
               <Ajustes />
             </ProtectedRoute>
           } 
+        />
+
+        {/* Rutas de promociones */}
+        <Route 
+          path="promociones" 
+          element={<Promociones />}
+        />
+        <Route 
+          path="promociones/nueva" 
+          element={<PromocionNew />}
+        />
+        <Route 
+          path="promociones/editar/:pro_sec" 
+          element={<PromocionNew />}
         />
 
         {/* Rutas de conteos */}

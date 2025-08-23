@@ -21,6 +21,8 @@ import ConteosNew from './pages/ConteoCreate';
 import RoleManager from './pages/RoleManager';
 import UserManager from './pages/UserManager';
 import DiferenciaInventario from './pages/DiferenciaInventario';
+import Promociones from './pages/Promociones';
+import PromocionNew from './pages/PromocionNew';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -172,6 +174,20 @@ function App() {
                 <Clients />
               </ProtectedRoute>
             } 
+          />
+
+          {/* Promociones Routes */}
+          <Route 
+            path="promociones" 
+            element={<Promociones />}
+          />
+          <Route 
+            path="promociones/nueva" 
+            element={<PromocionNew />}
+          />
+          <Route 
+            path="promociones/editar/:pro_sec" 
+            element={<PromocionNew />}
           />
           
           {/* Role Manager - Solo accesible para administradores */}

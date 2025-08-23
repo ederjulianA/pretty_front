@@ -1,7 +1,7 @@
 // src/layouts/AdminLayout.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog } from 'react-icons/fa';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
 import { useAuth } from '../contexts/AuthContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -177,6 +177,21 @@ const AdminLayout = () => {
                   onClick={handleNavClick}
                 >
                   <FaCogs className="w-5 h-5" /> Ajustes
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Promociones - Solo visible si tiene permiso */}
+            {(hasAccess('promociones') || hasRole('Administrador')) && (
+              <li>
+                <NavLink
+                  to="/promociones"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaTag className="w-5 h-5" /> Promociones
                 </NavLink>
               </li>
             )}

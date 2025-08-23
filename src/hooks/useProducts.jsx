@@ -52,6 +52,16 @@ const useProducts = (filters, selectedCategory, selectedSubcategory) => {
             existencia: articulo.existencia,
             art_woo_id: articulo.art_woo_id,
             imgUrl: articulo.art_url_img_servi,
+            // Información de promociones
+            tiene_oferta: articulo.tiene_oferta,
+            precio_oferta: articulo.precio_oferta,
+            descuento_porcentaje: articulo.descuento_porcentaje,
+            pro_fecha_inicio: articulo.pro_fecha_inicio,
+            pro_fecha_fin: articulo.pro_fecha_fin,
+            codigo_promocion: articulo.codigo_promocion,
+            descripcion_promocion: articulo.descripcion_promocion,
+            precio_detal_original: articulo.precio_detal_original,
+            precio_mayor_original: articulo.precio_mayor_original,
           }));
           
           if (page === 1) {

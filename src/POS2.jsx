@@ -108,18 +108,42 @@ const POS = () => {
           setSelectedPriceType(initialListaPrecio);
           // Map details to order items
           const mergedDetails = orderData.details.map(item => {
+            // Determinar si el artículo tiene oferta
+            const tieneOferta = item.kar_tiene_oferta === 'S';
+            
+            // Determinar los precios según si tiene oferta o no
+            let price, price_detal;
+            
+            if (tieneOferta) {
+              // Si tiene oferta, usar los precios de oferta
+              price = item.precio_mayor;
+              price_detal = item.precio_detal;
+            } else {
+              // Si no tiene oferta, usar los precios originales
+              price = item.kar_pre_pub_mayor;
+              price_detal = item.kar_pre_pub_detal;
+            }
+            
             return {
               id: item.art_sec,
               codigo: item.art_cod,
               name: item.art_nom,
-              price: item.precio_mayor,
-              price_detal: item.precio_detal,
+              price: price,
+              price_detal: price_detal,
               quantity: item.kar_uni,
               existencia: item.existencia || 1,
               kar_des_uno: item.kar_des_uno || 0,
               kar_sec: item.kar_sec,
               fac_sec: item.fac_sec,
-              imgUrl: item.art_url_img_servi
+              imgUrl: item.art_url_img_servi,
+              // Información de promociones
+              tiene_oferta: item.kar_tiene_oferta,
+              precio_oferta: item.kar_precio_oferta,
+              descuento_porcentaje: item.kar_descuento_porcentaje,
+              codigo_promocion: item.kar_codigo_promocion,
+              descripcion_promocion: item.kar_descripcion_promocion,
+              precio_detal_original: item.precio_detal_original,
+              precio_mayor_original: item.precio_mayor_original
             };
           });
           

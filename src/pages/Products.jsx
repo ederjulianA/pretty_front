@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaEdit, FaTrash, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ArticleMovementModal from '../components/ArticleMovementModal';
 import debounce from 'lodash/debounce';
@@ -37,6 +37,8 @@ const Products = () => {
                 tieneExistenciaValue = '';
             }
 
+            console.log(`🔍 Fetching products - Page: ${page}, Code: "${filterCodigo}", Name: "${filterNombre}", Existence: "${selectedExistencia}"`);
+
             const response = await axios.get(`${API_URL}/articulos`, {
                 params: {
                     PageNumber: page,
@@ -49,8 +51,20 @@ const Products = () => {
             });
 
             const newProducts = response.data.articulos || response.data.products || [];
+            console.log(`📦 Received ${newProducts.length} products from API:`, newProducts.map(p => p.art_cod));
 
-            setProducts(page === 1 ? newProducts : [...currentProducts, ...newProducts]);
+            // Limpiar completamente el estado si es la primera página
+            if (page === 1) {
+                console.log(`🧹 Clearing all previous products and setting new ones:`, newProducts.map(p => p.art_cod));
+                setProducts(newProducts);
+            } else {
+                // Agregar a los productos existentes
+                setProducts(prevProducts => {
+                    const updatedProducts = [...prevProducts, ...newProducts];
+                    console.log(`➕ Adding to existing products. Total: ${updatedProducts.length}`);
+                    return updatedProducts;
+                });
+            }
 
             setHasMore(newProducts.length === limit);
             setPageNumber(page);
@@ -65,22 +79,33 @@ const Products = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [filterCodigo, filterNombre, selectedExistencia, hasMore, limit]);
+    }, [filterCodigo, filterNombre, selectedExistencia, limit]);
 
-    const debouncedFetch = useCallback(debounce(() => fetchProducts(1), 500), [fetchProducts]);
+    // Crear un debounce estable que no se recree constantemente
+    const debouncedFetch = useCallback(
+        debounce(() => {
+            console.log('🚀 Debounced fetch triggered');
+            fetchProducts(1);
+        }, 500),
+        [fetchProducts]
+    );
 
+    // useEffect para manejar los cambios de filtros
     useEffect(() => {
+        console.log('🔄 Filter changed - triggering debounced fetch');
         debouncedFetch();
         return () => debouncedFetch.cancel();
-    }, [debouncedFetch]);
+    }, [filterCodigo, filterNombre, selectedExistencia, debouncedFetch]);
 
+    // useEffect inicial para cargar productos al montar el componente
     useEffect(() => {
+        console.log('🚀 Initial load - fetching products');
         fetchProducts(1);
-    }, []);
+    }, []); // Solo se ejecuta al montar el componente
 
     const handleLoadMore = () => {
         if (!isLoading && hasMore) {
-            fetchProducts(pageNumber + 1, products);
+            fetchProducts(pageNumber + 1);
         }
     };
 
@@ -133,6 +158,9 @@ const Products = () => {
         if (!price) return '$0';
         return `$${parseInt(price).toLocaleString('es-CO')}`;
     };
+
+    // Log para debugging del estado actual
+    console.log(`🎯 Current products state: ${products.length} products`, products.map(p => p.art_cod));
 
     return (
         <div className="min-h-screen bg-[#f7f8fa] p-2 sm:p-6">
@@ -189,6 +217,9 @@ const Products = () => {
                                         <span className="flex-shrink-0">
                                             {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                         </span>
+                                        {product.tiene_oferta === 'S' && (
+                                            <FaFire className="text-orange-500 w-3 h-3" title="En oferta" />
+                                        )}
                                     </div>
                                     <p className="text-sm text-gray-700 break-words mb-2">{product.art_nom}</p>
                                 </div>
@@ -210,18 +241,24 @@ const Products = () => {
                                     </button>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-t pt-2 mt-2 text-xs">
+                            <div className="grid grid-cols-4 gap-2 border-t pt-2 mt-2 text-xs">
                                 <div className="text-center">
                                     <span className="text-gray-500 block">Exist.</span>
                                     <span className="font-medium text-[#f58ea3]">{product.existencia}</span>
                                 </div>
                                 <div className="text-center">
                                     <span className="text-gray-500 block">P. Detal</span>
-                                    <span className="font-medium text-[#f58ea3]">{formatPrice(product.precio_detal)}</span>
+                                    <span className="font-medium text-[#f58ea3]">{formatPrice(product.precio_detal_original)}</span>
                                 </div>
                                 <div className="text-center">
                                     <span className="text-gray-500 block">P. Mayor</span>
-                                    <span className="font-medium text-[#f58ea3]">{formatPrice(product.precio_mayor)}</span>
+                                    <span className="font-medium text-[#f58ea3]">{formatPrice(product.precio_mayor_original)}</span>
+                                </div>
+                                <div className="text-center">
+                                    <span className="text-gray-500 block">P. Promo</span>
+                                    <span className={`font-medium ${product.tiene_oferta === 'S' ? 'text-orange-600' : 'text-gray-400'}`}>
+                                        {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -238,6 +275,7 @@ const Products = () => {
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Exist.</th>
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">P. Detal</th>
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">P. Mayor</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">P. Promo</th>
                                 <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Estado Sincronización WooCommerce">
                                     <FaSyncAlt className="inline-block text-[#f58ea3]" />
                                 </th>
@@ -246,18 +284,30 @@ const Products = () => {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {isLoading && pageNumber === 1 && (
-                                <tr><td colSpan="7" className="text-center py-4"><LoadingSpinner /></td></tr>
+                                <tr><td colSpan="8" className="text-center py-4"><LoadingSpinner /></td></tr>
                             )}
                             {!isLoading && products.length === 0 && pageNumber === 1 && (
-                                <tr><td colSpan="7" className="text-center py-4 text-gray-500">No hay productos para mostrar.</td></tr>
+                                <tr><td colSpan="8" className="text-center py-4 text-gray-500">No hay productos para mostrar.</td></tr>
                             )}
                             {products.map((product) => (
                                 <tr key={product.art_sec} className="hover:bg-[#fff5f7] transition-colors">
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{product.art_cod}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                                        <div className="flex items-center gap-2">
+                                            {product.art_cod}
+                                            {product.tiene_oferta === 'S' && (
+                                                <FaFire className="text-orange-500 w-3 h-3" title="En oferta" />
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{product.art_nom}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{product.existencia}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatPrice(product.precio_detal)}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatPrice(product.precio_mayor)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatPrice(product.precio_detal_original)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">{formatPrice(product.precio_mayor_original)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
+                                        <span className={product.tiene_oferta === 'S' ? 'text-orange-600 font-medium' : 'text-gray-400'}>
+                                            {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
+                                        </span>
+                                    </td>
                                     <td className="px-2 py-2 whitespace-nowrap text-center">
                                         {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                     </td>
@@ -291,7 +341,7 @@ const Products = () => {
                                 </tr>
                             ))}
                             {isLoading && pageNumber > 1 && (
-                                <tr><td colSpan="7" className="text-center py-4"><LoadingSpinner /></td></tr>
+                                <tr><td colSpan="8" className="text-center py-4"><LoadingSpinner /></td></tr>
                             )}
                         </tbody>
                     </table>

@@ -49,8 +49,8 @@ const EditProduct = () => {
             art_nom: prod.art_nom || '',
             categoria: prod.inv_gru_cod || '',
             subcategoria: prod.inv_sub_gru_cod || 0,
-            precio_detal: prod.precio_detal || '',
-            precio_mayor: prod.precio_mayor || '',
+            precio_detal: prod.precio_detal_original || prod.precio_detal || '',
+            precio_mayor: prod.precio_mayor_original || prod.precio_mayor || '',
             art_woo_id: prod.art_woo_id || '',
             actualiza_fecha: prod.actualiza_fecha || 'N'
           });

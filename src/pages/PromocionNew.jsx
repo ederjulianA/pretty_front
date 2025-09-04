@@ -16,7 +16,8 @@ const initialArticleRow = {
   precio_oferta: '',
   descuento_porcentaje: '',
   estado: 'A',
-  observaciones: ''
+  observaciones: '',
+  isNew: true // Indica si el artículo es nuevo (agregado durante edición)
 };
 
 const PromocionNew = () => {
@@ -77,7 +78,8 @@ const PromocionNew = () => {
               precio_oferta: articulo.pro_det_precio_oferta || '',
               descuento_porcentaje: articulo.pro_det_descuento_porcentaje || '',
               estado: articulo.pro_det_estado || 'A',
-              observaciones: articulo.pro_det_observaciones || ''
+              observaciones: articulo.pro_det_observaciones || '',
+              isNew: false // Los artículos cargados de BD no son nuevos
             }));
 
             // Rellenar con filas vacías si hay menos artículos que el mínimo
@@ -145,8 +147,21 @@ const PromocionNew = () => {
     setArticleRows([...articleRows, { ...initialArticleRow }]);
   };
 
-  // Eliminar fila
+  // Eliminar fila (solo artículos nuevos)
   const removeRow = (index) => {
+    const row = articleRows[index];
+    
+    // Solo permitir eliminar artículos nuevos
+    if (!row.isNew) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No se puede eliminar',
+        text: 'No se puede eliminar un artículo que ya existe en la promoción',
+        confirmButtonColor: '#f58ea3'
+      });
+      return;
+    }
+    
     if (articleRows.length > 1) {
       const updatedRows = articleRows.filter((_, i) => i !== index);
       setArticleRows(updatedRows);
@@ -155,12 +170,30 @@ const PromocionNew = () => {
 
   // Función para abrir búsqueda de artículo
   const buscarArticulo = (index) => {
+    const row = articleRows[index];
+    
+    // Solo permitir búsqueda para artículos nuevos
+    if (!row.isNew) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Búsqueda no disponible',
+        text: 'No se puede modificar un artículo que ya existe en la promoción',
+        confirmButtonColor: '#f58ea3'
+      });
+      return;
+    }
+    
     setCurrentRowIndex(index);
     setShowArticleModal(true);
   };
 
   // Función para consultar artículo cuando se pierde el foco
   const handleArtCodBlur = async (index, artCodValue) => {
+    const row = articleRows[index];
+    
+    // Solo permitir consulta para artículos nuevos
+    if (!row.isNew) return;
+    
     if (!artCodValue) return;
     
     try {
@@ -199,7 +232,8 @@ const PromocionNew = () => {
           art_nom: articulo.art_nom,
           precio_normal: articulo.precio_detal_base || articulo.precio_detal || '',
           precio_mayor: articulo.precio_mayor_base || articulo.precio_mayor || '',
-          art_sec: articulo.art_sec
+          art_sec: articulo.art_sec,
+          isNew: true // Al buscar y seleccionar un artículo, se marca como nuevo
         };
         setArticleRows(updatedRows);
       } else {
@@ -290,7 +324,8 @@ const PromocionNew = () => {
         art_nom: article.name,
         precio_normal: article.precio_detal_base || article.precio_detal || '',
         precio_mayor: article.precio_mayor_base || article.precio_mayor || '',
-        art_sec: article.id
+        art_sec: article.id,
+        isNew: true // Al seleccionar desde modal, se marca como nuevo
       };
       setArticleRows(updatedRows);
     }
@@ -401,10 +436,14 @@ const PromocionNew = () => {
       }
     } catch (error) {
       console.error('Error al guardar promoción:', error);
+      
+      // Extraer mensaje de error del backend
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error al guardar la promoción';
+      
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.response?.data?.error || 'Error al guardar la promoción',
+        text: errorMessage,
         confirmButtonColor: '#f58ea3'
       });
     } finally {
@@ -598,14 +637,27 @@ const PromocionNew = () => {
                     </div>
                   )}
                   <div className="flex justify-between items-center mb-3">
-                    <span className="font-medium text-gray-700">Artículo #{index + 1}</span>
-                    {articleRows.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-700">Artículo #{index + 1}</span>
+                      {row.isNew && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          Nuevo
+                        </span>
+                      )}
+                    </div>
+                    {articleRows.length > 1 && row.isNew && (
                       <button
                         onClick={() => removeRow(index)}
                         className="text-red-500 hover:text-red-700 p-1"
+                        title="Eliminar artículo"
                       >
                         <FaTrash />
                       </button>
+                    )}
+                    {!row.isNew && (
+                      <span className="text-xs text-gray-500 italic">
+                        No se puede eliminar
+                      </span>
                     )}
                   </div>
 
@@ -690,6 +742,7 @@ const PromocionNew = () => {
                   <th className="px-3 py-2 text-xs font-medium text-gray-700 text-left">Precio Oferta</th>
                   <th className="px-3 py-2 text-xs font-medium text-gray-700 text-left">Descuento %</th>
                   <th className="px-3 py-2 text-xs font-medium text-gray-700 text-left">Estado</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-700 text-left">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -701,16 +754,28 @@ const PromocionNew = () => {
                         value={row.art_cod}
                         onChange={(e) => handleRowChange(index, 'art_cod', e.target.value)}
                         onBlur={(e) => handleArtCodBlur(index, e.target.value)}
-                        className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                        className={`w-full p-2 border rounded text-sm transition-colors ${
+                          !row.isNew 
+                            ? 'bg-gray-100 cursor-not-allowed' 
+                            : 'focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3]'
+                        }`}
                         placeholder="Código..."
+                        readOnly={!row.isNew}
+                        disabled={!row.isNew}
                       />
                     </td>
                     <td className="px-3 py-2">
                       <button
                         onClick={() => buscarArticulo(index)}
-                        className="p-2 border rounded bg-[#fff5f7] hover:bg-[#fce7eb] transition-colors"
+                        className={`p-2 border rounded transition-colors ${
+                          !row.isNew 
+                            ? 'bg-gray-100 cursor-not-allowed opacity-50' 
+                            : 'bg-[#fff5f7] hover:bg-[#fce7eb]'
+                        }`}
+                        disabled={!row.isNew}
+                        title={!row.isNew ? 'No se puede modificar artículo existente' : 'Buscar artículo'}
                       >
-                        <FaSearch className="text-[#f58ea3] w-3 h-3" />
+                        <FaSearch className={`w-3 h-3 ${!row.isNew ? 'text-gray-400' : 'text-[#f58ea3]'}`} />
                       </button>
                     </td>
                     <td className="px-3 py-2">
@@ -764,6 +829,29 @@ const PromocionNew = () => {
                         <option value="A">Activo</option>
                         <option value="I">Inactivo</option>
                       </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        {row.isNew && (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                            Nuevo
+                          </span>
+                        )}
+                        {articleRows.length > 1 && row.isNew && (
+                          <button
+                            onClick={() => removeRow(index)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            title="Eliminar artículo"
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
+                        {!row.isNew && (
+                          <span className="text-xs text-gray-500 italic">
+                            No se puede eliminar
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

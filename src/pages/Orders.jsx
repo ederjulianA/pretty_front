@@ -8,7 +8,7 @@ import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
 import usePrintOrder from '../hooks/usePrintOrder';
-import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt, FaTrash, FaSync } from 'react-icons/fa';
+import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt, FaTrash, FaSync, FaStar, FaBolt } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import AnularDocumentoModal from '../components/AnularDocumentoModal';
 import SyncWooModal from '../components/SyncWooModal';
@@ -236,6 +236,23 @@ const Orders = () => {
     return ['A', 'P'].includes(estado);
   };
 
+  // Función para identificar pedidos pagados por Epayco
+  const isEpaycoPaid = (order) => {
+    return order.fac_est_woo === 'epayco_processing' || order.fac_est_woo === 'epayco_completed';
+  };
+
+  // Función para ordenar pedidos (Epayco primero)
+  const sortOrders = (orders) => {
+    return [...orders].sort((a, b) => {
+      const aIsEpayco = isEpaycoPaid(a);
+      const bIsEpayco = isEpaycoPaid(b);
+      
+      if (aIsEpayco && !bIsEpayco) return -1;
+      if (!aIsEpayco && bIsEpayco) return 1;
+      return 0;
+    });
+  };
+
   // Update the handleSyncWoo function
   const handleSyncWoo = async (facNro) => {
     setIsSyncing(true);
@@ -271,7 +288,22 @@ const Orders = () => {
       {/* Card de Header + Filtros */}
       <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Órdenes</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Órdenes</h1>
+            {orders.length > 0 && (
+              <div className="flex items-center gap-2">
+                {orders.filter(isEpaycoPaid).length > 0 && (
+                  <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full text-sm font-bold shadow-lg animate-pulse">
+                    <FaStar className="w-3 h-3" />
+                    <span>{orders.filter(isEpaycoPaid).length} EPAYCO</span>
+                  </div>
+                )}
+                <div className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                  Total: {orders.length}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={handleClearFilters}
@@ -400,16 +432,39 @@ const Orders = () => {
           {!isLoading && orders.length === 0 && pageNumber === 1 && (
             <p className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</p>
           )}
-          {orders.map((order) => {
+          {sortOrders(orders).map((order) => {
             const isFacturado = order.documentos && order.documentos !== "";
+            const isEpayco = isEpaycoPaid(order);
             return (
               <div key={order.fac_sec}
-                className={`bg-white p-3 rounded-xl shadow border transition-colors
-                     ${isFacturado ? 'border-[#f58ea3] bg-[#fff5f7]' : 'border-gray-200 hover:border-[#f58ea3]'}`}>
+                className={`bg-white p-3 rounded-xl shadow border transition-all duration-300 relative overflow-hidden
+                     ${isFacturado ? 'border-[#f58ea3] bg-[#fff5f7]' : 
+                       isEpayco ? 'border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50 shadow-lg shadow-yellow-200' : 
+                       'border-gray-200 hover:border-[#f58ea3]'}`}>
+                {/* Indicador de prioridad Epayco */}
+                {isEpayco && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                    <div className="animate-pulse">
+                      <FaStar className="text-yellow-500 w-4 h-4" />
+                    </div>
+                    <div className="animate-bounce">
+                      <FaBolt className="text-orange-500 w-3 h-3" />
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold text-sm">{order.fac_nro}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{order.fac_nro}</span>
+                        {isEpayco && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md animate-pulse">
+                            <FaStar className="w-3 h-3" />
+                            EPAYCO
+                          </span>
+                        )}
+                      </div>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.fac_est_fac === 'A' ? 'bg-[#fff5f7] text-[#f58ea3]' :
                         order.fac_est_fac === 'P' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-800'
@@ -499,12 +554,31 @@ const Orders = () => {
               {!isLoading && orders.length === 0 && pageNumber === 1 && (
                 <tr><td colSpan="10" className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</td></tr>
               )}
-              {orders.map((order) => {
+              {sortOrders(orders).map((order) => {
                 const isFacturado = order.documentos && order.documentos !== "";
+                const isEpayco = isEpaycoPaid(order);
                 return (
-                  <tr key={order.fac_sec} className={`hover:bg-[#fff5f7] transition-colors ${isFacturado ? 'bg-[#fff5f7]' : ''}`}>
+                  <tr key={order.fac_sec} className={`hover:bg-[#fff5f7] transition-all duration-300 relative ${isFacturado ? 'bg-[#fff5f7]' : 
+                    isEpayco ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400' : ''}`}>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{formatDate(order.fac_fec)}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <div className="flex items-center gap-2">
+                        <span>{order.fac_nro}</span>
+                        {isEpayco && (
+                          <div className="flex items-center gap-1">
+                            <div className="animate-pulse">
+                              <FaStar className="text-yellow-500 w-3 h-3" />
+                            </div>
+                            <div className="animate-bounce">
+                              <FaBolt className="text-orange-500 w-3 h-3" />
+                            </div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md">
+                              EPAYCO
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.fac_nro_woo || '-'}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{order.nit_ide}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 max-w-[180px] truncate overflow-hidden">{order.nit_nom}</td>

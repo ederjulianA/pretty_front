@@ -23,7 +23,8 @@ const Dashboard = () => {
     { value: 'cancelled', label: 'Cancelado' },
     { value: 'refunded', label: 'Reembolsado' },
     { value: 'failed', label: 'Fallido' },
-    { value: 'pending', label: 'Pendiente' }
+    { value: 'pending', label: 'Pendiente' },
+    { value: 'epayco_processing', label: 'PAGADO EPAYCO' }
   ];
 
   const handleSync = async () => {

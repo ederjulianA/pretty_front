@@ -24,7 +24,9 @@ const Dashboard = () => {
     { value: 'refunded', label: 'Reembolsado' },
     { value: 'failed', label: 'Fallido' },
     { value: 'pending', label: 'Pendiente' },
-    { value: 'epayco_processing', label: 'PAGADO EPAYCO' }
+    { value: 'epayco_processing', label: 'PAGADO EPAYCO (Pruebas)' },
+    { value: 'epayco-processing', label: 'PAGADO EPAYCO (Producción)' },
+    { value: 'epayco-completed', label: 'EPAYCO COMPLETADO' }
   ];
 
   const handleSync = async () => {

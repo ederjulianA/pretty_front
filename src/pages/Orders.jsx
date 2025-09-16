@@ -238,7 +238,7 @@ const Orders = () => {
 
   // Función para identificar pedidos pagados por Epayco
   const isEpaycoPaid = (order) => {
-    return order.fac_est_woo === 'epayco_processing' || order.fac_est_woo === 'epayco_completed';
+    return order.fac_est_woo === 'epayco-processing' || order.fac_est_woo === 'epayco-completed';
   };
 
   // Función para ordenar pedidos (Epayco primero)

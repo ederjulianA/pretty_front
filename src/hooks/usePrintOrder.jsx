@@ -33,7 +33,8 @@ const usePrintOrder = () => {
         (acc, item) => acc + (item.kar_pre_pub * item.kar_uni) * (item.kar_des_uno / 100),
         0
       );
-      const finalTotal = globalSubtotal - globalDiscount;
+      const facDescuentoGeneral = header.fac_descuento_general || 0;
+      const finalTotal = globalSubtotal - globalDiscount - facDescuentoGeneral;
 
       // Configuración del documento
       const doc = new jsPDF();
@@ -215,8 +216,10 @@ const usePrintOrder = () => {
       // Totales en un box estilizado y compacto, alineado a la derecha
       const totBoxWidth = 100;
       const totBoxX = pageWidth - marginRight - totBoxWidth;
+      // Ajustar altura del box si hay descuento evento
+      const totBoxHeight = facDescuentoGeneral > 0 ? 35 : 28;
       doc.setFillColor(250, 245, 247);
-      doc.roundedRect(totBoxX, finalY, totBoxWidth, 28, 5, 5, 'F');
+      doc.roundedRect(totBoxX, finalY, totBoxWidth, totBoxHeight, 5, 5, 'F');
       
       // Labels y valores alineados
       const labelX = totBoxX + totBoxWidth - 50;
@@ -230,6 +233,11 @@ const usePrintOrder = () => {
       totY += 7;
       doc.text('DESCUENTO:', labelX, totY, { align: 'right' });
       doc.text(`${formatValue(globalDiscount)}`, valueX, totY, { align: 'right' });
+      if (facDescuentoGeneral > 0) {
+        totY += 7;
+        doc.text('DESC. EVENTO:', labelX, totY, { align: 'right' });
+        doc.text(`${formatValue(facDescuentoGeneral)}`, valueX, totY, { align: 'right' });
+      }
       totY += 9;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);

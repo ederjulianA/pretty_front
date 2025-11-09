@@ -59,7 +59,8 @@ const OrderDetailModal = ({ order, onClose }) => {
 
   const computedSubtotal = details?.reduce((acc, item) => acc + item.kar_pre_pub * item.kar_uni, 0) || 0;
   const computedDiscount = details?.reduce((acc, item) => acc + item.kar_pre_pub * item.kar_uni * (item.kar_des_uno / 100), 0) || 0;
-  const computedTotal = computedSubtotal - computedDiscount;
+  const facDescuentoGeneral = header.fac_descuento_general || 0;
+  const computedTotal = computedSubtotal - computedDiscount - facDescuentoGeneral;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -150,6 +151,12 @@ const OrderDetailModal = ({ order, onClose }) => {
                   <p className="text-gray-600">Descuento:</p>
                   <p className="font-medium text-red-500">-${formatValue(computedDiscount)}</p>
                 </div>
+                {facDescuentoGeneral > 0 && (
+                  <div className="flex justify-between">
+                    <p className="text-gray-600">Descuento Evento:</p>
+                    <p className="font-medium text-red-500">-${formatValue(facDescuentoGeneral)}</p>
+                  </div>
+                )}
                 <div className="flex justify-between text-base font-semibold border-t border-gray-300 pt-3 mt-3">
                   <p className="text-gray-900">Total Pedido:</p>
                   <p className="text-[#f58ea3]">${formatValue(computedTotal)}</p>

@@ -119,10 +119,14 @@ const Orders = () => {
   const fetchOrders = async (page = 1) => {
     setIsLoading(true);
     try {
+      // Formatear fechas para incluir hora: desde 00:00:00 hasta 23:59:59
+      const fechaDesdeFormateada = fechaDesde ? `${fechaDesde} 00:00:00` : fechaDesde;
+      const fechaHastaFormateada = fechaHasta ? `${fechaHasta} 23:59:59` : fechaHasta;
+      
       const response = await axios.get(`${API_URL}/ordenes`, {
         params: {
-          FechaDesde: fechaDesde,
-          FechaHasta: fechaHasta,
+          FechaDesde: fechaDesdeFormateada,
+          FechaHasta: fechaHastaFormateada,
           nit_ide: nitIde,
           nit_nom: nitNom,
           fac_nro: facNro,

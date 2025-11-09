@@ -21,6 +21,9 @@ import { FaShoppingCart, FaSpinner } from 'react-icons/fa';
 import usePrintOrder from './hooks/usePrintOrder';
 import LoadingSpinner from './components/LoadingSpinner';
 import CreateClientModal from './components/CreateClientModal';
+import useEventoPromocional from './hooks/useEventoPromocional';
+import PromocionBanner from './components/PromocionBanner';
+import useParametro from './hooks/useParametro';
 
 const POS = () => {
   const [searchParams] = useSearchParams();
@@ -49,6 +52,7 @@ const POS = () => {
   // Price type and discount
   const [selectedPriceType, setSelectedPriceType] = useState("mayor");
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [facDescuentoGeneral, setFacDescuentoGeneral] = useState(0);
 
   // Order drawer for mobile
   const [showOrderDrawer, setShowOrderDrawer] = useState(false);
@@ -68,6 +72,8 @@ const POS = () => {
   const { categories: categoryList, isLoadingCategories: isLoadingCategoryList } = useCategories();
   const { clientResults, fetchClients } = useClients();
   const { pedidoMinimo, isLoading: isLoadingPedidoMinimo } = usePedidoMinimo();
+  const { evento: eventoPromocional } = useEventoPromocional();
+  const { valor: montoMayorista } = useParametro('monto_mayorista');
 
   // Editing mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -106,6 +112,8 @@ const POS = () => {
           }
           setDiscountPercent(initialDiscount);
           setSelectedPriceType(initialListaPrecio);
+          // Cargar descuento general del header
+          setFacDescuentoGeneral(orderData.header.fac_descuento_general || 0);
           // Map details to order items
           const mergedDetails = orderData.details.map(item => {
             // Determinar si el artículo tiene oferta
@@ -159,9 +167,51 @@ const POS = () => {
   // Calculate totals
   const wholesaleTotal = order.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const retailTotal = order.reduce((sum, item) => sum + (item.price_detal || item.price) * item.quantity, 0);
-  const totalValue = selectedPriceType === "detal" ? retailTotal : wholesaleTotal;
+  
+  // Lógica de evento promocional y control de lista de precio
+  const montoMayoristaNum = montoMayorista ? Number(montoMayorista) : 0;
+  const cumpleUmbralMayorista = wholesaleTotal >= montoMayoristaNum;
+  const hayEventoActivo = eventoPromocional && eventoPromocional.eve_activo === 'S';
+  
+  // Determinar tipo de precio según umbral mayorista (siempre automático)
+  let precioTypeForzado = selectedPriceType;
+  let isPriceTypeDisabled = false;
+  
+  if (montoMayoristaNum > 0) {
+    if (cumpleUmbralMayorista) {
+      precioTypeForzado = "mayor";
+      isPriceTypeDisabled = true;
+    } else {
+      precioTypeForzado = "detal";
+      isPriceTypeDisabled = true;
+    }
+  }
+  
+  // Aplicar el tipo de precio forzado si está deshabilitado
+  const precioTypeActual = isPriceTypeDisabled ? precioTypeForzado : selectedPriceType;
+  
+  const totalValue = precioTypeActual === "detal" ? retailTotal : wholesaleTotal;
   const discountValue = totalValue * (discountPercent / 100);
-  const finalTotal = totalValue - discountValue;
+  
+  // Calcular descuento evento según condiciones
+  let descuentoEventoCalculado = 0;
+  let porcentajeDescuentoEvento = 0;
+  if (hayEventoActivo && montoMayoristaNum > 0) {
+    // Si cumple umbral mayorista: aplicar descuento mayorista
+    if (cumpleUmbralMayorista) {
+      porcentajeDescuentoEvento = eventoPromocional.eve_descuento_mayor;
+      descuentoEventoCalculado = totalValue * (porcentajeDescuentoEvento / 100);
+    } else {
+      // Si no cumple umbral: aplicar descuento detal
+      porcentajeDescuentoEvento = eventoPromocional.eve_descuento_detal;
+      descuentoEventoCalculado = totalValue * (porcentajeDescuentoEvento / 100);
+    }
+  }
+  
+  // Usar el descuento evento calculado si hay evento activo, sino usar el del estado (para edición)
+  const descuentoEventoFinal = hayEventoActivo ? descuentoEventoCalculado : (facDescuentoGeneral || 0);
+  
+  const finalTotal = totalValue - discountValue - descuentoEventoFinal;
 
   // Función para manejar el scroll infinito
   const handleLoadMore = () => {
@@ -276,6 +326,8 @@ const POS = () => {
   const handleNewOrder = () => {
     setOrder([]);
     setSelectedClient(null);
+    setFacDescuentoGeneral(0);
+    setDiscountPercent(0);
     // Reinicia la URL para eliminar el query param "fac_nro"
     navigate('/pos');
     Swal.fire({
@@ -323,14 +375,15 @@ const POS = () => {
       fac_tip_cod: "COT",
       fac_est_fac: "A",
       descuento: discountPercent,
-      lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+      fac_descuento_general: descuentoEventoFinal,
+      lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
       detalles: order.map(item => ({
         art_sec: item.id,
         kar_uni: item.quantity,
         kar_nat:"c",
-        kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
-        kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+        kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
+        kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       })),
     };
     setIsSubmitting(true);
@@ -481,13 +534,14 @@ const POS = () => {
       fac_tip_cod: "VTA",
       fac_est_fac: "A",
       descuento: discountPercent,
-      lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+      fac_descuento_general: descuentoEventoFinal,
+      lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
       detalles: order.map(item => ({
         art_sec: item.id,
         kar_uni: item.quantity,
-        kar_pre_pub: selectedPriceType === "detal" && item.price_detal ? item.price_detal : item.price,
-        kar_lis_pre_cod: selectedPriceType === "detal" ? 1 : 2,
+        kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
+        kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
         kar_nat: "-",
         kar_kar_sec_ori: item.kar_sec || null,
         kar_fac_sec_ori: item.fac_sec || null
@@ -721,6 +775,7 @@ const POS = () => {
           className="w-full md:w-2/3 p-6 overflow-y-auto"
         >
           <Header title="Pedidos Pretty" />
+          <PromocionBanner evento={eventoPromocional} />
           <Filters
             filterCodigo={filterCodigo}
             setFilterCodigo={setFilterCodigo}
@@ -787,20 +842,31 @@ const POS = () => {
                 onRemove={removeFromOrder} 
                 onAdd={addToOrder} 
                 totalValue={totalValue} 
-                selectedPriceType={selectedPriceType}
+                selectedPriceType={precioTypeActual}
                 discountValue={discountValue}
+                facDescuentoGeneral={descuentoEventoFinal}
+                porcentajeDescuentoEvento={porcentajeDescuentoEvento}
                 finalTotal={finalTotal}
+                montoMayorista={montoMayorista}
               />
 
               <div className="space-y-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo de Precio
+                    {isPriceTypeDisabled && (
+                      <span className="ml-2 text-xs text-orange-600 font-normal">
+                        (Automático según umbral mayorista)
+                      </span>
+                    )}
                   </label>
                   <select
-                    value={selectedPriceType}
+                    value={precioTypeActual}
                     onChange={(e) => setSelectedPriceType(e.target.value)}
-                    className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                    disabled={isPriceTypeDisabled}
+                    className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 ${
+                      isPriceTypeDisabled ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                    }`}
                   >
                     <option value="mayor">Precios al Mayor</option>
                     <option value="detal">Precios al Detal</option>
@@ -926,12 +992,19 @@ const POS = () => {
             onCreateClient={() => setShowCreateClientModal(true)}
             onPlaceOrder={handlePlaceOrder}
             onFacturarOrder={handleFacturarOrder}
-            selectedPriceType={selectedPriceType}
+            selectedPriceType={precioTypeActual}
             onPriceTypeChange={(e) => setSelectedPriceType(e.target.value)}
+            isPriceTypeDisabled={isPriceTypeDisabled}
+            hayEventoActivo={hayEventoActivo}
             discountPercent={discountPercent}
             onDiscountChange={(e) => setDiscountPercent(Number(e.target.value))}
+            facDescuentoGeneral={descuentoEventoFinal}
+            porcentajeDescuentoEvento={porcentajeDescuentoEvento}
             discountValue={discountValue}
             finalTotal={finalTotal}
+            montoMayorista={montoMayorista}
+            isEditing={isEditing}
+            orderType={orderType}
           />
         )}
 

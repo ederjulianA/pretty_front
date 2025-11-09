@@ -18,8 +18,13 @@ const OrderDrawer = ({
   onPriceTypeChange,
   discountPercent,
   onDiscountChange,
+  facDescuentoGeneral,
+  porcentajeDescuentoEvento,
   discountValue,
   finalTotal,
+  montoMayorista,
+  isPriceTypeDisabled,
+  hayEventoActivo,
   isEditing,
   orderType
 }) => {
@@ -103,11 +108,19 @@ const OrderDrawer = ({
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
               <label className="block text-sm font-semibold text-gray-900 mb-3 font-system">
                 Tipo de Precio
+                {isPriceTypeDisabled && (
+                  <span className="ml-2 text-xs text-orange-600 font-normal">
+                    (Automático según umbral mayorista)
+                  </span>
+                )}
               </label>
               <select
                 value={selectedPriceType}
                 onChange={onPriceTypeChange}
-                className="w-full p-4 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 bg-white/90 backdrop-blur-sm font-system"
+                disabled={isPriceTypeDisabled}
+                className={`w-full p-4 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 bg-white/90 backdrop-blur-sm font-system ${
+                  isPriceTypeDisabled ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                }`}
               >
                 <option value="mayor">Precios al Mayor</option>
                 <option value="detal">Precios al Detal</option>
@@ -138,7 +151,10 @@ const OrderDrawer = ({
               totalValue={totalValue}
               selectedPriceType={selectedPriceType}
               discountValue={discountValue}
+              facDescuentoGeneral={facDescuentoGeneral}
+              porcentajeDescuentoEvento={porcentajeDescuentoEvento}
               finalTotal={finalTotal}
+              montoMayorista={montoMayorista}
               isEditing={isEditing}
               orderType={orderType}
             />

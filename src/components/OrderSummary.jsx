@@ -4,7 +4,7 @@ import { FaPlus, FaMinus, FaBox, FaFire } from 'react-icons/fa';
 import { formatValue, formatName } from '../utils';
 import PropTypes from 'prop-types';
 
-const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, finalTotal }) => {
+const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista }) => {
   return (
     <div>
       {order.length === 0 ? (
@@ -125,6 +125,14 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
 
       {/* Totales */}
       <div className="mt-6 space-y-3 border-t pt-4">
+        {montoMayorista && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+            <div className="flex justify-between items-center">
+              <span className="text-blue-700 font-semibold text-sm">Monto Mayorista:</span>
+              <span className="font-bold text-blue-900 text-base">${formatValue(Number(montoMayorista))}</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Subtotal:</span>
           <span className="font-bold text-gray-900">${formatValue(totalValue)}</span>
@@ -132,6 +140,12 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Descuento:</span>
           <span className="font-bold text-gray-900">${formatValue(discountValue)}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600">
+            Descuento Evento{porcentajeDescuentoEvento > 0 ? ` (${porcentajeDescuentoEvento}%)` : ''}:
+          </span>
+          <span className="font-bold text-gray-900">${formatValue(facDescuentoGeneral || 0)}</span>
         </div>
         <div className="flex justify-between items-center pt-2 border-t">
           <span className="text-lg font-semibold text-gray-900">Total:</span>
@@ -149,7 +163,10 @@ OrderSummary.propTypes = {
   totalValue: PropTypes.number.isRequired,
   selectedPriceType: PropTypes.string.isRequired,
   discountValue: PropTypes.number.isRequired,
+  facDescuentoGeneral: PropTypes.number,
+  porcentajeDescuentoEvento: PropTypes.number,
   finalTotal: PropTypes.number.isRequired,
+  montoMayorista: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default OrderSummary;

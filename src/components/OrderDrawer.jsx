@@ -26,7 +26,9 @@ const OrderDrawer = ({
   isPriceTypeDisabled,
   hayEventoActivo,
   isEditing,
-  orderType
+  orderType,
+  eventoPromocional,
+  cumpleUmbralMayorista
 }) => {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col md:hidden">
@@ -155,8 +157,9 @@ const OrderDrawer = ({
               porcentajeDescuentoEvento={porcentajeDescuentoEvento}
               finalTotal={finalTotal}
               montoMayorista={montoMayorista}
-              isEditing={isEditing}
-              orderType={orderType}
+              eventoPromocional={eventoPromocional}
+              hayEventoActivo={hayEventoActivo}
+              cumpleUmbralMayorista={cumpleUmbralMayorista}
             />
           </div>
         </div>

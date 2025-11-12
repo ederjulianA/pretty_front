@@ -291,9 +291,10 @@ const Orders = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] p-2 sm:p-6">
-      {/* Card de Header + Filtros */}
-      <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
+    <div className="min-h-screen bg-[#f7f8fa]">
+      <div className="w-full p-2 sm:p-4 md:p-6">
+        {/* Card de Header + Filtros */}
+        <div className="bg-white rounded-xl shadow-lg mb-6 p-4 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-[#f58ea3] text-center sm:text-left">Gestión de Órdenes</h1>
@@ -538,8 +539,9 @@ const Orders = () => {
         </div>
 
         {/* Vista Desktop (Tabla) */}
-        <div className="hidden sm:block overflow-x-auto bg-white rounded-xl shadow">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="hidden sm:block bg-white rounded-xl shadow overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-[1200px] divide-y divide-gray-200">
             <thead className="bg-[#fff5f7]">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
@@ -551,7 +553,7 @@ const Orders = () => {
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documentos</th>
                 <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario Creador</th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -610,43 +612,45 @@ const Orders = () => {
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
                       {order.fac_usu_cod_cre || '-'}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                      <button onClick={() => handleViewDetail(order)}
-                        className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
-                        title="Ver Detalle">
-                        <FaEye />
-                      </button>
-                      <button onClick={() => printOrder(order.fac_nro)}
-                        className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
-                        title="Imprimir">
-                        <FaPrint />
-                      </button>
-                      {canEditOrAnular(order.fac_est_fac, order.fac_tip_cod, order.documentos) && (
-                        <>
-                          <button onClick={() => handleEditOrder(order)}
-                            className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors"
-                            title="Editar">
-                            <FaEdit />
-                          </button>
-                          <button onClick={() => handleAnularClick(order)}
-                            className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
-                            title="Anular">
-                            <FaTrash />
-                          </button>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => handleSyncWoo(order.fac_nro)}
-                        className="text-[#f58ea3] hover:text-[#f7b3c2] mr-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Sync Woo"
-                        disabled={isSyncing}
-                      >
-                        {isSyncing ? (
-                          <div className="w-4 h-4 border-2 border-[#f58ea3] border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <FaSync />
+                    <td className="px-4 py-2 whitespace-nowrap text-center text-sm font-medium min-w-[120px]">
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => handleViewDetail(order)}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                          title="Ver Detalle">
+                          <FaEye />
+                        </button>
+                        <button onClick={() => printOrder(order.fac_nro)}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                          title="Imprimir">
+                          <FaPrint />
+                        </button>
+                        {canEditOrAnular(order.fac_est_fac, order.fac_tip_cod, order.documentos) && (
+                          <>
+                            <button onClick={() => handleEditOrder(order)}
+                              className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                              title="Editar">
+                              <FaEdit />
+                            </button>
+                            <button onClick={() => handleAnularClick(order)}
+                              className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
+                              title="Anular">
+                              <FaTrash />
+                            </button>
+                          </>
                         )}
-                      </button>
+                        <button 
+                          onClick={() => handleSyncWoo(order.fac_nro)}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Sync Woo"
+                          disabled={isSyncing}
+                        >
+                          {isSyncing ? (
+                            <div className="w-4 h-4 border-2 border-[#f58ea3] border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <FaSync />
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -656,6 +660,7 @@ const Orders = () => {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -702,6 +707,7 @@ const Orders = () => {
           isSyncing={isSyncing}
         />
       )}
+      </div>
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { FaPlus, FaMinus, FaBox, FaFire } from 'react-icons/fa';
 import { formatValue, formatName } from '../utils';
 import PropTypes from 'prop-types';
 
-const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista }) => {
+const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista, eventoPromocional, hayEventoActivo, cumpleUmbralMayorista }) => {
   return (
     <div>
       {order.length === 0 ? (
@@ -14,6 +14,12 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
           {order.map((item) => {
             const tieneOferta = item.tiene_oferta === 'S';
             const precioAMostrar = selectedPriceType === 'detal' && item.price_detal ? item.price_detal : item.price;
+            
+            // Determinar si el artículo recibe descuento evento (no tiene descuento activo)
+            // kar_des_uno es el descuento general de la orden, no un descuento individual del artículo
+            // Solo los artículos con oferta activa tienen descuento individual
+            const tieneDescuentoActivo = tieneOferta;
+            const recibeDescuentoEvento = hayEventoActivo && !tieneDescuentoActivo && porcentajeDescuentoEvento > 0;
             
             return (
               <li key={item.id} className={`py-3 ${tieneOferta ? 'bg-orange-50 rounded-lg p-2 -mx-2' : ''}`}>
@@ -42,7 +48,7 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
                   {/* Información del producto */}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-1">
                         <h3 className={`font-semibold break-words max-w-full md:max-w-[180px] text-sm leading-snug ${
                           tieneOferta ? 'text-orange-800' : 'text-gray-900'
                         }`}>
@@ -51,6 +57,19 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
                         <p className="text-sm text-gray-500">
                           Cód: {item.codigo}
                         </p>
+                        {/* Badge de descuento evento */}
+                        {recibeDescuentoEvento && eventoPromocional && (
+                          <div className="mt-2 mb-1">
+                            <div className="bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] border-2 border-[#f58ea3] rounded-lg px-2.5 py-1.5 flex items-center gap-2 inline-flex">
+                              <span className="text-white text-xs font-bold whitespace-nowrap">
+                                {eventoPromocional.eve_nombre}
+                              </span>
+                              <span className="bg-black text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                                -{porcentajeDescuentoEvento}%
+                              </span>
+                            </div>
+                          </div>
+                        )}
                         {tieneOferta && item.descripcion_promocion && (
                           <p className="text-xs text-orange-600 font-medium mt-1">
                             {item.descripcion_promocion}
@@ -167,6 +186,9 @@ OrderSummary.propTypes = {
   porcentajeDescuentoEvento: PropTypes.number,
   finalTotal: PropTypes.number.isRequired,
   montoMayorista: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  eventoPromocional: PropTypes.object,
+  hayEventoActivo: PropTypes.bool,
+  cumpleUmbralMayorista: PropTypes.bool,
 };
 
 export default OrderSummary;

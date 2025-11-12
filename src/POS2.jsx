@@ -116,13 +116,15 @@ const POS = () => {
           setFacDescuentoGeneral(orderData.header.fac_descuento_general || 0);
           // Map details to order items
           const mergedDetails = orderData.details.map(item => {
-            // Determinar si el artículo tiene oferta
-            const tieneOferta = item.kar_tiene_oferta === 'S';
+            // Determinar si el artículo tiene oferta activa
+            // Verificar que realmente tenga una promoción activa (código de promoción o precio de oferta)
+            const tieneOfertaReal = item.kar_tiene_oferta === 'S' && 
+                                    (item.kar_codigo_promocion || item.kar_precio_oferta);
             
             // Determinar los precios según si tiene oferta o no
             let price, price_detal;
             
-            if (tieneOferta) {
+            if (tieneOfertaReal) {
               // Si tiene oferta, usar los precios de oferta
               price = item.precio_mayor;
               price_detal = item.precio_detal;
@@ -144,8 +146,8 @@ const POS = () => {
               kar_sec: item.kar_sec,
               fac_sec: item.fac_sec,
               imgUrl: item.art_url_img_servi,
-              // Información de promociones
-              tiene_oferta: item.kar_tiene_oferta,
+              // Información de promociones - usar el valor real validado
+              tiene_oferta: tieneOfertaReal ? 'S' : 'N',
               precio_oferta: item.kar_precio_oferta,
               descuento_porcentaje: item.kar_descuento_porcentaje,
               codigo_promocion: item.kar_codigo_promocion,
@@ -193,18 +195,31 @@ const POS = () => {
   const totalValue = precioTypeActual === "detal" ? retailTotal : wholesaleTotal;
   const discountValue = totalValue * (discountPercent / 100);
   
-  // Calcular descuento evento según condiciones
+  // Calcular subtotal de artículos SIN descuento activo (para aplicar descuento evento)
+  const subtotalSinDescuento = order.reduce((sum, item) => {
+    // Un artículo tiene descuento activo SOLO si tiene oferta activa
+    // kar_des_uno es el descuento general de la orden, no un descuento individual del artículo
+    const tieneDescuentoActivo = item.tiene_oferta === 'S';
+    
+    if (!tieneDescuentoActivo) {
+      const precioItem = precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price;
+      return sum + (precioItem * item.quantity);
+    }
+    return sum;
+  }, 0);
+  
+  // Calcular descuento evento según condiciones (solo sobre artículos sin descuento)
   let descuentoEventoCalculado = 0;
   let porcentajeDescuentoEvento = 0;
   if (hayEventoActivo && montoMayoristaNum > 0) {
     // Si cumple umbral mayorista: aplicar descuento mayorista
     if (cumpleUmbralMayorista) {
       porcentajeDescuentoEvento = eventoPromocional.eve_descuento_mayor;
-      descuentoEventoCalculado = totalValue * (porcentajeDescuentoEvento / 100);
+      descuentoEventoCalculado = subtotalSinDescuento * (porcentajeDescuentoEvento / 100);
     } else {
       // Si no cumple umbral: aplicar descuento detal
       porcentajeDescuentoEvento = eventoPromocional.eve_descuento_detal;
-      descuentoEventoCalculado = totalValue * (porcentajeDescuentoEvento / 100);
+      descuentoEventoCalculado = subtotalSinDescuento * (porcentajeDescuentoEvento / 100);
     }
   }
   
@@ -322,14 +337,24 @@ const POS = () => {
     );
   };
 
-  // Nuevo Pedido: reset order and client
-  const handleNewOrder = () => {
+  // Función helper para reiniciar todas las variables del pedido
+  const resetOrderState = (shouldNavigate = true) => {
     setOrder([]);
     setSelectedClient(null);
     setFacDescuentoGeneral(0);
     setDiscountPercent(0);
-    // Reinicia la URL para eliminar el query param "fac_nro"
-    navigate('/pos');
+    setIsEditing(false);
+    setOrderType(null);
+    setShowOrderDrawer(false);
+    // Reinicia la URL para eliminar el query param "fac_nro" solo si se solicita
+    if (shouldNavigate) {
+      navigate('/pos');
+    }
+  };
+
+  // Nuevo Pedido: reset order and client
+  const handleNewOrder = () => {
+    resetOrderState();
     Swal.fire({
       icon: 'info',
       title: 'Nuevo Pedido',
@@ -378,13 +403,25 @@ const POS = () => {
       fac_descuento_general: descuentoEventoFinal,
       lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
-      detalles: order.map(item => ({
-        art_sec: item.id,
-        kar_uni: item.quantity,
-        kar_nat:"c",
-        kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
-        kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
-      })),
+      detalles: order.map(item => {
+        // Determinar si realmente tiene oferta activa
+        const tieneOfertaReal = item.tiene_oferta === 'S' && 
+                                (item.codigo_promocion || item.precio_oferta);
+        
+        return {
+          art_sec: item.id,
+          kar_uni: item.quantity,
+          kar_nat: "c",
+          kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
+          kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
+          // Campos de oferta - solo enviar si realmente hay oferta activa
+          kar_tiene_oferta: tieneOfertaReal ? 'S' : 'N',
+          kar_precio_oferta: tieneOfertaReal ? (item.precio_oferta || null) : null,
+          kar_descuento_porcentaje: tieneOfertaReal ? (item.descuento_porcentaje || null) : null,
+          kar_codigo_promocion: tieneOfertaReal ? (item.codigo_promocion || null) : null,
+          kar_descripcion_promocion: tieneOfertaReal ? (item.descripcion_promocion || null) : null,
+        };
+      }),
     };
     setIsSubmitting(true);
     
@@ -418,9 +455,8 @@ const POS = () => {
                 printOrder(cotizacionNumero); // Usamos el número de cotización guardado
               });
             }
-            setOrder([]);
-            setSelectedClient(null);
-            setShowOrderDrawer(false);
+            // Reiniciar todas las variables del pedido (sin navegar, ya que se navega a /orders)
+            resetOrderState(false);
           } else {
             Swal.fire({
               icon: 'error',
@@ -466,9 +502,8 @@ const POS = () => {
               printOrder(data.fac_nro);
             });
           }
-          setOrder([]);
-          setSelectedClient(null);
-          setShowOrderDrawer(false);
+          // Reiniciar todas las variables del pedido
+          resetOrderState();
         } else {
           Swal.fire({
             icon: 'error',
@@ -537,15 +572,27 @@ const POS = () => {
       fac_descuento_general: descuentoEventoFinal,
       lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
-      detalles: order.map(item => ({
-        art_sec: item.id,
-        kar_uni: item.quantity,
-        kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
-        kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
-        kar_nat: "-",
-        kar_kar_sec_ori: item.kar_sec || null,
-        kar_fac_sec_ori: item.fac_sec || null
-      })),
+      detalles: order.map(item => {
+        // Determinar si realmente tiene oferta activa
+        const tieneOfertaReal = item.tiene_oferta === 'S' && 
+                                (item.codigo_promocion || item.precio_oferta);
+        
+        return {
+          art_sec: item.id,
+          kar_uni: item.quantity,
+          kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
+          kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
+          kar_nat: "-",
+          kar_kar_sec_ori: item.kar_sec || null,
+          kar_fac_sec_ori: item.fac_sec || null,
+          // Campos de oferta - solo enviar si realmente hay oferta activa
+          kar_tiene_oferta: tieneOfertaReal ? 'S' : 'N',
+          kar_precio_oferta: tieneOfertaReal ? (item.precio_oferta || null) : null,
+          kar_descuento_porcentaje: tieneOfertaReal ? (item.descuento_porcentaje || null) : null,
+          kar_codigo_promocion: tieneOfertaReal ? (item.codigo_promocion || null) : null,
+          kar_descripcion_promocion: tieneOfertaReal ? (item.descripcion_promocion || null) : null,
+        };
+      }),
     };
 
     setIsSubmitting(true);
@@ -611,9 +658,8 @@ const POS = () => {
               printOrder(facturaNumero);
             });
           }
-          setOrder([]);
-          setSelectedClient(null);
-          setShowOrderDrawer(false);
+          // Reiniciar todas las variables del pedido (sin navegar, ya que se navega a /orders)
+          resetOrderState(false);
         } else {
           Swal.fire({
             icon: 'error',
@@ -659,9 +705,8 @@ const POS = () => {
                 printOrder(data.fac_nro);
               });
             }
-            setOrder([]);
-            setSelectedClient(null);
-            setShowOrderDrawer(false);
+            // Reiniciar todas las variables del pedido
+            resetOrderState();
           } else {
             Swal.fire({
               icon: 'error',
@@ -848,6 +893,9 @@ const POS = () => {
                 porcentajeDescuentoEvento={porcentajeDescuentoEvento}
                 finalTotal={finalTotal}
                 montoMayorista={montoMayorista}
+                eventoPromocional={eventoPromocional}
+                hayEventoActivo={hayEventoActivo}
+                cumpleUmbralMayorista={cumpleUmbralMayorista}
               />
 
               <div className="space-y-4">
@@ -1005,6 +1053,8 @@ const POS = () => {
             montoMayorista={montoMayorista}
             isEditing={isEditing}
             orderType={orderType}
+            eventoPromocional={eventoPromocional}
+            cumpleUmbralMayorista={cumpleUmbralMayorista}
           />
         )}
 

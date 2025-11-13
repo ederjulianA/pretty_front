@@ -209,6 +209,7 @@ const POS = () => {
   }, 0);
   
   // Calcular descuento evento según condiciones (solo sobre artículos sin descuento)
+  // IMPORTANTE: Solo se aplica si hay un evento activo
   let descuentoEventoCalculado = 0;
   let porcentajeDescuentoEvento = 0;
   if (hayEventoActivo && montoMayoristaNum > 0) {
@@ -223,8 +224,8 @@ const POS = () => {
     }
   }
   
-  // Usar el descuento evento calculado si hay evento activo, sino usar el del estado (para edición)
-  const descuentoEventoFinal = hayEventoActivo ? descuentoEventoCalculado : (facDescuentoGeneral || 0);
+  // Solo aplicar descuento de evento si hay un evento activo, de lo contrario es 0
+  const descuentoEventoFinal = hayEventoActivo ? descuentoEventoCalculado : 0;
   
   const finalTotal = totalValue - discountValue - descuentoEventoFinal;
 

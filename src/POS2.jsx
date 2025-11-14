@@ -73,7 +73,7 @@ const POS = () => {
   const { clientResults, fetchClients } = useClients();
   const { pedidoMinimo, isLoading: isLoadingPedidoMinimo } = usePedidoMinimo();
   const { evento: eventoPromocional } = useEventoPromocional();
-  const { valor: montoMayorista } = useParametro('monto_mayorista');
+  const { valor: montoMayorista, refresh: refreshMontoMayorista } = useParametro('monto_mayorista');
 
   // Editing mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -744,6 +744,43 @@ const POS = () => {
     }
   };
 
+  // Función para actualizar el monto mayorista
+  const handleUpdateMontoMayorista = async (nuevoMonto) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/parametros/monto_mayorista`,
+        { par_value: String(nuevoMonto) },
+        {
+          headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+        }
+      );
+
+      if (response.data.success) {
+        // Refrescar el valor del parámetro
+        if (refreshMontoMayorista) {
+          await refreshMontoMayorista();
+        }
+        Swal.fire({
+          icon: 'success',
+          title: 'Monto mayorista actualizado',
+          text: `El monto mayorista se ha actualizado exitosamente a $${formatValue(Number(nuevoMonto))}`,
+          confirmButtonColor: '#f58ea3',
+        });
+      } else {
+        throw new Error(response.data.message || 'Error al actualizar el monto mayorista');
+      }
+    } catch (error) {
+      console.error("Error al actualizar el monto mayorista:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'Error al actualizar el monto mayorista, por favor intente nuevamente.',
+        confirmButtonColor: '#f58ea3',
+      });
+      throw error;
+    }
+  };
+
   // Cargar listado de categorías
   useEffect(() => {
     setIsLoadingCategories(true);
@@ -897,6 +934,7 @@ const POS = () => {
                 eventoPromocional={eventoPromocional}
                 hayEventoActivo={hayEventoActivo}
                 cumpleUmbralMayorista={cumpleUmbralMayorista}
+                onUpdateMontoMayorista={handleUpdateMontoMayorista}
               />
 
               <div className="space-y-4">
@@ -1056,6 +1094,7 @@ const POS = () => {
             orderType={orderType}
             eventoPromocional={eventoPromocional}
             cumpleUmbralMayorista={cumpleUmbralMayorista}
+            onUpdateMontoMayorista={handleUpdateMontoMayorista}
           />
         )}
 

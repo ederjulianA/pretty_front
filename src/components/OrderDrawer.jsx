@@ -28,7 +28,8 @@ const OrderDrawer = ({
   isEditing,
   orderType,
   eventoPromocional,
-  cumpleUmbralMayorista
+  cumpleUmbralMayorista,
+  onUpdateMontoMayorista
 }) => {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col md:hidden">
@@ -160,6 +161,7 @@ const OrderDrawer = ({
               eventoPromocional={eventoPromocional}
               hayEventoActivo={hayEventoActivo}
               cumpleUmbralMayorista={cumpleUmbralMayorista}
+              onUpdateMontoMayorista={onUpdateMontoMayorista}
             />
           </div>
         </div>

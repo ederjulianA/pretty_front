@@ -1,10 +1,57 @@
 // src/components/OrderSummary.jsx
-import React from 'react';
-import { FaPlus, FaMinus, FaBox, FaFire } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaPlus, FaMinus, FaBox, FaFire, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import { formatValue, formatName } from '../utils';
 import PropTypes from 'prop-types';
 
-const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista, eventoPromocional, hayEventoActivo, cumpleUmbralMayorista }) => {
+const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista, eventoPromocional, hayEventoActivo, cumpleUmbralMayorista, onUpdateMontoMayorista }) => {
+  const [isEditingMonto, setIsEditingMonto] = useState(false);
+  const [nuevoMonto, setNuevoMonto] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleEditClick = () => {
+    setIsEditingMonto(true);
+    setNuevoMonto(montoMayorista || '');
+    setError('');
+  };
+
+  const handleCancel = () => {
+    setIsEditingMonto(false);
+    setNuevoMonto('');
+    setError('');
+  };
+
+  const handleUpdate = async () => {
+    setError('');
+    
+    // Validar que el monto sea mayor a 0
+    const montoNum = Number(nuevoMonto);
+    if (isNaN(montoNum) || montoNum <= 0) {
+      setError('El monto debe ser mayor a 0');
+      return;
+    }
+
+    // Validar que no sea el mismo monto
+    const montoActual = Number(montoMayorista);
+    if (montoNum === montoActual) {
+      setError('Debe ingresar un monto diferente al actual');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      if (onUpdateMontoMayorista) {
+        await onUpdateMontoMayorista(nuevoMonto);
+        setIsEditingMonto(false);
+        setNuevoMonto('');
+      }
+    } catch (err) {
+      setError('Error al actualizar el monto mayorista');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
   return (
     <div>
       {order.length === 0 ? (
@@ -146,10 +193,63 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
       <div className="mt-6 space-y-3 border-t pt-4">
         {montoMayorista && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-            <div className="flex justify-between items-center">
-              <span className="text-blue-700 font-semibold text-sm">Monto Mayorista:</span>
-              <span className="font-bold text-blue-900 text-base">${formatValue(Number(montoMayorista))}</span>
-            </div>
+            {!isEditingMonto ? (
+              <div className="flex justify-between items-center">
+                <span className="text-blue-700 font-semibold text-sm">Monto Mayorista:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-blue-900 text-base">${formatValue(Number(montoMayorista))}</span>
+                  {onUpdateMontoMayorista && (
+                    <button
+                      onClick={handleEditClick}
+                      className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                      title="Editar monto mayorista"
+                    >
+                      <FaEdit className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="block text-blue-700 font-semibold text-sm mb-1">
+                  Editar Monto Mayorista:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={nuevoMonto}
+                    onChange={(e) => {
+                      setNuevoMonto(e.target.value);
+                      setError('');
+                    }}
+                    className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ingrese el monto"
+                    min="1"
+                    step="0.01"
+                    disabled={isUpdating}
+                  />
+                  <button
+                    onClick={handleUpdate}
+                    disabled={isUpdating}
+                    className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    title="Actualizar"
+                  >
+                    <FaCheck className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    disabled={isUpdating}
+                    className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    title="Cancelar"
+                  >
+                    <FaTimes className="w-4 h-4" />
+                  </button>
+                </div>
+                {error && (
+                  <p className="text-red-600 text-xs mt-1">{error}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
         <div className="flex justify-between items-center">
@@ -189,6 +289,7 @@ OrderSummary.propTypes = {
   eventoPromocional: PropTypes.object,
   hayEventoActivo: PropTypes.bool,
   cumpleUmbralMayorista: PropTypes.bool,
+  onUpdateMontoMayorista: PropTypes.func,
 };
 
 export default OrderSummary;

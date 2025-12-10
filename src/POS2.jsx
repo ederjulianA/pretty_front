@@ -121,17 +121,31 @@ const POS = () => {
             const tieneOfertaReal = item.kar_tiene_oferta === 'S' && 
                                     (item.kar_codigo_promocion || item.kar_precio_oferta);
             
-            // Determinar los precios según si tiene oferta o no
+            // IMPORTANTE: Usar el precio real guardado en el pedido (kar_pre_pub)
+            // en lugar de los precios oficiales del producto, para preservar los precios
+            // que se usaron cuando se creó el pedido (especialmente importante para pedidos de WooCommerce)
+            const precioGuardado = item.kar_pre_pub;
+            
+            // Determinar los precios según el tipo de lista de precio usado en el pedido
             let price, price_detal;
             
-            if (tieneOfertaReal) {
-              // Si tiene oferta, usar los precios de oferta
+            // kar_lis_pre_cod: 1 = detal, 2 = mayor
+            if (item.kar_lis_pre_cod === 1) {
+              // Precio detal usado en el pedido
+              price_detal = precioGuardado;
+              // Si hay precio mayor disponible, usarlo, sino usar el mismo precio
+              price = item.kar_pre_pub_mayor || precioGuardado;
+            } else {
+              // Precio mayor usado en el pedido
+              price = precioGuardado;
+              // Si hay precio detal disponible, usarlo, sino usar el mismo precio
+              price_detal = item.kar_pre_pub_detal || precioGuardado;
+            }
+            
+            // Si tiene oferta real, usar los precios de oferta si están disponibles
+            if (tieneOfertaReal && item.precio_mayor && item.precio_detal) {
               price = item.precio_mayor;
               price_detal = item.precio_detal;
-            } else {
-              // Si no tiene oferta, usar los precios originales
-              price = item.kar_pre_pub_mayor;
-              price_detal = item.kar_pre_pub_detal;
             }
             
             return {
@@ -209,10 +223,36 @@ const POS = () => {
   }, 0);
   
   // Calcular descuento evento según condiciones (solo sobre artículos sin descuento)
-  // IMPORTANTE: Solo se aplica si hay un evento activo
+  // IMPORTANTE: 
+  // 1. Si estamos editando un pedido existente (COT) que ya tiene facDescuentoGeneral guardado,
+  //    usamos ese valor en lugar de recalcular (para preservar el descuento del evento que estaba activo cuando se creó el pedido)
+  // 2. Si es un pedido de WooCommerce y facDescuentoGeneral es 0, no aplicar descuento adicional
+  //    porque el descuento del evento ya está aplicado en los precios de los ítems
   let descuentoEventoCalculado = 0;
   let porcentajeDescuentoEvento = 0;
-  if (hayEventoActivo && montoMayoristaNum > 0) {
+  
+  // Detectar si es un pedido de WooCommerce
+  const esPedidoWooCommerce = selectedClient?.fac_nro_woo != null && selectedClient.fac_nro_woo !== '';
+  
+  // Si estamos editando un pedido (COT) y ya tiene descuento general guardado, preservarlo
+  const tieneDescuentoGuardado = isEditing && orderType === "COT" && facDescuentoGeneral > 0;
+  
+  // Si es pedido de WooCommerce y no tiene descuento general guardado, el descuento ya está en los precios
+  const esWooCommerceSinDescuentoGeneral = esPedidoWooCommerce && facDescuentoGeneral === 0;
+  
+  if (tieneDescuentoGuardado) {
+    // Usar el descuento guardado del pedido original
+    descuentoEventoCalculado = facDescuentoGeneral;
+    // Calcular el porcentaje aproximado para mostrar en la UI
+    if (subtotalSinDescuento > 0) {
+      porcentajeDescuentoEvento = (facDescuentoGeneral / subtotalSinDescuento) * 100;
+    }
+  } else if (esWooCommerceSinDescuentoGeneral) {
+    // Pedido de WooCommerce: el descuento ya está aplicado en los precios, no aplicar adicional
+    descuentoEventoCalculado = 0;
+    porcentajeDescuentoEvento = 0;
+  } else if (hayEventoActivo && montoMayoristaNum > 0) {
+    // Si no hay descuento guardado y no es WooCommerce, calcular normalmente según evento activo
     // Si cumple umbral mayorista: aplicar descuento mayorista
     if (cumpleUmbralMayorista) {
       porcentajeDescuentoEvento = eventoPromocional.eve_descuento_mayor;
@@ -224,8 +264,10 @@ const POS = () => {
     }
   }
   
-  // Solo aplicar descuento de evento si hay un evento activo, de lo contrario es 0
-  const descuentoEventoFinal = hayEventoActivo ? descuentoEventoCalculado : 0;
+  // Aplicar descuento de evento: usar el guardado si existe, sino el calculado
+  const descuentoEventoFinal = tieneDescuentoGuardado 
+    ? facDescuentoGeneral 
+    : (esWooCommerceSinDescuentoGeneral ? 0 : (hayEventoActivo ? descuentoEventoCalculado : 0));
   
   const finalTotal = totalValue - discountValue - descuentoEventoFinal;
 
@@ -564,13 +606,24 @@ const POS = () => {
       return;
     }
 
+    // Determinar el descuento general a usar:
+    // 1. Si estamos facturando desde un pedido existente (COT) con descuento guardado, usar ese valor
+    // 2. Si es un pedido de WooCommerce sin descuento general, usar 0 (el descuento ya está en los precios)
+    // 3. En otros casos, usar el descuento calculado del evento activo
+    const esPedidoWooCommerce = selectedClient?.fac_nro_woo != null && selectedClient.fac_nro_woo !== '';
+    const esWooCommerceSinDescuentoGeneral = esPedidoWooCommerce && facDescuentoGeneral === 0;
+    
+    const descuentoGeneralParaFactura = (isEditing && orderType === "COT" && facDescuentoGeneral > 0)
+      ? facDescuentoGeneral 
+      : (esWooCommerceSinDescuentoGeneral ? 0 : descuentoEventoFinal);
+
     const payload = {
       nit_sec: selectedClient.nit_sec,
       fac_usu_cod_cre: fac_usu_cod,
       fac_tip_cod: "VTA",
       fac_est_fac: "A",
       descuento: discountPercent,
-      fac_descuento_general: descuentoEventoFinal,
+      fac_descuento_general: descuentoGeneralParaFactura,
       lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
       detalles: order.map(item => {

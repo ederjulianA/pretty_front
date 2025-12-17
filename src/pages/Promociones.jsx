@@ -106,6 +106,8 @@ const Promociones = () => {
   // Estados de Modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPromocion, setSelectedPromocion] = useState(null);
+  const [detalleCompleto, setDetalleCompleto] = useState(null);
+  const [isLoadingDetalle, setIsLoadingDetalle] = useState(false);
 
   // Función para obtener promociones
   const fetchPromociones = useCallback(async (page, currentPromociones = []) => {
@@ -178,9 +180,49 @@ const Promociones = () => {
   };
 
   // Función para ver detalles
-  const handleViewDetail = (promocion) => {
+  const handleViewDetail = async (promocion) => {
     setSelectedPromocion(promocion);
     setShowDetailModal(true);
+    setDetalleCompleto(null);
+    setIsLoadingDetalle(true);
+    
+    try {
+      const response = await axios.get(`${API_URL}/promociones/${promocion.pro_sec}`, {
+        headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
+      });
+
+      if (response.data.success) {
+        // La respuesta puede tener diferentes estructuras:
+        // Opción 1: response.data.data contiene los datos principales
+        // Opción 2: response.data contiene los datos directamente
+        const data = response.data.data || response.data;
+        
+        // Log para debugging - verificar estructura
+        console.log('Respuesta completa:', response.data);
+        console.log('Datos cargados:', data);
+        console.log('Artículos encontrados:', data.articulos);
+        console.log('Tipo de articulos:', typeof data.articulos, Array.isArray(data.articulos));
+        
+        setDetalleCompleto(data);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo cargar el detalle de la promoción',
+          confirmButtonColor: '#f58ea3'
+        });
+      }
+    } catch (error) {
+      console.error('Error al cargar detalles:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al cargar los detalles de la promoción',
+        confirmButtonColor: '#f58ea3'
+      });
+    } finally {
+      setIsLoadingDetalle(false);
+    }
   };
 
   // Función para editar
@@ -238,8 +280,14 @@ const Promociones = () => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
   };
 
-  const canEditOrDelete = (promocionEstado) => {
-    return ['ACTIVA', 'PENDIENTE', 'INACTIVA'].includes(promocionEstado);
+  // Función para verificar si se puede editar (siempre permitido)
+  const canEdit = () => {
+    return true; // Siempre se permite editar, sin importar el estado
+  };
+
+  // Función para verificar si se puede eliminar (siempre permitido)
+  const canDelete = () => {
+    return true; // Siempre se permite eliminar, sin importar el estado
   };
 
   return (
@@ -367,23 +415,23 @@ const Promociones = () => {
                 >
                   <FaEye className="w-4 h-4" />
                 </button>
-                {canEditOrDelete(promocion.estado_temporal) && (
-                  <>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleEdit(promocion); }}
-                      className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
-                      title="Editar"
-                    >
-                      <FaEdit className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleDelete(promocion); }}
-                      className="text-red-500 hover:text-red-700 p-2 rounded-lg transition-colors bg-red-50"
-                      title="Eliminar"
-                    >
-                      <FaTrash className="w-4 h-4" />
-                    </button>
-                  </>
+                {canEdit() && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleEdit(promocion); }}
+                    className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
+                    title="Editar"
+                  >
+                    <FaEdit className="w-4 h-4" />
+                  </button>
+                )}
+                {canDelete() && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDelete(promocion); }}
+                    className="text-red-500 hover:text-red-700 p-2 rounded-lg transition-colors bg-red-50"
+                    title="Eliminar"
+                  >
+                    <FaTrash className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             </div>
@@ -444,23 +492,23 @@ const Promociones = () => {
                       >
                         <FaEye className="w-4 h-4" />
                       </button>
-                      {canEditOrDelete(promocion.estado_temporal) && (
-                        <>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleEdit(promocion); }}
-                            className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
-                            title="Editar"
-                          >
-                            <FaEdit className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleDelete(promocion); }}
-                            className="text-red-500 hover:text-red-700 p-2 rounded-lg transition-colors bg-red-50"
-                            title="Eliminar"
-                          >
-                            <FaTrash className="w-4 h-4" />
-                          </button>
-                        </>
+                      {canEdit() && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleEdit(promocion); }}
+                          className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 rounded-lg transition-colors bg-[#fff5f7]"
+                          title="Editar"
+                        >
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDelete() && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDelete(promocion); }}
+                          className="text-red-500 hover:text-red-700 p-2 rounded-lg transition-colors bg-red-50"
+                          title="Eliminar"
+                        >
+                          <FaTrash className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
                   </td>
@@ -486,28 +534,128 @@ const Promociones = () => {
         </div>
       )}
 
-      {/* Modal de Detalle - Temporalmente deshabilitado */}
+      {/* Modal de Detalle */}
       {showDetailModal && selectedPromocion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">Detalles de Promoción</h2>
               <button
-                onClick={() => setShowDetailModal(false)}
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setDetalleCompleto(null);
+                }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 ×
               </button>
             </div>
-            <div className="space-y-4">
-              <div><strong>Código:</strong> {selectedPromocion.pro_codigo}</div>
-              <div><strong>Descripción:</strong> {selectedPromocion.pro_descripcion}</div>
-              <div><strong>Tipo:</strong> {selectedPromocion.pro_tipo}</div>
-              <div><strong>Fechas:</strong> {format(new Date(selectedPromocion.pro_fecha_inicio), 'dd/MM/yyyy')} - {format(new Date(selectedPromocion.pro_fecha_fin), 'dd/MM/yyyy')}</div>
-              <div><strong>Estado:</strong> {selectedPromocion.estado_temporal}</div>
-              <div><strong>Artículos:</strong> {selectedPromocion.total_articulos || 0}</div>
-              <div><strong>Días Restantes:</strong> {selectedPromocion.dias_restantes || 0}</div>
-              <div><strong>Observaciones:</strong> {selectedPromocion.pro_observaciones || 'Sin observaciones'}</div>
+
+            {/* Información del Encabezado */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Información General</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <strong className="text-gray-700">Código:</strong>
+                  <p className="text-gray-900">{selectedPromocion.pro_codigo}</p>
+                </div>
+                <div>
+                  <strong className="text-gray-700">Descripción:</strong>
+                  <p className="text-gray-900">{selectedPromocion.pro_descripcion}</p>
+                </div>
+                <div>
+                  <strong className="text-gray-700">Tipo:</strong>
+                  <p className="text-gray-900">{selectedPromocion.pro_tipo || 'N/A'}</p>
+                </div>
+                <div>
+                  <strong className="text-gray-700">Fechas:</strong>
+                  <p className="text-gray-900">
+                    {format(new Date(selectedPromocion.pro_fecha_inicio), 'dd/MM/yyyy')} - {format(new Date(selectedPromocion.pro_fecha_fin), 'dd/MM/yyyy')}
+                  </p>
+                </div>
+                <div>
+                  <strong className="text-gray-700">Estado:</strong>
+                  <p className="text-gray-900">{selectedPromocion.estado_temporal}</p>
+                </div>
+                <div>
+                  <strong className="text-gray-700">Días Restantes:</strong>
+                  <p className="text-gray-900">{selectedPromocion.dias_restantes || 0}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <strong className="text-gray-700">Observaciones:</strong>
+                  <p className="text-gray-900">{selectedPromocion.pro_observaciones || 'Sin observaciones'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Detalle de Artículos */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Artículos en Promoción ({
+                  detalleCompleto?.articulos?.length !== undefined 
+                    ? detalleCompleto.articulos.length 
+                    : (selectedPromocion.total_articulos || 0)
+                })
+              </h3>
+              
+              {isLoadingDetalle ? (
+                <div className="text-center py-8">
+                  <LoadingSpinner />
+                </div>
+              ) : detalleCompleto && detalleCompleto.articulos && Array.isArray(detalleCompleto.articulos) && detalleCompleto.articulos.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg">
+                    <thead className="bg-[#fff5f7]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Código</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Precio Normal</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Precio Oferta</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Descuento %</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {detalleCompleto.articulos.map((articulo, index) => {
+                        const precioNormal = articulo.precio_detal_base || articulo.precio_normal || 0;
+                        const precioOferta = articulo.pro_det_precio_oferta || 0;
+                        const descuentoPorcentaje = articulo.pro_det_descuento_porcentaje || 0;
+                        const estadoArticulo = articulo.pro_det_estado === 'A' ? 'Activo' : articulo.pro_det_estado === 'I' ? 'Inactivo' : 'Pendiente';
+                        const estadoColor = articulo.pro_det_estado === 'A' ? 'bg-green-100 text-green-800' : articulo.pro_det_estado === 'I' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800';
+                        
+                        return (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {articulo.art_cod}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700">
+                              {articulo.art_nom}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                              ${Number(precioNormal).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-[#f58ea3]">
+                              ${Number(precioOferta).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                              {descuentoPorcentaje > 0 ? `${descuentoPorcentaje}%` : '-'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-center">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${estadoColor}`}>
+                                {estadoArticulo}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No hay artículos asociados a esta promoción.
+                </div>
+              )}
             </div>
           </div>
         </div>

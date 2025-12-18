@@ -521,7 +521,7 @@ const InventoryAdjustment = () => {
           <div className="space-y-4">
             {rows.map((row, index) => (
               <div key={index} className="border rounded-lg p-2 bg-gray-50">
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-1 gap-2 mb-2">
                   <div>
                     <label className="text-xs text-gray-500">Código</label>
                     <div className="flex space-x-1">
@@ -541,14 +541,15 @@ const InventoryAdjustment = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500">Naturaleza</label>
+                    <label className="text-xs text-gray-500 font-semibold">Naturaleza del Ajuste</label>
                     <select
                       value={row.kar_nat}
                       onChange={(e) => handleRowChange(index, 'kar_nat', e.target.value)}
-                      className="w-full p-1 border rounded text-xs"
+                      className="w-full p-2 border-2 rounded text-sm font-medium focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                      style={{ minWidth: '100%' }}
                     >
-                      <option value="+">Positivo (+)</option>
-                      <option value="-">Negativo (-)</option>
+                      <option value="+">➕ Positivo (+) - Agregar unidades</option>
+                      <option value="-">➖ Negativo (-) - Restar unidades</option>
                     </select>
                   </div>
                 </div>
@@ -606,7 +607,7 @@ const InventoryAdjustment = () => {
                 <th className="px-2 py-1 text-xs font-medium text-gray-700">Art. Cod</th>
                 <th className="px-2 py-1 text-xs font-medium text-gray-700">Buscar</th>
                 <th className="px-2 py-1 text-xs font-medium text-gray-700">Art. Nom</th>
-                <th className="px-2 py-1 text-xs font-medium text-gray-700">Nat.</th>
+                <th className="px-2 py-1 text-xs font-medium text-gray-700" style={{ minWidth: '180px', width: '180px' }}>Naturaleza</th>
                 <th className="px-2 py-1 text-xs font-medium text-gray-700">Cant.</th>
                 <th className="px-2 py-1 text-xs font-medium text-gray-700">Actual</th>
                 <th className="px-2 py-1 text-xs font-medium text-gray-700">Nuevo</th>
@@ -640,14 +641,15 @@ const InventoryAdjustment = () => {
                       className="w-full p-1 border rounded text-xs bg-gray-50"
                     />
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-2 py-1" style={{ minWidth: '180px', width: '180px' }}>
                     <select
                       value={row.kar_nat}
                       onChange={(e) => handleRowChange(index, 'kar_nat', e.target.value)}
-                      className="w-full p-1 border rounded text-xs"
+                      className="w-full p-2 border-2 rounded text-sm font-medium focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                      style={{ minWidth: '180px' }}
                     >
-                      <option value="+">+</option>
-                      <option value="-">-</option>
+                      <option value="+">➕ Positivo (+) - Agregar unidades</option>
+                      <option value="-">➖ Negativo (-) - Restar unidades</option>
                     </select>
                   </td>
                   <td className="px-2 py-1">

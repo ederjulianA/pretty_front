@@ -17,6 +17,7 @@ import Roles from '../pages/admin/Roles';
 import Users from '../pages/admin/Users';
 import Promociones from '../pages/Promociones';
 import PromocionNew from '../pages/PromocionNew';
+import EventosPromocionales from '../pages/EventosPromocionales';
 
 const AppRoutes = () => {
   return (
@@ -113,6 +114,12 @@ const AppRoutes = () => {
         <Route 
           path="promociones/editar/:pro_sec" 
           element={<PromocionNew />}
+        />
+
+        {/* Rutas de eventos promocionales */}
+        <Route 
+          path="eventos-promocionales" 
+          element={<EventosPromocionales />}
         />
 
         {/* Rutas de conteos */}

@@ -23,6 +23,8 @@ import UserManager from './pages/UserManager';
 import DiferenciaInventario from './pages/DiferenciaInventario';
 import Promociones from './pages/Promociones';
 import PromocionNew from './pages/PromocionNew';
+import EventosPromocionales from './pages/EventosPromocionales';
+import EventoPromocionalNew from './pages/EventoPromocionalNew';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -188,6 +190,20 @@ function App() {
           <Route 
             path="promociones/editar/:pro_sec" 
             element={<PromocionNew />}
+          />
+
+          {/* Eventos Promocionales Routes */}
+          <Route 
+            path="eventos-promocionales" 
+            element={<EventosPromocionales />}
+          />
+          <Route 
+            path="eventos-promocionales/nuevo" 
+            element={<EventoPromocionalNew />}
+          />
+          <Route 
+            path="eventos-promocionales/editar/:eve_sec" 
+            element={<EventoPromocionalNew />}
           />
           
           {/* Role Manager - Solo accesible para administradores */}

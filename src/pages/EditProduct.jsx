@@ -1,15 +1,18 @@
 // src/pages/EditProduct.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import ProductPhotoGallery from '../components/product/ProductPhotoGallery';
+import VariationsTable from '../components/product/VariationsTable';
+import CreateVariationModal from '../components/product/CreateVariationModal';
+import { FaLayerGroup } from 'react-icons/fa';
 
 const EditProduct = () => {
   const { id } = useParams(); // id del producto (usamos art_sec como id)
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     art_cod: '',
     art_nom: '',
@@ -20,15 +23,15 @@ const EditProduct = () => {
     art_woo_id: '',
     actualiza_fecha: 'N'
   });
-  
+
   // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
   const [initialArtCod, setInitialArtCod] = useState('');
   const [initialArtWooId, setInitialArtWooId] = useState('');
-  
+
   // Estados para errores de validación
   const [errorArtCod, setErrorArtCod] = useState('');
   const [errorArtWoo, setErrorArtWoo] = useState('');
-  
+
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
@@ -36,11 +39,88 @@ const EditProduct = () => {
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Estados para producto variable
+  const [productWooType, setProductWooType] = useState(null); // 'simple', 'variable', 'variation'
+  const [variations, setVariations] = useState([]);
+  const [isLoadingVariations, setIsLoadingVariations] = useState(false);
+  const [isVariationModalOpen, setIsVariationModalOpen] = useState(false);
+  const [parentAttributes, setParentAttributes] = useState([]); // [{name: "Tono", options: [...]}]
+  const [isSyncingAttributes, setIsSyncingAttributes] = useState(false);
+
+  // Cargar variaciones del producto variable
+  const fetchVariations = useCallback(async () => {
+    setIsLoadingVariations(true);
+    try {
+      const token = localStorage.getItem('pedidos_pretty_token');
+      const response = await axios.get(`${API_URL}/articulos/variable/${id}/variations`, {
+        headers: { 'x-access-token': token }
+      });
+      if (response.data.success) {
+        setVariations(response.data.data || []);
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error al cargar variaciones:', error);
+    } finally {
+      setIsLoadingVariations(false);
+    }
+    return null;
+  }, [id]);
+
+  // Sincronizar atributos con WooCommerce
+  const handleSyncAttributes = async () => {
+    setIsSyncingAttributes(true);
+    try {
+      const token = localStorage.getItem('pedidos_pretty_token');
+      const response = await axios.put(
+        `${API_URL}/articulos/variable/${id}/sync-attributes`,
+        {},
+        { headers: { 'x-access-token': token } }
+      );
+      if (response.data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Sincronización exitosa',
+          text: response.data.message || 'Atributos sincronizados con WooCommerce.',
+          confirmButtonColor: '#f58ea3'
+        });
+        fetchVariations();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: response.data.message || 'Error al sincronizar atributos.',
+          confirmButtonColor: '#f58ea3'
+        });
+      }
+    } catch (error) {
+      console.error('Error al sincronizar atributos:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'Error al sincronizar atributos con WooCommerce.',
+        confirmButtonColor: '#f58ea3'
+      });
+    } finally {
+      setIsSyncingAttributes(false);
+    }
+  };
+
+  // Función para parsear atributos de forma segura
+  const parseAttributes = (attrs) => {
+    try {
+      const parsed = typeof attrs === 'string' ? JSON.parse(attrs) : attrs;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
   // Cargar datos del producto a editar
   useEffect(() => {
     setIsLoadingProduct(true);
     axios.get(`${API_URL}/articulos/${id}`)
-      .then(response => {
+      .then(async (response) => {
         const data = response.data;
         if(data.success && data.articulo) {
           const prod = data.articulo;
@@ -54,9 +134,55 @@ const EditProduct = () => {
             art_woo_id: prod.art_woo_id || '',
             actualiza_fecha: prod.actualiza_fecha || 'N'
           });
-          // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
           setInitialArtCod(prod.art_cod || '');
           setInitialArtWooId(prod.art_woo_id || '');
+
+          // Detectar tipo de producto
+          // Prioridad: art_woo_type > art_variable > fallback por variaciones
+          const wooType = prod.art_woo_type;
+          const isVariable = prod.art_variable === 'S';
+
+          if (wooType === 'variable' || wooType === 'variation') {
+            setProductWooType(wooType);
+            if (wooType === 'variable' && prod.attributes) {
+              setParentAttributes(parseAttributes(prod.attributes));
+            }
+          } else if (isVariable) {
+            setProductWooType('variable');
+            if (prod.attributes) {
+              setParentAttributes(parseAttributes(prod.attributes));
+            }
+          } else {
+            // El backend puede no devolver art_woo_type aún
+            // Intentar detectar consultando el endpoint de variaciones
+            try {
+              const token = localStorage.getItem('pedidos_pretty_token');
+              const varResponse = await axios.get(`${API_URL}/articulos/variable/${id}/variations`, {
+                headers: { 'x-access-token': token }
+              });
+              if (varResponse.data.success && varResponse.data.data) {
+                // Es un producto variable - tiene variaciones
+                setProductWooType('variable');
+                setVariations(varResponse.data.data);
+                // Inferir atributos desde las variaciones existentes
+                if (varResponse.data.data.length > 0) {
+                  const firstVar = varResponse.data.data[0];
+                  if (firstVar.art_variation_attributes) {
+                    const attrName = Object.keys(firstVar.art_variation_attributes)[0];
+                    const usedOptions = varResponse.data.data
+                      .map(v => v.art_variation_attributes ? Object.values(v.art_variation_attributes)[0] : null)
+                      .filter(Boolean);
+                    setParentAttributes([{ name: attrName, options: usedOptions }]);
+                  }
+                }
+              } else {
+                setProductWooType('simple');
+              }
+            } catch {
+              // Si el endpoint falla (404, etc.), es un producto simple
+              setProductWooType('simple');
+            }
+          }
         } else {
           Swal.fire({
             icon: 'error',
@@ -77,6 +203,13 @@ const EditProduct = () => {
       })
       .finally(() => setIsLoadingProduct(false));
   }, [id]);
+
+  // Cargar variaciones cuando se detecte que es variable (si no se cargaron ya)
+  useEffect(() => {
+    if (productWooType === 'variable' && variations.length === 0 && !isLoadingVariations) {
+      fetchVariations();
+    }
+  }, [productWooType, fetchVariations, variations.length, isLoadingVariations]);
 
   // Cargar categorías
   useEffect(() => {
@@ -111,7 +244,7 @@ const EditProduct = () => {
   useEffect(() => {
     if(formData.categoria) {
       setIsLoadingSubcategorias(true);
-      axios.get(`${API_URL}/subcategorias`, { params: { categoria: formData.categoria } })
+      axios.get(`${API_URL}/subcategorias`, { params: { inv_gru_cod: formData.categoria } })
         .then(response => {
           const data = response.data;
           if(data.success && data.subcategorias) {
@@ -197,7 +330,7 @@ const EditProduct = () => {
       return;
     }
     setIsSubmitting(true);
-    
+
     const dataToSend = {
       ...formData,
       subcategoria: formData.subcategoria || 0,
@@ -240,6 +373,22 @@ const EditProduct = () => {
       });
   };
 
+  // Calcular opciones disponibles para nueva variación
+  const getAvailableOptions = () => {
+    if (!parentAttributes.length) return [];
+    const attr = parentAttributes[0]; // Solo soportamos un atributo
+    const allOptions = attr.options || [];
+    const usedOptions = variations
+      .map(v => {
+        if (v.art_variation_attributes) {
+          return Object.values(v.art_variation_attributes)[0];
+        }
+        return null;
+      })
+      .filter(Boolean);
+    return allOptions.filter(opt => !usedOptions.includes(opt));
+  };
+
   if(isLoadingProduct) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#edf3f9]">
@@ -248,15 +397,33 @@ const EditProduct = () => {
     );
   }
 
+  const isVariable = productWooType === 'variable';
+  const isVariation = productWooType === 'variation';
+
   return (
-    <div className="min-h-screen bg-[#edf3f9] p-4 flex items-center justify-center">
+    <div className="min-h-screen bg-[#edf3f9] p-4 flex flex-col items-center">
       <div className="w-full max-w-2xl mx-auto bg-white/80 shadow-xl rounded-2xl p-6 sm:p-10 border border-[#f5cad4] backdrop-blur-md">
-        <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 tracking-tight">Editar Producto</h2>
+        <h2 className="text-3xl font-bold mb-2 text-center text-gray-800 tracking-tight">Editar Producto</h2>
+
+        {/* Badge de tipo de producto */}
+        {(isVariable || isVariation) && (
+          <div className="flex justify-center mb-6">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
+              isVariable
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-indigo-100 text-indigo-700'
+            }`}>
+              <FaLayerGroup className="w-3 h-3" />
+              {isVariable ? 'Producto Variable' : 'Variación'}
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Código */}
           <div>
             <label className="block text-gray-700 mb-2 font-medium">Código</label>
-            <input 
+            <input
               type="text"
               name="art_cod"
               value={formData.art_cod}
@@ -265,13 +432,15 @@ const EditProduct = () => {
               placeholder="Ingrese código"
               className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
               required
+              disabled={isVariation}
             />
             {errorArtCod && <p className="text-[#f58ea3] text-xs mt-1">{errorArtCod}</p>}
+            {isVariation && <p className="text-xs text-gray-400 mt-1">El código de variaciones es generado automáticamente.</p>}
           </div>
           {/* Nombre */}
           <div>
             <label className="block text-gray-700 mb-2 font-medium">Nombre</label>
-            <input 
+            <input
               type="text"
               name="art_nom"
               value={formData.art_nom}
@@ -287,7 +456,7 @@ const EditProduct = () => {
             {isLoadingCategories ? (
               <p className="text-[#f58ea3]">Cargando categorías...</p>
             ) : (
-              <select 
+              <select
                 name="categoria"
                 value={formData.categoria}
                 onChange={handleChange}
@@ -309,7 +478,7 @@ const EditProduct = () => {
             {isLoadingSubcategorias ? (
               <p className="text-[#f58ea3]">Cargando subcategorías...</p>
             ) : (
-              <select 
+              <select
                 name="subcategoria"
                 value={formData.subcategoria}
                 onChange={handleChange}
@@ -328,8 +497,10 @@ const EditProduct = () => {
           {/* Precios */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 mb-2 font-medium">Precio Detal</label>
-              <input 
+              <label className="block text-gray-700 mb-2 font-medium">
+                {isVariable ? 'Precio Detal (Referencia)' : 'Precio Detal'}
+              </label>
+              <input
                 type="number"
                 name="precio_detal"
                 value={formData.precio_detal}
@@ -338,10 +509,15 @@ const EditProduct = () => {
                 className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
               />
+              {isVariable && (
+                <p className="text-xs text-gray-400 mt-1">Precio de referencia para las variaciones.</p>
+              )}
             </div>
             <div>
-              <label className="block text-gray-700 mb-2 font-medium">Precio Mayor</label>
-              <input 
+              <label className="block text-gray-700 mb-2 font-medium">
+                {isVariable ? 'Precio Mayor (Referencia)' : 'Precio Mayor'}
+              </label>
+              <input
                 type="number"
                 name="precio_mayor"
                 value={formData.precio_mayor}
@@ -350,12 +526,15 @@ const EditProduct = () => {
                 className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
                 required
               />
+              {isVariable && (
+                <p className="text-xs text-gray-400 mt-1">Precio de referencia para las variaciones.</p>
+              )}
             </div>
           </div>
           {/* Código WooCommerce */}
           <div>
             <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
-            <input 
+            <input
               type="text"
               name="art_woo_id"
               value={formData.art_woo_id}
@@ -387,14 +566,14 @@ const EditProduct = () => {
           </div>
           {/* Botones de acción */}
           <div className="flex justify-end gap-4 pt-4">
-            <button 
+            <button
               type="button"
               onClick={() => navigate('/products')}
               className="px-6 py-2 border border-[#f58ea3] text-[#f58ea3] rounded-xl bg-[#fffafe] hover:bg-[#f7b3c2]/40 hover:text-[#a5762f] transition font-semibold shadow-sm"
             >
               Cancelar
             </button>
-            <button 
+            <button
               type="submit"
               disabled={isSubmitting || errorArtCod || errorArtWoo}
               className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] text-white font-semibold shadow-md hover:from-[#a5762f] hover:to-[#f7b3c2] transition cursor-pointer disabled:opacity-60"
@@ -404,6 +583,37 @@ const EditProduct = () => {
           </div>
         </form>
       </div>
+
+      {/* Sección de Variaciones - solo para producto variable */}
+      {isVariable && (
+        <div className="w-full max-w-2xl mx-auto">
+          <VariationsTable
+            variations={variations}
+            isLoading={isLoadingVariations}
+            onAddVariation={() => setIsVariationModalOpen(true)}
+            onSyncAttributes={handleSyncAttributes}
+            isSyncing={isSyncingAttributes}
+            parentName={formData.art_nom}
+          />
+        </div>
+      )}
+
+      {/* Modal para crear variación */}
+      {isVariable && (
+        <CreateVariationModal
+          isOpen={isVariationModalOpen}
+          onClose={() => setIsVariationModalOpen(false)}
+          parentArtSec={id}
+          parentName={formData.art_nom}
+          attributeType={parentAttributes[0]?.name || 'Tono'}
+          availableOptions={getAvailableOptions()}
+          referencePrices={{
+            detal: formData.precio_detal,
+            mayor: formData.precio_mayor,
+          }}
+          onVariationCreated={fetchVariations}
+        />
+      )}
     </div>
   );
 };

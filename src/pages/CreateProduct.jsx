@@ -5,10 +5,13 @@ import { API_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaUpload, FaTrash, FaSpinner, FaSyncAlt } from 'react-icons/fa';
+import ProductTypeSelector from '../components/product/ProductTypeSelector';
+import AttributeManager from '../components/product/AttributeManager';
 
 const CreateProduct = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const [productType, setProductType] = useState('simple');
   const [formData, setFormData] = useState({
     art_cod: '',
     art_nom: '',
@@ -26,6 +29,10 @@ const CreateProduct = () => {
   const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingCodigo, setIsLoadingCodigo] = useState(false);
+
+  // Estados para atributos (producto variable)
+  const [attributeType, setAttributeType] = useState('Tono');
+  const [attributeOptions, setAttributeOptions] = useState([]);
 
   // Estados para los errores de validación
   const [errorArtCod, setErrorArtCod] = useState('');
@@ -223,6 +230,73 @@ const CreateProduct = () => {
     }
   };
 
+  // Submit para producto SIMPLE (lógica original)
+  const handleSubmitSimple = async () => {
+    const formDataToSend = new FormData();
+
+    // Agregar campos del formulario
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value) {
+        formDataToSend.append(key, value);
+      }
+    });
+
+    // Agregar imágenes
+    images.forEach((image, index) => {
+      formDataToSend.append(`image${index + 1}`, image);
+    });
+
+    const response = await axios.post(`${API_URL}/crearArticulo`, formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response;
+  };
+
+  // Submit para producto VARIABLE
+  const handleSubmitVariable = async () => {
+    // Validar que hay opciones de atributo
+    if (attributeOptions.length === 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de validación',
+        text: `Debes agregar al menos una opción de ${attributeType.toLowerCase()}.`,
+        confirmButtonColor: '#f58ea3'
+      });
+      return null;
+    }
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('art_nom', formData.art_nom);
+    formDataToSend.append('art_cod', formData.art_cod);
+    formDataToSend.append('subcategoria', formData.subcategoria);
+
+    if (formData.categoria) formDataToSend.append('categoria', formData.categoria);
+    if (formData.precio_detal) formDataToSend.append('precio_detal_referencia', formData.precio_detal);
+    if (formData.precio_mayor) formDataToSend.append('precio_mayor_referencia', formData.precio_mayor);
+
+    // Atributos como JSON
+    const attributes = [{ name: attributeType, options: attributeOptions }];
+    formDataToSend.append('attributes', JSON.stringify(attributes));
+
+    // Imágenes
+    images.forEach((image, index) => {
+      formDataToSend.append(`image${index + 1}`, image);
+    });
+
+    const token = localStorage.getItem('pedidos_pretty_token');
+    const response = await axios.post(`${API_URL}/articulos/variable`, formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'x-access-token': token,
+      }
+    });
+
+    return response;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -246,55 +320,47 @@ const CreateProduct = () => {
     setIsSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
+      let response;
 
-      // Agregar campos del formulario
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value) { // Solo agregar campos que tengan valor
-          formDataToSend.append(key, value);
+      if (productType === 'variable') {
+        response = await handleSubmitVariable();
+        if (!response) {
+          setIsSubmitting(false);
+          return;
         }
-      });
+      } else {
+        response = await handleSubmitSimple();
+      }
 
-      // Agregar imágenes con los nombres correctos que espera el backend
-      images.forEach((image, index) => {
-        formDataToSend.append(`image${index + 1}`, image);
-      });
-
-      const response = await axios.post(`${API_URL}/crearArticulo`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      console.log('Respuesta del servidor:', response.data); // Para debug
+      console.log('Respuesta del servidor:', response.data);
 
       if (response.data.success) {
-        // Si no hay errores, mostrar mensaje de éxito simple
         if (!response.data.errors || Object.keys(response.data.errors).length === 0) {
           Swal.fire({
             icon: 'success',
             title: 'Producto creado',
-            text: response.data.message,
+            text: response.data.message || 'Producto creado exitosamente.',
             confirmButtonColor: '#f58ea3'
           }).then(() => {
-            navigate('/products');
+            if (productType === 'variable' && response.data.data?.art_sec) {
+              navigate(`/products/edit/${response.data.data.art_sec}`);
+            } else {
+              navigate('/products');
+            }
           });
         } else {
-          // Si hay errores pero el artículo se creó, mostrar mensaje detallado
+          // Producto creado con advertencias
           let errorMessage = '<div class="text-left">';
           errorMessage += `<p class="mb-4 text-lg">${response.data.message}</p>`;
           errorMessage += '<div class="space-y-4">';
 
           Object.entries(response.data.errors).forEach(([key, errorData]) => {
-            console.log(`Procesando error de ${key}:`, errorData); // Para debug
-
             const errorType = {
               cloudinary: { title: 'Error en Cloudinary', color: 'red' },
               wooCommerce: { title: 'Error en WooCommerce', color: 'orange' },
               database: { title: 'Error en Base de Datos', color: 'red' }
             }[key] || { title: key, color: 'red' };
 
-            // Asegurarse de que errorData sea un objeto
             const error = typeof errorData === 'string' ? { message: errorData } : errorData;
 
             errorMessage += `
@@ -313,7 +379,7 @@ const CreateProduct = () => {
                           ${error.message}
                         </p>
                       ` : ''}
-                      
+
                       ${error.details ? `
                         <p class="text-sm text-${errorType.color}-600 mt-1">
                           ${error.details}
@@ -358,12 +424,16 @@ const CreateProduct = () => {
             }
           }).then((result) => {
             if (result.isConfirmed) {
-              navigate('/products');
+              if (productType === 'variable' && response.data.data?.art_sec) {
+                navigate(`/products/edit/${response.data.data.art_sec}`);
+              } else {
+                navigate('/products');
+              }
             }
           });
         }
       } else {
-        // Si hay error en la creación del artículo
+        // Error en la creación
         let errorMessage = '<div class="text-left">';
         errorMessage += `<p class="mb-4 text-lg font-medium">${response.data.message || 'Error al crear el producto'}</p>`;
         errorMessage += '<div class="space-y-4">';
@@ -386,7 +456,7 @@ const CreateProduct = () => {
                       ${errorData.message ? `
                         <p class="text-sm text-red-700">${errorData.message}</p>
                       ` : ''}
-                      
+
                       <div class="mt-2 p-2 bg-red-100 rounded">
                         <div class="text-xs font-mono">
                           ${Object.entries(errorData)
@@ -428,17 +498,16 @@ const CreateProduct = () => {
       }
     } catch (error) {
       console.error("Error al crear producto:", error);
-      console.error("Detalles del error:", error.response?.data); // Para debug
+      console.error("Detalles del error:", error.response?.data);
 
       let errorMessage = '<div class="text-left">';
       errorMessage += `<p class="mb-4 text-lg font-medium">Error al crear el producto:</p>`;
 
-      // Mostrar el mensaje principal del error
       const mainError = error.response?.data?.message || error.message || 'Ha ocurrido un error inesperado.';
       errorMessage += `
         <div class="bg-red-50 p-4 rounded-lg border border-red-200">
           <p class="text-sm text-red-700">${mainError}</p>
-          
+
           ${error.response?.data?.errors ? `
             <div class="mt-2 p-2 bg-red-100 rounded text-xs font-mono">
               ${Object.entries(error.response.data.errors)
@@ -476,6 +545,8 @@ const CreateProduct = () => {
     }
   };
 
+  const isVariable = productType === 'variable';
+
   return (
     <div className="min-h-screen bg-[#edf3f9] p-4 flex items-center justify-center">
       <div className="w-full max-w-2xl mx-auto bg-white/80 shadow-xl rounded-2xl p-6 sm:p-10 border border-[#f5cad4] backdrop-blur-md relative">
@@ -488,6 +559,13 @@ const CreateProduct = () => {
         )}
         <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 tracking-tight">Crear Nuevo Producto</h2>
         <form onSubmit={handleSubmit} className={`space-y-6 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+          {/* Selector de Tipo de Producto */}
+          <ProductTypeSelector
+            productType={productType}
+            onTypeChange={setProductType}
+            disabled={isSubmitting}
+          />
+
           {/* Código */}
           <div>
             <label className="block text-gray-700 mb-2 font-medium">Código</label>
@@ -588,10 +666,24 @@ const CreateProduct = () => {
               </select>
             )}
           </div>
+
+          {/* Sección de Atributos (solo para producto variable) */}
+          {isVariable && (
+            <AttributeManager
+              attributeType={attributeType}
+              onAttributeTypeChange={setAttributeType}
+              options={attributeOptions}
+              onOptionsChange={setAttributeOptions}
+              disabled={isSubmitting}
+            />
+          )}
+
           {/* Precios */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 mb-2 font-medium">Precio Detal</label>
+              <label className="block text-gray-700 mb-2 font-medium">
+                {isVariable ? 'Precio Detal (Referencia)' : 'Precio Detal'}
+              </label>
               <input
                 type="number"
                 name="precio_detal"
@@ -599,12 +691,17 @@ const CreateProduct = () => {
                 onChange={handleChange}
                 placeholder="0"
                 className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
-                required
+                required={!isVariable}
                 disabled={isSubmitting}
               />
+              {isVariable && (
+                <p className="text-xs text-gray-400 mt-1">Opcional. Se usará como referencia al crear variaciones.</p>
+              )}
             </div>
             <div>
-              <label className="block text-gray-700 mb-2 font-medium">Precio Mayor</label>
+              <label className="block text-gray-700 mb-2 font-medium">
+                {isVariable ? 'Precio Mayor (Referencia)' : 'Precio Mayor'}
+              </label>
               <input
                 type="number"
                 name="precio_mayor"
@@ -612,33 +709,38 @@ const CreateProduct = () => {
                 onChange={handleChange}
                 placeholder="0"
                 className="w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition"
-                required
+                required={!isVariable}
                 disabled={isSubmitting}
               />
+              {isVariable && (
+                <p className="text-xs text-gray-400 mt-1">Opcional. Se usará como referencia al crear variaciones.</p>
+              )}
             </div>
           </div>
-          {/* Código WooCommerce */}
-          <div>
-            <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
-            <input
-              type="text"
-              name="art_woo_id"
-              value={formData.art_woo_id}
-              onChange={handleChange}
-              onBlur={handleBlurArtWoo}
-              placeholder="Ingrese código WooCommerce (opcional)"
-              className={`w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-500 focus:border-red-500' : ''}`}
-              disabled={isSubmitting}
-            />
-            {errorArtWoo && (
-              <div className="mt-1 flex items-center text-[#f58ea3] text-xs">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {errorArtWoo}
-              </div>
-            )}
-          </div>
+          {/* Código WooCommerce - solo para producto simple */}
+          {!isVariable && (
+            <div>
+              <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
+              <input
+                type="text"
+                name="art_woo_id"
+                value={formData.art_woo_id}
+                onChange={handleChange}
+                onBlur={handleBlurArtWoo}
+                placeholder="Ingrese código WooCommerce (opcional)"
+                className={`w-full p-3 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-500 focus:border-red-500' : ''}`}
+                disabled={isSubmitting}
+              />
+              {errorArtWoo && (
+                <div className="mt-1 flex items-center text-[#f58ea3] text-xs">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errorArtWoo}
+                </div>
+              )}
+            </div>
+          )}
           {/* Imágenes */}
           <div>
             <label className="block text-gray-700 mb-2 font-medium">Imágenes (Máximo 4)</label>
@@ -689,6 +791,16 @@ const CreateProduct = () => {
               </div>
             )}
           </div>
+
+          {/* Info para producto variable */}
+          {isVariable && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-sm text-blue-700">
+                <strong>Nota:</strong> Después de crear el producto variable, serás redirigido a la pantalla de edición donde podrás crear las variaciones individuales con sus precios y stock.
+              </p>
+            </div>
+          )}
+
           {/* Botones de acción */}
           <div className="flex justify-end gap-4 pt-4">
             <button
@@ -701,7 +813,7 @@ const CreateProduct = () => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || errorArtCod || errorArtWoo}
+              disabled={isSubmitting || errorArtCod || (productType === 'simple' && errorArtWoo)}
               className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] text-white font-semibold shadow-md hover:from-[#a5762f] hover:to-[#f7b3c2] transition cursor-pointer disabled:opacity-60 flex items-center gap-2"
             >
               {isSubmitting ? (
@@ -710,7 +822,7 @@ const CreateProduct = () => {
                   <span>Creando...</span>
                 </>
               ) : (
-                'Crear Producto'
+                isVariable ? 'Crear Producto Variable' : 'Crear Producto'
               )}
             </button>
           </div>

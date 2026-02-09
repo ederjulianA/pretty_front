@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaEdit, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire, FaFilter, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire, FaFilter, FaTimes, FaLayerGroup, FaSpinner } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ArticleMovementModal from '../components/ArticleMovementModal';
 import debounce from 'lodash/debounce';
@@ -13,6 +13,7 @@ const Products = () => {
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [syncingProducts, setSyncingProducts] = useState({});
+    const [syncingAttributes, setSyncingAttributes] = useState({});
     const [pageNumber, setPageNumber] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
@@ -232,6 +233,28 @@ const Products = () => {
         }
     };
 
+    const handleSyncAttributes = async (productId) => {
+        try {
+            setSyncingAttributes(prev => ({ ...prev, [productId]: true }));
+            const response = await axios.put(
+                `${API_URL}/articulos/variable/${productId}/sync-attributes`,
+                {},
+                { headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') } }
+            );
+
+            if (response.data.success) {
+                toast.success(response.data.message || 'Atributos sincronizados con WooCommerce');
+            } else {
+                toast.error(response.data.message || 'Error al sincronizar atributos');
+            }
+        } catch (error) {
+            console.error('Error syncing attributes:', error);
+            toast.error(error.response?.data?.message || 'Error al sincronizar atributos');
+        } finally {
+            setSyncingAttributes(prev => ({ ...prev, [productId]: false }));
+        }
+    };
+
     const renderSyncStatus = (status, message) => {
         switch (status) {
             case 'success':
@@ -361,6 +384,16 @@ const Products = () => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap mb-1">
                                             <span className="font-bold text-sm text-gray-800">{product.art_cod}</span>
+                                            {product.art_woo_type === 'variable' && (
+                                                <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
+                                                    <FaLayerGroup className="w-2.5 h-2.5" />VAR
+                                                </span>
+                                            )}
+                                            {product.art_woo_type === 'variation' && (
+                                                <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
+                                                    <FaLayerGroup className="w-2.5 h-2.5" />VRN
+                                                </span>
+                                            )}
                                             {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                             {product.tiene_oferta === 'S' && (
                                                 <FaFire className="text-orange-500 w-3.5 h-3.5" title="En oferta" />
@@ -383,6 +416,20 @@ const Products = () => {
                                         >
                                             <FaHistory className="w-4 h-4" />
                                         </button>
+                                        {product.art_woo_type === 'variable' && (
+                                            <button
+                                                onClick={() => handleSyncAttributes(product.art_sec)}
+                                                className="text-purple-500 hover:text-white hover:bg-purple-500 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Sync Atributos WooCommerce"
+                                                disabled={syncingAttributes[product.art_sec]}
+                                            >
+                                                {syncingAttributes[product.art_sec] ? (
+                                                    <FaSpinner className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <FaSyncAlt className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -468,6 +515,16 @@ const Products = () => {
                                     <td className="px-2 py-2 text-xs font-semibold text-gray-900 whitespace-nowrap">
                                         <div className="flex items-center gap-1">
                                             <span>{product.art_cod}</span>
+                                            {product.art_woo_type === 'variable' && (
+                                                <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0" title="Producto Variable">
+                                                    <FaLayerGroup className="w-2.5 h-2.5" />VAR
+                                                </span>
+                                            )}
+                                            {product.art_woo_type === 'variation' && (
+                                                <span className="inline-flex items-center gap-0.5 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0" title="Variación">
+                                                    <FaLayerGroup className="w-2.5 h-2.5" />VRN
+                                                </span>
+                                            )}
                                             {product.tiene_oferta === 'S' && (
                                                 <FaFire className="text-orange-500 w-3 h-3 flex-shrink-0" title="En oferta" />
                                             )}
@@ -535,6 +592,20 @@ const Products = () => {
                                                     <FaSyncAlt className="w-3.5 h-3.5" />
                                                 )}
                                             </button>
+                                            {product.art_woo_type === 'variable' && (
+                                                <button
+                                                    onClick={() => handleSyncAttributes(product.art_sec)}
+                                                    className="p-1 text-purple-500 hover:text-white hover:bg-purple-500 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title="Sync Atributos WooCommerce"
+                                                    disabled={syncingAttributes[product.art_sec]}
+                                                >
+                                                    {syncingAttributes[product.art_sec] ? (
+                                                        <FaSpinner className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <FaLayerGroup className="w-3.5 h-3.5" />
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

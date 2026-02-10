@@ -44,7 +44,10 @@ const CreateProduct = () => {
     const fetchCategories = async () => {
       setIsLoadingCategories(true);
       try {
-        const response = await axios.get(`${API_URL}/categorias?limit=1000`);
+        const token = localStorage.getItem('pedidos_pretty_token');
+        const response = await axios.get(`${API_URL}/categorias?limit=1000`, {
+          headers: { 'x-access-token': token }
+        });
 
         if (response.data.success && response.data.data) {
           setCategories(response.data.data);
@@ -78,8 +81,10 @@ const CreateProduct = () => {
       if (formData.categoria) {
         setIsLoadingSubcategories(true);
         try {
+          const token = localStorage.getItem('pedidos_pretty_token');
           const response = await axios.get(`${API_URL}/subcategorias`, {
-            params: { inv_gru_cod: formData.categoria, limit: 1000 }
+            params: { inv_gru_cod: formData.categoria, limit: 1000 },
+            headers: { 'x-access-token': token }
           });
 
           if (response.data.success && response.data.data) {

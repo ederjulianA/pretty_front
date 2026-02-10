@@ -74,7 +74,10 @@ const Products = () => {
     // Cargar categorías al montar el componente
     useEffect(() => {
         setIsLoadingCategories(true);
-        axios.get(`${API_URL}/categorias?limit=1000`)
+        const token = localStorage.getItem('pedidos_pretty_token');
+        axios.get(`${API_URL}/categorias?limit=1000`, {
+            headers: { 'x-access-token': token }
+        })
             .then(response => {
                 const data = response.data;
                 if (data.success && data.data) {
@@ -91,7 +94,11 @@ const Products = () => {
     useEffect(() => {
         if (filterCategoria) {
             setIsLoadingSubcategories(true);
-            axios.get(`${API_URL}/subcategorias`, { params: { inv_gru_cod: filterCategoria, limit: 1000 } })
+            const token = localStorage.getItem('pedidos_pretty_token');
+            axios.get(`${API_URL}/subcategorias`, {
+                params: { inv_gru_cod: filterCategoria, limit: 1000 },
+                headers: { 'x-access-token': token }
+            })
                 .then(response => {
                     const data = response.data;
                     if (data.success && data.data) {

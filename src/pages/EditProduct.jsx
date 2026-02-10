@@ -204,19 +204,15 @@ const EditProduct = () => {
       .finally(() => setIsLoadingProduct(false));
   }, [id]);
 
-  // Cargar variaciones cuando se detecte que es variable (si no se cargaron ya)
-  useEffect(() => {
-    if (productWooType === 'variable' && variations.length === 0 && !isLoadingVariations) {
-      fetchVariations();
-    }
-  }, [productWooType, fetchVariations, variations.length, isLoadingVariations]);
-
   // Cargar categorías
   useEffect(() => {
     const fetchCategories = async () => {
       setIsLoadingCategories(true);
       try {
-        const response = await axios.get(`${API_URL}/categorias?limit=1000`);
+        const token = localStorage.getItem('pedidos_pretty_token');
+        const response = await axios.get(`${API_URL}/categorias?limit=1000`, {
+          headers: { 'x-access-token': token }
+        });
 
         if (response.data.success && response.data.data) {
           setCategories(response.data.data);
@@ -250,8 +246,10 @@ const EditProduct = () => {
       if (formData.categoria) {
         setIsLoadingSubcategorias(true);
         try {
+          const token = localStorage.getItem('pedidos_pretty_token');
           const response = await axios.get(`${API_URL}/subcategorias`, {
-            params: { inv_gru_cod: formData.categoria, limit: 1000 }
+            params: { inv_gru_cod: formData.categoria, limit: 1000 },
+            headers: { 'x-access-token': token }
           });
 
           if (response.data.success && response.data.data) {

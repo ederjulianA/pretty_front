@@ -26,11 +26,14 @@ const Filters = ({
   // Cargar listado de categorías
   useEffect(() => {
     setIsLoadingCategories(true);
-    axios.get(`${API_URL}/categorias`)
+    const token = localStorage.getItem('pedidos_pretty_token');
+    axios.get(`${API_URL}/categorias?limit=1000`, {
+      headers: { 'x-access-token': token }
+    })
       .then(response => {
         const data = response.data;
-        if (data.success && data.result && data.result.data) {
-          setCategories(data.result.data);
+        if (data.success && data.data) {
+          setCategories(data.data);
         } else {
           Swal.fire({
             icon: 'error',
@@ -56,11 +59,15 @@ const Filters = ({
   useEffect(() => {
     if (selectedCategory) {
       setIsLoadingSubcategories(true);
-      axios.get(`${API_URL}/subcategorias`, { params: { inv_gru_cod: selectedCategory } })
+      const token = localStorage.getItem('pedidos_pretty_token');
+      axios.get(`${API_URL}/subcategorias`, {
+        params: { inv_gru_cod: selectedCategory, limit: 1000 },
+        headers: { 'x-access-token': token }
+      })
         .then(response => {
           const data = response.data;
-          if (data.success && data.subcategorias) {
-            setSubcategories(data.subcategorias);
+          if (data.success && data.data) {
+            setSubcategories(data.data);
           } else {
             Swal.fire({
               icon: 'error',

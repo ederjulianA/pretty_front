@@ -1,7 +1,7 @@
 // src/layouts/AdminLayout.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt } from 'react-icons/fa';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
 import { useAuth } from '../contexts/AuthContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -10,6 +10,7 @@ const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const menuRef = useRef(null);
@@ -236,6 +237,35 @@ const AdminLayout = () => {
                 >
                   <FaClipboardCheck className="w-5 h-5" /> POS
                 </NavLink>
+              </li>
+            )}
+
+            {/* Configuraciones - Solo visible si tiene acceso al módulo products o admin */}
+            {(hasAccess('products') || hasAccess('admin')) && (
+              <li>
+                <button
+                  onClick={() => setIsConfigOpen(!isConfigOpen)}
+                  className="w-full flex items-center justify-between px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors text-gray-700"
+                >
+                  <span className="flex items-center gap-3">
+                    <FaCogs className="w-5 h-5" /> Configuraciones
+                  </span>
+                  {isConfigOpen ? <FaChevronDown /> : <FaChevronRight />}
+                </button>
+                <div className={`pl-8 mt-2 space-y-2 ${isConfigOpen ? 'block' : 'hidden'}`}>
+                  {/* Categorías */}
+                  {hasAccess('products') && (
+                    <NavLink
+                      to="/configuraciones/categorias"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                      }
+                      onClick={handleNavClick}
+                    >
+                      <FaFolderOpen className="w-4 h-4" /> Categorías
+                    </NavLink>
+                  )}
+                </div>
               </li>
             )}
 

@@ -25,6 +25,7 @@ import Promociones from './pages/Promociones';
 import PromocionNew from './pages/PromocionNew';
 import EventosPromocionales from './pages/EventosPromocionales';
 import EventoPromocionalNew from './pages/EventoPromocionalNew';
+import Categories from './pages/Categories';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -193,19 +194,29 @@ function App() {
           />
 
           {/* Eventos Promocionales Routes */}
-          <Route 
-            path="eventos-promocionales" 
+          <Route
+            path="eventos-promocionales"
             element={<EventosPromocionales />}
           />
-          <Route 
-            path="eventos-promocionales/nuevo" 
+          <Route
+            path="eventos-promocionales/nuevo"
             element={<EventoPromocionalNew />}
           />
-          <Route 
-            path="eventos-promocionales/editar/:eve_sec" 
+          <Route
+            path="eventos-promocionales/editar/:eve_sec"
             element={<EventoPromocionalNew />}
           />
-          
+
+          {/* Configuraciones Routes */}
+          <Route
+            path="configuraciones/categorias"
+            element={
+              <ProtectedRoute requiredModule="products" requiredPermission="view">
+                <Categories />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Role Manager - Solo accesible para administradores */}
           <Route 
             path="admin/roles" 

@@ -213,12 +213,16 @@ const EditProduct = () => {
 
   // Cargar categorías
   useEffect(() => {
-    setIsLoadingCategories(true);
-    axios.get(`${API_URL}/categorias`)
-      .then(response => {
-        const data = response.data;
-        if(data.success && data.result && data.result.data) {
-          setCategories(data.result.data);
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const token = localStorage.getItem('pedidos_pretty_token');
+        const response = await axios.get(`${API_URL}/categorias?limit=1000`, {
+          headers: { 'x-access-token': token }
+        });
+
+        if (response.data.success && response.data.data) {
+          setCategories(response.data.data);
         } else {
           Swal.fire({
             icon: 'error',
@@ -227,8 +231,7 @@ const EditProduct = () => {
             confirmButtonColor: '#f58ea3'
           });
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error("Error al obtener categorías:", error);
         Swal.fire({
           icon: 'error',
@@ -236,19 +239,28 @@ const EditProduct = () => {
           text: 'Error al cargar las categorías.',
           confirmButtonColor: '#f58ea3'
         });
-      })
-      .finally(() => setIsLoadingCategories(false));
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   // Cargar subcategorías al cambiar la categoría seleccionada
   useEffect(() => {
-    if(formData.categoria) {
-      setIsLoadingSubcategorias(true);
-      axios.get(`${API_URL}/subcategorias`, { params: { inv_gru_cod: formData.categoria } })
-        .then(response => {
-          const data = response.data;
-          if(data.success && data.subcategorias) {
-            setSubcategories(data.subcategorias);
+    const fetchSubcategories = async () => {
+      if (formData.categoria) {
+        setIsLoadingSubcategorias(true);
+        try {
+          const token = localStorage.getItem('pedidos_pretty_token');
+          const response = await axios.get(`${API_URL}/subcategorias`, {
+            params: { inv_gru_cod: formData.categoria, limit: 1000 },
+            headers: { 'x-access-token': token }
+          });
+
+          if (response.data.success && response.data.data) {
+            setSubcategories(response.data.data);
           } else {
             Swal.fire({
               icon: 'error',
@@ -257,8 +269,7 @@ const EditProduct = () => {
               confirmButtonColor: '#f58ea3'
             });
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error("Error al obtener subcategorías:", error);
           Swal.fire({
             icon: 'error',
@@ -266,12 +277,16 @@ const EditProduct = () => {
             text: 'Error al cargar las subcategorías.',
             confirmButtonColor: '#f58ea3'
           });
-        })
-        .finally(() => setIsLoadingSubcategorias(false));
-    } else {
-      setSubcategories([]);
-      setFormData(prev => ({ ...prev, subcategoria: '' }));
-    }
+        } finally {
+          setIsLoadingSubcategorias(false);
+        }
+      } else {
+        setSubcategories([]);
+        setFormData(prev => ({ ...prev, subcategoria: '' }));
+      }
+    };
+
+    fetchSubcategories();
   }, [formData.categoria]);
 
   const handleChange = (e) => {

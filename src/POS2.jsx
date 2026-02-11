@@ -24,6 +24,7 @@ import CreateClientModal from './components/CreateClientModal';
 import useEventoPromocional from './hooks/useEventoPromocional';
 import PromocionBanner from './components/PromocionBanner';
 import useParametro from './hooks/useParametro';
+import BundleDetailsModal from './components/BundleDetailsModal';
 
 const POS = () => {
   const [searchParams] = useSearchParams();
@@ -58,6 +59,9 @@ const POS = () => {
   const [showOrderDrawer, setShowOrderDrawer] = useState(false);
   // Submitting overlay state
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Bundle details modal
+  const [showBundleModal, setShowBundleModal] = useState(false);
+  const [selectedBundle, setSelectedBundle] = useState(null);
 
   // Refs for scroll
   const containerRef = useRef(null);
@@ -115,7 +119,11 @@ const POS = () => {
           // Cargar descuento general del header
           setFacDescuentoGeneral(orderData.header.fac_descuento_general || 0);
           // Map details to order items
-          const mergedDetails = orderData.details.map(item => {
+          // FILTRAR: Solo mostrar items que NO son componentes de bundle (kar_bundle_padre IS NULL)
+          // Los componentes de bundle tienen kar_bundle_padre con el art_sec del padre
+          const mergedDetails = orderData.details
+            .filter(item => !item.kar_bundle_padre) // Filtrar componentes de bundle
+            .map(item => {
             // Determinar si el artículo tiene oferta activa
             // Verificar que realmente tenga una promoción activa (código de promoción o precio de oferta)
             const tieneOfertaReal = item.kar_tiene_oferta === 'S' && 
@@ -167,7 +175,9 @@ const POS = () => {
               codigo_promocion: item.kar_codigo_promocion,
               descripcion_promocion: item.kar_descripcion_promocion,
               precio_detal_original: item.precio_detal_original,
-              precio_mayor_original: item.precio_mayor_original
+              precio_mayor_original: item.precio_mayor_original,
+              // Bundle
+              art_bundle: item.art_bundle
             };
           });
           
@@ -358,6 +368,17 @@ const POS = () => {
   const handlePointerUp = () => setIsDragging(false);
   const handlePointerCancel = () => setIsDragging(false);
 
+  // Function to show bundle details
+  const handleShowBundleDetails = (product) => {
+    setSelectedBundle(product);
+    setShowBundleModal(true);
+  };
+
+  const handleCloseBundleModal = () => {
+    setShowBundleModal(false);
+    setSelectedBundle(null);
+  };
+
   // Function to add product to order
   const addToOrder = (product) => {
     if (product.existencia <= 0) return;
@@ -511,10 +532,11 @@ const POS = () => {
         })
         .catch(error => {
           console.error("Error al editar el pedido:", error);
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al editar el pedido, por favor intente nuevamente.';
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al editar el pedido, por favor intente nuevamente.',
+            text: errorMessage,
             confirmButtonColor: '#f58ea3',
           });
         })
@@ -558,10 +580,11 @@ const POS = () => {
       })
       .catch(error => {
         console.error("Error al crear la orden:", error);
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al crear la orden, por favor intente nuevamente.';
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Error al crear la orden, por favor intente nuevamente.',
+          text: errorMessage,
           confirmButtonColor: '#f58ea3',
         });
       })
@@ -725,10 +748,11 @@ const POS = () => {
       })
       .catch(error => {
         console.error("Error al actualizar la factura:", error);
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al actualizar la factura, por favor intente nuevamente.';
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Error al actualizar la factura, por favor intente nuevamente.',
+          text: errorMessage,
           confirmButtonColor: '#f58ea3',
         });
       })
@@ -772,10 +796,11 @@ const POS = () => {
         })
         .catch(error => {
           console.error("Error al crear la factura:", error);
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al crear la factura, por favor intente nuevamente.';
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al crear la factura, por favor intente nuevamente.',
+            text: errorMessage,
             confirmButtonColor: '#f58ea3',
           });
         })
@@ -933,14 +958,15 @@ const POS = () => {
             onSearch={() => fetchProducts(1)}
           />
           
-          <ProductsGrid 
-            products={products} 
-            onAdd={addToOrder} 
-            isLoading={isLoading} 
+          <ProductsGrid
+            products={products}
+            onAdd={addToOrder}
+            isLoading={isLoading}
             order={order}
             hasMore={hasMore}
             onLoadMore={handleLoadMore}
             onProductUpdate={handleProductUpdate}
+            onShowBundleDetails={handleShowBundleDetails}
           />
         </section>
 
@@ -980,11 +1006,11 @@ const POS = () => {
                 </button>
               </div>
 
-              <OrderSummary 
-                order={order} 
-                onRemove={removeFromOrder} 
-                onAdd={addToOrder} 
-                totalValue={totalValue} 
+              <OrderSummary
+                order={order}
+                onRemove={removeFromOrder}
+                onAdd={addToOrder}
+                totalValue={totalValue}
                 selectedPriceType={precioTypeActual}
                 discountValue={discountValue}
                 facDescuentoGeneral={descuentoEventoFinal}
@@ -995,6 +1021,7 @@ const POS = () => {
                 hayEventoActivo={hayEventoActivo}
                 cumpleUmbralMayorista={cumpleUmbralMayorista}
                 onUpdateMontoMayorista={handleUpdateMontoMayorista}
+                onShowBundleDetails={handleShowBundleDetails}
               />
 
               <div className="space-y-4">
@@ -1197,6 +1224,14 @@ const POS = () => {
             }}
           />
         )}
+
+        {/* Bundle Details Modal */}
+        <BundleDetailsModal
+          isOpen={showBundleModal}
+          onClose={handleCloseBundleModal}
+          bundle={selectedBundle}
+          onAddToCart={addToOrder}
+        />
       </div>
     </>
   );

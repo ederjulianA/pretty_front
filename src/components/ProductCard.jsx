@@ -1,12 +1,12 @@
 // src/components/ProductCard.js
 import React, { useState } from 'react';
 import { formatValue, formatName } from '../utils';
-import { FaShoppingCart, FaPlus, FaBox, FaSync, FaFire } from 'react-icons/fa';
+import { FaShoppingCart, FaPlus, FaBox, FaSync, FaFire, FaCubes } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { toast } from 'react-toastify';
 
-const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate }) => {
+const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundleDetails }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentImage, setCurrentImage] = useState(product.imgUrl);
 
@@ -55,18 +55,37 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate }) => {
     }
   };
 
-  // Verificar si el producto tiene oferta
+  // Verificar si el producto tiene oferta o es bundle
   const tieneOferta = product.tiene_oferta === 'S';
+  const esBundle = product.art_bundle === 'S';
+
+  const handleClick = () => {
+    if (product.existencia <= 0) return;
+
+    if (esBundle && onShowBundleDetails) {
+      onShowBundleDetails(product);
+    } else {
+      onAdd(product);
+    }
+  };
 
   return (
     <div
-      onClick={() => product.existencia > 0 && onAdd(product)}
-      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col h-full border border-gray-100 cursor-pointer relative overflow-hidden ${
-        tieneOferta ? 'ring-2 ring-orange-200 shadow-orange-100' : ''
+      onClick={handleClick}
+      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col h-full border cursor-pointer relative overflow-hidden ${
+        tieneOferta
+          ? 'ring-2 ring-orange-200 shadow-orange-100 border-gray-100'
+          : esBundle
+            ? 'ring-2 ring-emerald-200 shadow-emerald-100 border-emerald-100'
+            : 'border-gray-100'
       }`}
     >
-      {/* Header del card con badge de oferta integrado */}
-      <div className="bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] px-3 py-2 rounded-t-xl flex flex-col gap-0.5 min-h-[2.2rem] relative">
+      {/* Header del card con badges integrados */}
+      <div className={`px-3 py-2 rounded-t-xl flex flex-col gap-0.5 min-h-[2.2rem] relative ${
+        esBundle
+          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
+          : 'bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2]'
+      }`}>
         {/* Badge de oferta en la esquina superior derecha */}
         {tieneOferta && (
           <div className="absolute top-1 right-1 z-10">
@@ -76,10 +95,20 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate }) => {
             </div>
           </div>
         )}
-        
+
+        {/* Badge de bundle en la esquina superior derecha */}
+        {esBundle && !tieneOferta && (
+          <div className="absolute top-1 right-1 z-10">
+            <div className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 border border-white/30">
+              <FaCubes className="w-2.5 h-2.5" />
+              COMBO
+            </div>
+          </div>
+        )}
+
         {/* Título con padding ajustado para evitar superposición */}
         <h3 className={`text-base font-bold text-white leading-tight break-words line-clamp-2 ${
-          tieneOferta ? 'pr-16' : ''
+          (tieneOferta || esBundle) ? 'pr-16' : ''
         }`}>
           {product.name}
         </h3>
@@ -161,19 +190,21 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate }) => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onAdd(product);
+            handleClick();
           }}
           disabled={product.existencia <= 0}
           className={`mt-2 w-full py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
-            product.existencia <= 0 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-              : tieneOferta 
-                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600' 
-                : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
+            product.existencia <= 0
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : tieneOferta
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
+                : esBundle
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                  : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
           }`}
         >
-          <FaShoppingCart className="w-4 h-4" />
-          {tieneOferta ? '¡Agregar Oferta!' : 'Agregar'}
+          {esBundle ? <FaCubes className="w-4 h-4" /> : <FaShoppingCart className="w-4 h-4" />}
+          {tieneOferta ? '¡Agregar Oferta!' : esBundle ? 'Ver Combo' : 'Agregar'}
         </button>
       </div>
     </div>

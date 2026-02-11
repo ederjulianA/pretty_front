@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import ProductCard from './ProductCard';
 
-const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore, onProductUpdate }) => {
+const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore, onProductUpdate, onShowBundleDetails }) => {
   const observerRef = useRef(null);
   const loadingRef = useRef(null);
 
@@ -48,6 +48,7 @@ const ProductsGrid = ({ products, onAdd, isLoading, order, hasMore, onLoadMore, 
             onAdd={onAdd}
             orderQuantity={orderQuantity}
             onImageUpdate={handleImageUpdate}
+            onShowBundleDetails={onShowBundleDetails}
           />
         );
       })}

@@ -62,6 +62,8 @@ const useProducts = (filters, selectedCategory, selectedSubcategory) => {
             descripcion_promocion: articulo.descripcion_promocion,
             precio_detal_original: articulo.precio_detal_original,
             precio_mayor_original: articulo.precio_mayor_original,
+            // Bundle
+            art_bundle: articulo.art_bundle,
           }));
           
           if (page === 1) {

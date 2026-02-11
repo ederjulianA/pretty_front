@@ -23,3 +23,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Development tools
+.agent/
+.agents/
+.claude/
+.cursor/
+
+# Documentation (local only)
+IMPLEMENTACIONES_2026/

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaBox, FaLayerGroup } from 'react-icons/fa';
+import { FaBox, FaLayerGroup, FaBoxOpen } from 'react-icons/fa';
 
 const ProductTypeSelector = ({ productType, onTypeChange, disabled = false }) => {
   const types = [
@@ -15,12 +15,18 @@ const ProductTypeSelector = ({ productType, onTypeChange, disabled = false }) =>
       description: 'Con variaciones (tonos/colores)',
       icon: FaLayerGroup,
     },
+    {
+      value: 'bundle',
+      label: 'Combo/Bundle',
+      description: 'Producto pre-armado con componentes',
+      icon: FaBoxOpen,
+    },
   ];
 
   return (
     <div>
       <label className="block text-gray-700 mb-2 font-medium">Tipo de Producto</label>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {types.map((type) => {
           const Icon = type.icon;
           const isSelected = productType === type.value;

@@ -63,11 +63,12 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
             const esBundle = item.art_bundle === 'S';
             const precioAMostrar = selectedPriceType === 'detal' && item.price_detal ? item.price_detal : item.price;
 
-            // Determinar si el artículo recibe descuento evento (no tiene descuento activo)
+            // Determinar si el artículo recibe descuento evento (no tiene descuento activo Y no es bundle)
             // kar_des_uno es el descuento general de la orden, no un descuento individual del artículo
             // Solo los artículos con oferta activa tienen descuento individual
+            // Los bundles NO reciben descuento de evento
             const tieneDescuentoActivo = tieneOferta;
-            const recibeDescuentoEvento = hayEventoActivo && !tieneDescuentoActivo && porcentajeDescuentoEvento > 0;
+            const recibeDescuentoEvento = hayEventoActivo && !tieneDescuentoActivo && !esBundle && porcentajeDescuentoEvento > 0;
 
             return (
               <li key={item.id} className={`py-3 ${

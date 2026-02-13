@@ -224,8 +224,11 @@ const POS = () => {
     // Un artículo tiene descuento activo SOLO si tiene oferta activa
     // kar_des_uno es el descuento general de la orden, no un descuento individual del artículo
     const tieneDescuentoActivo = item.tiene_oferta === 'S';
-    
-    if (!tieneDescuentoActivo) {
+    // Los productos bundle NO deben recibir descuento de evento promocional
+    const esBundle = item.art_bundle === 'S';
+
+    // Solo incluir en el subtotal si NO tiene descuento activo Y NO es bundle
+    if (!tieneDescuentoActivo && !esBundle) {
       const precioItem = precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price;
       return sum + (precioItem * item.quantity);
     }

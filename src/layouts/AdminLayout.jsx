@@ -1,7 +1,7 @@
 // src/layouts/AdminLayout.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen } from 'react-icons/fa';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen, FaChartLine } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
 import { useAuth } from '../contexts/AuthContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -117,6 +117,15 @@ const AdminLayout = () => {
                     onClick={handleNavClick}
                   >
                     <FaBoxOpen className="w-4 h-4" /> Diferencia Inventario
+                  </NavLink>
+                  <NavLink
+                    to="/dashboard/costos"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-[#fff5f7] text-[#f58ea3] border-l-4 border-[#f58ea3]' : 'text-gray-700 hover:bg-gray-100'}`
+                    }
+                    onClick={handleNavClick}
+                  >
+                    <FaChartLine className="w-4 h-4" /> Control de Costos
                   </NavLink>
                 </div>
               </li>

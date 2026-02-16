@@ -8,6 +8,7 @@ import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
 import Dashboard from './pages/Dashboard';
 import DashboardVentas from './pages/DashboardVentas';
+import DashboardCostos from './pages/DashboardCostos';
 import Products from './pages/Products';
 import CreateProduct from './pages/CreateProduct';
 import AjustesNew from './pages/AjusteNew';
@@ -72,13 +73,21 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="dashboard/inventario" 
+          <Route
+            path="dashboard/inventario"
             element={
               <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
                 <DiferenciaInventario />
               </ProtectedRoute>
-            } 
+            }
+          />
+          <Route
+            path="dashboard/costos"
+            element={
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
+                <DashboardCostos />
+              </ProtectedRoute>
+            }
           />
 
           {/* Products Routes */}

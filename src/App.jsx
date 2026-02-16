@@ -27,6 +27,8 @@ import PromocionNew from './pages/PromocionNew';
 import EventosPromocionales from './pages/EventosPromocionales';
 import EventoPromocionalNew from './pages/EventoPromocionalNew';
 import Categories from './pages/Categories';
+import Compras from './pages/Compras';
+import CompraForm from './pages/CompraForm';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -124,6 +126,32 @@ function App() {
                 <Orders />
               </ProtectedRoute>
             } 
+          />
+
+          {/* Compras Routes */}
+          <Route
+            path="compras"
+            element={
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
+                <Compras />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="compras/nueva"
+            element={
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
+                <CompraForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="compras/editar/:fac_nro"
+            element={
+              <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
+                <CompraForm />
+              </ProtectedRoute>
+            }
           />
 
           {/* Ajustes */}

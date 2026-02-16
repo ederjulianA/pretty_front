@@ -41,12 +41,20 @@ const useProducts = (filters, selectedCategory, selectedSubcategory) => {
       .then((response) => {
         const data = response.data;
         if (data.success) {
+          const resolverCostoPromedio = (articulo) =>
+            articulo.costo_promedio ??
+            articulo.costo_promedio_ponderado ??
+            articulo.costo_promedio_actual ??
+            articulo.kar_cos_pro ??
+            null;
+
           const mappedProducts = data.articulos.map((articulo) => ({
             id: articulo.art_sec,
             codigo: articulo.art_cod,
             name: articulo.art_nom,
             price: articulo.precio_mayor,
             price_detal: articulo.precio_detal,
+            average_cost: resolverCostoPromedio(articulo),
             category: articulo.categoria + " - " + articulo.sub_categoria,
             sub_categoria: articulo.sub_categoria,
             existencia: articulo.existencia,

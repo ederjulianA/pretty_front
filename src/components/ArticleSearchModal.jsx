@@ -202,6 +202,14 @@ const ArticleSearchModal = ({ isOpen, onClose, onSelectArticle }) => {
                           <span className="text-gray-500">Precio</span>
                           <p className="font-medium text-gray-900">${product.price_detal}</p>
                         </div>
+                        <div className="bg-gray-50 rounded-lg p-2 col-span-2">
+                          <span className="text-gray-500">Costo promedio</span>
+                          <p className="font-medium text-gray-900">
+                            {product.average_cost !== null && product.average_cost !== undefined
+                              ? `$${product.average_cost}`
+                              : 'Sin dato'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

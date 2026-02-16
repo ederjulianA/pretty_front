@@ -280,6 +280,13 @@ const Products = () => {
         return `$${parseInt(price).toLocaleString('es-CO')}`;
     };
 
+    const getAverageCost = (product) =>
+        product?.costo_promedio ??
+        product?.costo_promedio_ponderado ??
+        product?.costo_promedio_actual ??
+        product?.kar_cos_pro ??
+        null;
+
     // Log para debugging del estado actual
     console.log(`🎯 Current products state: ${products.length} products`, products.map(p => p.art_cod));
 
@@ -478,6 +485,12 @@ const Products = () => {
                                             {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
                                         </span>
                                     </div>
+                                    <div className="col-span-2">
+                                        <span className="text-xs text-gray-500 block mb-1">Costo Promedio</span>
+                                        <span className="font-bold text-sm text-gray-800">
+                                            {getAverageCost(product) !== null ? formatPrice(getAverageCost(product)) : '-'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -504,6 +517,7 @@ const Products = () => {
                                 <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">P. Detal</th>
                                 <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">P. Mayor</th>
                                 <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">P. Promo</th>
+                                <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">C. Promedio</th>
                                 <th className="px-2 py-2.5 text-center text-xs font-bold text-gray-700 uppercase" title="Estado Sincronización WooCommerce">
                                     <FaSyncAlt className="inline-block text-[#f58ea3]" />
                                 </th>
@@ -512,10 +526,10 @@ const Products = () => {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {isLoading && pageNumber === 1 && (
-                                <tr><td colSpan="10" className="text-center py-8"><LoadingSpinner /></td></tr>
+                                <tr><td colSpan="11" className="text-center py-8"><LoadingSpinner /></td></tr>
                             )}
                             {!isLoading && products.length === 0 && pageNumber === 1 && (
-                                <tr><td colSpan="10" className="text-center py-8 text-gray-500 font-medium">No hay productos para mostrar.</td></tr>
+                                <tr><td colSpan="11" className="text-center py-8 text-gray-500 font-medium">No hay productos para mostrar.</td></tr>
                             )}
                             {products.map((product) => (
                                 <tr key={product.art_sec} className="hover:bg-pink-50/50 transition-colors border-b border-gray-100">
@@ -568,6 +582,9 @@ const Products = () => {
                                             {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
                                         </span>
                                     </td>
+                                    <td className="px-2 py-2 text-xs text-right font-medium whitespace-nowrap text-gray-900">
+                                        {getAverageCost(product) !== null ? formatPrice(getAverageCost(product)) : '-'}
+                                    </td>
                                     <td className="px-2 py-2 text-center whitespace-nowrap">
                                         {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
                                     </td>
@@ -618,7 +635,7 @@ const Products = () => {
                                 </tr>
                             ))}
                             {isLoading && pageNumber > 1 && (
-                                <tr><td colSpan="10" className="text-center py-6"><LoadingSpinner /></td></tr>
+                                <tr><td colSpan="11" className="text-center py-6"><LoadingSpinner /></td></tr>
                             )}
                         </tbody>
                     </table>

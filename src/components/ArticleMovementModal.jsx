@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 import { FaTimes, FaBoxOpen, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import LoadingSpinner from './LoadingSpinner';
+import { formatValue } from '../utils';
 
 const ArticleMovementModal = ({ isOpen, onClose, articleCode }) => {
     const [loading, setLoading] = useState(true);
@@ -97,8 +98,9 @@ const ArticleMovementModal = ({ isOpen, onClose, articleCode }) => {
 
                             {/* Movements Table */}
                             {data.data.movements.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
+                                <div className="overflow-x-auto -mx-1">
+                                    <p className="text-xs text-gray-500 mb-2">Desliza horizontalmente para ver costo y rentabilidad.</p>
+                                    <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '900px' }}>
                                         <thead className="bg-[#fff5f7]">
                                             <tr>
                                                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Documento</th>
@@ -107,29 +109,74 @@ const ArticleMovementModal = ({ isOpen, onClose, articleCode }) => {
                                                 <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">Movimiento</th>
                                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Cantidad</th>
                                                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Saldo</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Precio unit.</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Total venta</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Costo unit.</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Costo total</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Utilidad</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 whitespace-nowrap">Rentab. %</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
-                                            {data.data.movements.map((movement, index) => (
-                                                <tr key={`${movement.documento}-${index}`} className="hover:bg-[#fff5f7] transition-colors">
-                                                    <td className="px-4 py-2 text-sm">{movement.documento}</td>
-                                                    <td className="px-4 py-2 text-sm">{new Date(movement.fecha).toLocaleDateString()}</td>
-                                                    <td className="px-4 py-2 text-sm">{movement.tipo_documento}</td>
-                                                    <td className="px-4 py-2 text-center">
-                                                        {movement.naturaleza === '+' ? (
-                                                            <FaArrowUp className="inline text-green-500" />
-                                                        ) : (
-                                                            <FaArrowDown className="inline text-red-500" />
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-2 text-sm text-right">
-                                                        <span className={movement.naturaleza === '+' ? 'text-green-500' : 'text-red-500'}>
-                                                            {movement.naturaleza === '+' ? '+' : '-'}{movement.cantidad}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-2 text-sm text-right font-medium">{movement.saldo}</td>
-                                                </tr>
-                                            ))}
+                                            {data.data.movements.map((movement, index) => {
+                                                const isVenta = movement.tipo_documento === 'VTA';
+                                                const precioUnit = isVenta && movement.precio_unitario_venta != null ? Number(movement.precio_unitario_venta) : null;
+                                                const totalVenta = isVenta && movement.total_venta != null ? Number(movement.total_venta) : null;
+                                                const costoUnit = isVenta && movement.costo_unitario != null ? Number(movement.costo_unitario) : null;
+                                                const costoTotal = isVenta && movement.costo_total != null ? Number(movement.costo_total) : null;
+                                                const utilidad = isVenta && movement.utilidad != null ? Number(movement.utilidad) : null;
+                                                // Rentabilidad: usar la del backend o calcular si tenemos total_venta y utilidad
+                                                let rentabilidadReal = isVenta && movement.rentabilidad_real != null ? Number(movement.rentabilidad_real) : null;
+                                                if (isVenta && rentabilidadReal == null && totalVenta != null && totalVenta > 0 && utilidad != null) {
+                                                    rentabilidadReal = (utilidad / totalVenta) * 100;
+                                                }
+                                                return (
+                                                    <tr key={`${movement.documento}-${index}`} className="hover:bg-[#fff5f7] transition-colors">
+                                                        <td className="px-4 py-2 text-sm">{movement.documento}</td>
+                                                        <td className="px-4 py-2 text-sm">{new Date(movement.fecha).toLocaleDateString()}</td>
+                                                        <td className="px-4 py-2 text-sm">{movement.tipo_documento}</td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            {movement.naturaleza === '+' ? (
+                                                                <FaArrowUp className="inline text-green-500" />
+                                                            ) : (
+                                                                <FaArrowDown className="inline text-red-500" />
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right">
+                                                            <span className={movement.naturaleza === '+' ? 'text-green-500' : 'text-red-500'}>
+                                                                {movement.naturaleza === '+' ? '+' : '-'}{movement.cantidad}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right font-medium">{movement.saldo}</td>
+                                                        <td className="px-4 py-2 text-sm text-right text-gray-600">
+                                                            {precioUnit != null ? `$${formatValue(precioUnit)}` : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right text-gray-600">
+                                                            {totalVenta != null ? `$${formatValue(totalVenta)}` : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right text-gray-600">
+                                                            {costoUnit != null ? `$${formatValue(costoUnit)}` : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right text-gray-600">
+                                                            {costoTotal != null ? `$${formatValue(costoTotal)}` : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right">
+                                                            {utilidad != null ? (
+                                                                <span className={utilidad >= 0 ? 'text-emerald-600 font-medium' : 'text-red-600 font-medium'}>
+                                                                    ${formatValue(utilidad)}
+                                                                </span>
+                                                            ) : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm text-right whitespace-nowrap bg-gray-50">
+                                                            {rentabilidadReal != null ? (
+                                                                <span className={`font-semibold ${rentabilidadReal >= 30 ? 'text-emerald-600' : rentabilidadReal >= 15 ? 'text-amber-600' : 'text-gray-700'}`}>
+                                                                    {rentabilidadReal.toFixed(1)}%
+                                                                </span>
+                                                            ) : '-'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

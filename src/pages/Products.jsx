@@ -4,9 +4,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaEdit, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire, FaFilter, FaTimes, FaLayerGroup, FaSpinner, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire, FaFilter, FaTimes, FaLayerGroup, FaSpinner, FaSearch, FaDollarSign } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ArticleMovementModal from '../components/ArticleMovementModal';
+import AsignarCostoInicialModal from '../components/AsignarCostoInicialModal';
 import debounce from 'lodash/debounce';
 import { toast } from 'react-toastify';
 
@@ -60,6 +61,8 @@ const Products = () => {
     const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
     const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
     const [selectedArticleCode, setSelectedArticleCode] = useState(null);
+    const [showAsignarCostoModal, setShowAsignarCostoModal] = useState(false);
+    const [articuloSeleccionado, setArticuloSeleccionado] = useState(null);
 
     const limit = 15;
 
@@ -247,6 +250,28 @@ const Products = () => {
         return () => debouncedFetch.cancel();
     }, [filterCodigo, filterNombre, selectedExistencia, filterCategoria, filterSubcategoria, debouncedFetch]);
 
+    // Función para manejar asignación de costo exitosa
+    const handleCostoAsignado = () => {
+        // Refrescar la lista de productos después de asignar costo
+        fetchProducts(pageNumber);
+        toast.success('Costo asignado exitosamente');
+    };
+
+    // Función para abrir modal de asignar costo
+    const handleAsignarCosto = (product) => {
+        // Preparar el objeto artículo con los campos que espera el modal
+        const articulo = {
+            art_sec: product.art_sec,
+            art_cod: product.art_cod,
+            art_nom: product.art_nom,
+            existencia: product.existencia || 0,
+            precio_mayor: product.precio_mayor_original || product.precio_mayor || 0,
+            costo_sugerido: null // El modal puede calcularlo si es necesario
+        };
+        setArticuloSeleccionado(articulo);
+        setShowAsignarCostoModal(true);
+    };
+
     // useEffect inicial para cargar productos al montar el componente
     useEffect(() => {
         console.log('🚀 Initial load - fetching products');
@@ -336,6 +361,15 @@ const Products = () => {
         product?.costo_promedio_actual ??
         product?.kar_cos_pro ??
         null;
+
+    // Función para verificar si un producto tiene costo asignado
+    const tieneCostoAsignado = (product) => {
+        const costo = getAverageCost(product);
+        // Considerar null, undefined, 0, '0', o valores falsy como "sin costo"
+        if (costo === null || costo === undefined) return false;
+        const costoNum = parseFloat(costo);
+        return !isNaN(costoNum) && costoNum > 0;
+    };
 
     // Determinar color de existencia (signature element)
     const getStockColor = (stock) => {
@@ -506,6 +540,15 @@ const Products = () => {
                                             >
                                                 <FaEdit className="w-3.5 h-3.5" />
                                             </button>
+                                            {!tieneCostoAsignado(product) && (
+                                                <button
+                                                    onClick={() => handleAsignarCosto(product)}
+                                                    className="p-1.5 text-amber-600 hover:text-white hover:bg-amber-600 rounded transition-colors duration-150"
+                                                    title="Asignar Costo Inicial"
+                                                >
+                                                    <FaDollarSign className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleViewMovements(product.art_cod)}
                                                 className="p-1.5 text-[#7a7a7a] hover:text-[#f58ea3] hover:bg-pink-50 rounded transition-colors duration-150"
@@ -676,6 +719,15 @@ const Products = () => {
                                                     >
                                                         <FaEdit className="w-3 h-3" />
                                                     </button>
+                                                    {!tieneCostoAsignado(product) && (
+                                                        <button
+                                                            onClick={() => handleAsignarCosto(product)}
+                                                            className="p-1 text-amber-600 hover:text-white hover:bg-amber-600 rounded transition-all duration-150"
+                                                            title="Asignar Costo Inicial"
+                                                        >
+                                                            <FaDollarSign className="w-3 h-3" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handleViewMovements(product.art_cod)}
                                                         className="p-1 text-[#7a7a7a] hover:text-white hover:bg-[#f58ea3] rounded transition-all duration-150"
@@ -794,6 +846,17 @@ const Products = () => {
                 isOpen={isMovementModalOpen}
                 onClose={() => setIsMovementModalOpen(false)}
                 articleCode={selectedArticleCode}
+            />
+
+            {/* Modal para asignar costo inicial */}
+            <AsignarCostoInicialModal
+                isOpen={showAsignarCostoModal}
+                onClose={() => {
+                    setShowAsignarCostoModal(false);
+                    setArticuloSeleccionado(null);
+                }}
+                articulo={articuloSeleccionado}
+                onSuccess={handleCostoAsignado}
             />
         </div>
     );

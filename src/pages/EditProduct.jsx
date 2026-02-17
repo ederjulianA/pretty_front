@@ -8,6 +8,8 @@ import ProductPhotoGallery from '../components/product/ProductPhotoGallery';
 import VariationsTable from '../components/product/VariationsTable';
 import CreateVariationModal from '../components/product/CreateVariationModal';
 import BundleManager from '../components/product/BundleManager';
+import ProfitMarginDisplay from '../components/product/ProfitMarginDisplay';
+import useRentabilidad from '../hooks/useRentabilidad';
 import { FaLayerGroup, FaBoxOpen, FaSpinner } from 'react-icons/fa';
 
 const EditProduct = () => {
@@ -51,6 +53,30 @@ const EditProduct = () => {
   // Estados para producto bundle
   const [bundleComponents, setBundleComponents] = useState([]);
   const [isLoadingBundle, setIsLoadingBundle] = useState(false);
+  
+  // Estado para costo promedio del producto
+  const [costoPromedio, setCostoPromedio] = useState(0);
+  
+  // Estado para datos de rentabilidad del backend
+  const [rentabilidadData, setRentabilidadData] = useState({
+    rentabilidadDetal: null,
+    margenGananciaDetal: null,
+    utilidadBrutaDetal: null,
+    clasificacionRentabilidad: null,
+    rentabilidadMayor: null
+  });
+  
+  // Hook para obtener datos de rentabilidad actualizados del backend
+  const { rentabilidadData: rentabilidadBackend, refetch: refetchRentabilidad } = useRentabilidad(id, true);
+  
+  // Actualizar costo promedio si el hook lo devuelve y el costo actual es 0
+  // (Solo como fallback si el endpoint de detalle no lo devuelve por alguna razón)
+  useEffect(() => {
+    if (rentabilidadBackend.costoPromedio && rentabilidadBackend.costoPromedio > 0 && costoPromedio === 0) {
+      console.log('✅ Costo promedio actualizado desde hook de rentabilidad:', rentabilidadBackend.costoPromedio);
+      setCostoPromedio(rentabilidadBackend.costoPromedio);
+    }
+  }, [rentabilidadBackend.costoPromedio, costoPromedio]);
 
   // Cargar variaciones del producto variable
   const fetchVariations = useCallback(async () => {
@@ -141,6 +167,37 @@ const EditProduct = () => {
           });
           setInitialArtCod(prod.art_cod || '');
           setInitialArtWooId(prod.art_woo_id || '');
+          
+          // Obtener costo promedio del producto
+          // Usar la misma lógica que Products.jsx para mantener consistencia
+          // El backend ahora devuelve todos los campos de costo promedio en el endpoint de detalle
+          const getCostoPromedio = (articulo) =>
+            articulo.costo_promedio ??
+            articulo.costo_promedio_ponderado ??
+            articulo.costo_promedio_actual ??
+            articulo.kar_cos_pro ??
+            articulo.art_bod_cos_cat ??
+            null;
+          
+          const costoCalculado = getCostoPromedio(prod);
+          
+          if (costoCalculado !== null && costoCalculado !== undefined) {
+            console.log('✅ Costo promedio obtenido del endpoint /articulos/:id:', costoCalculado);
+            setCostoPromedio(parseFloat(costoCalculado));
+          } else {
+            console.log('⚠️ Costo promedio no disponible en el endpoint de detalle. Se intentará obtener desde hook de rentabilidad o variaciones.');
+            setCostoPromedio(0);
+          }
+          
+          // Guardar datos de rentabilidad del backend para pasarlos al componente
+          // Combinar datos de la respuesta inicial con datos del hook (si están disponibles)
+          setRentabilidadData({
+            rentabilidadDetal: prod.rentabilidad_detal ?? prod.rentabilidad ?? null,
+            margenGananciaDetal: prod.margen_ganancia_detal ?? prod.margen_ganancia ?? null,
+            utilidadBrutaDetal: prod.utilidad_bruta_detal ?? prod.utilidad_bruta ?? null,
+            clasificacionRentabilidad: prod.clasificacion_rentabilidad ?? null,
+            rentabilidadMayor: prod.rentabilidad_mayor ?? null
+          });
 
           // Detectar tipo de producto
           // Prioridad: art_bundle > art_woo_type > art_variable > fallback por variaciones
@@ -158,12 +215,17 @@ const EditProduct = () => {
               });
               if (bundleResponse.data.success && bundleResponse.data.data) {
                 const componentes = bundleResponse.data.data.componentes || [];
+                
+                // El backend ahora devuelve directamente precio_detal, precio_mayor y costo_promedio
                 setBundleComponents(componentes.map(c => ({
                   art_sec: c.art_sec,
                   art_cod: c.art_cod,
                   art_nom: c.art_nom,
                   cantidad: c.cantidad,
-                  stock: c.stock_disponible || 0
+                  stock: c.stock_disponible || 0,
+                  precio_detal: c.precio_detal || 0,
+                  precio_mayor: c.precio_mayor || 0,
+                  costo_promedio: c.costo_promedio || 0
                 })));
               }
             } catch (bundleError) {
@@ -176,7 +238,36 @@ const EditProduct = () => {
             }
             // Cargar variaciones si es producto variable
             if (wooType === 'variable') {
-              await fetchVariations();
+              const variationsData = await fetchVariations();
+              // Si el costo promedio es 0, intentar obtenerlo del promedio de variaciones
+              if (costoCalculado === 0 && variationsData?.data?.length > 0) {
+                const getCostoVariacion = (v) =>
+                  v.costo_promedio ?? 
+                  v.costo_promedio_ponderado ?? 
+                  v.costo_promedio_actual ?? 
+                  v.art_bod_cos_cat ?? 
+                  v.kar_cos_pro ?? 
+                  0;
+                
+                const variacionesConCosto = variationsData.data.filter(v => {
+                  const costoVar = getCostoVariacion(v);
+                  return costoVar > 0;
+                });
+                
+                if (variacionesConCosto.length > 0) {
+                  const costoPromedioVariaciones = variacionesConCosto.reduce((sum, v) => {
+                    return sum + parseFloat(getCostoVariacion(v));
+                  }, 0) / variacionesConCosto.length;
+                  
+                  console.log('✅ Costo promedio calculado desde variaciones:', costoPromedioVariaciones);
+                  setCostoPromedio(costoPromedioVariaciones);
+                } else {
+                  console.log('⚠️ Variaciones cargadas pero ninguna tiene costo promedio:', variationsData.data.map(v => ({
+                    art_cod: v.art_cod,
+                    campos: Object.keys(v).filter(k => k.toLowerCase().includes('costo') || k.toLowerCase().includes('cos'))
+                  })));
+                }
+              }
             }
           } else if (isVariable) {
             setProductWooType('variable');
@@ -184,7 +275,33 @@ const EditProduct = () => {
               setParentAttributes(parseAttributes(prod.attributes));
             }
             // Cargar variaciones
-            await fetchVariations();
+            const variationsData = await fetchVariations();
+            // Si el costo promedio es 0, intentar obtenerlo del promedio de variaciones
+            if (costoCalculado === 0 && variationsData?.data?.length > 0) {
+              const getCostoVariacion = (v) =>
+                v.costo_promedio ?? 
+                v.costo_promedio_ponderado ?? 
+                v.costo_promedio_actual ?? 
+                v.art_bod_cos_cat ?? 
+                v.kar_cos_pro ?? 
+                0;
+              
+              const variacionesConCosto = variationsData.data.filter(v => {
+                const costoVar = getCostoVariacion(v);
+                return costoVar > 0;
+              });
+              
+              if (variacionesConCosto.length > 0) {
+                const costoPromedioVariaciones = variacionesConCosto.reduce((sum, v) => {
+                  return sum + parseFloat(getCostoVariacion(v));
+                }, 0) / variacionesConCosto.length;
+                
+                console.log('✅ Costo promedio calculado desde variaciones:', costoPromedioVariaciones);
+                setCostoPromedio(costoPromedioVariaciones);
+              } else {
+                console.log('⚠️ Variaciones cargadas pero ninguna tiene costo promedio');
+              }
+            }
           } else {
             // El backend puede no devolver art_woo_type aún
             // Intentar detectar consultando el endpoint de variaciones
@@ -652,6 +769,8 @@ const EditProduct = () => {
                 components={bundleComponents}
                 onComponentsChange={setBundleComponents}
                 disabled={isSubmitting}
+                precioDetalBundle={parseFloat(formData.precio_detal) || 0}
+                precioMayorBundle={parseFloat(formData.precio_mayor) || 0}
               />
             </div>
           )}
@@ -697,6 +816,23 @@ const EditProduct = () => {
                 )}
               </div>
             </div>
+            
+            {/* Mostrar márgenes de rentabilidad para productos simples y variables */}
+            {!isBundle && (
+              <ProfitMarginDisplay
+                precioDetal={parseFloat(formData.precio_detal) || 0}
+                precioMayor={parseFloat(formData.precio_mayor) || 0}
+                costoPromedio={costoPromedio}
+                tipoProducto={isVariable ? 'variable' : 'simple'}
+                title="Rentabilidad del Producto"
+                // Priorizar datos del hook de rentabilidad (más actualizados)
+                rentabilidadDetal={rentabilidadBackend.rentabilidadDetal ?? rentabilidadData.rentabilidadDetal}
+                margenGananciaDetal={rentabilidadBackend.margenGananciaDetal ?? rentabilidadData.margenGananciaDetal}
+                utilidadBrutaDetal={rentabilidadBackend.utilidadBrutaDetal ?? rentabilidadData.utilidadBrutaDetal}
+                clasificacionRentabilidad={rentabilidadBackend.clasificacionRentabilidad ?? rentabilidadData.clasificacionRentabilidad}
+                rentabilidadMayor={rentabilidadBackend.rentabilidadMayor ?? rentabilidadData.rentabilidadMayor}
+              />
+            )}
           </div>
 
           {/* Integración WooCommerce */}

@@ -6,7 +6,8 @@ import axiosInstance from '../axiosConfig';
 import useCostosData from '../hooks/useCostosData';
 import AsignarCostoInicialModal from '../components/AsignarCostoInicialModal';
 import AprobarCostosAlertasModal from '../components/AprobarCostosAlertasModal';
-import { FaEdit, FaCheckCircle, FaExclamationTriangle, FaSpinner, FaCheck } from 'react-icons/fa';
+import ArticleMovementModal from '../components/ArticleMovementModal';
+import { FaEdit, FaCheckCircle, FaExclamationTriangle, FaSpinner, FaCheck, FaHistory } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
 // Registrar componentes de Chart.js
@@ -58,6 +59,10 @@ const DashboardCostos = () => {
   
   // Estados para modal de aprobar costos con alertas
   const [showAprobarAlertasModal, setShowAprobarAlertasModal] = useState(false);
+  
+  // Estados para modal de movimientos del artículo
+  const [showMovementModal, setShowMovementModal] = useState(false);
+  const [selectedArticleCode, setSelectedArticleCode] = useState(null);
   const [categorias, setCategorias] = useState([]);
   const [subcategorias, setSubcategorias] = useState([]);
   const [cargandoCategorias, setCargandoCategorias] = useState(false);
@@ -1502,24 +1507,36 @@ const DashboardCostos = () => {
                       {producto.art_cod} · {producto.existencia} unidades
                     </p>
                   </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-sm font-bold text-[#0f172a] tabular-nums">
-                      {formatCurrency(producto.valor_total)}
-                    </p>
-                    <p className="text-xs text-[#64748b]">
-                      <span
-                        className="inline-block w-2 h-2 rounded-full mr-1"
-                        style={{
-                          backgroundColor:
-                            producto.clasificacion_abc === 'A'
-                              ? '#ff6384'
-                              : producto.clasificacion_abc === 'B'
-                              ? '#36a2eb'
-                              : '#ffce56'
-                        }}
-                      ></span>
-                      Tipo {producto.clasificacion_abc}
-                    </p>
+                  <div className="flex-shrink-0 text-right flex items-center gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-[#0f172a] tabular-nums">
+                        {formatCurrency(producto.valor_total)}
+                      </p>
+                      <p className="text-xs text-[#64748b]">
+                        <span
+                          className="inline-block w-2 h-2 rounded-full mr-1"
+                          style={{
+                            backgroundColor:
+                              producto.clasificacion_abc === 'A'
+                                ? '#ff6384'
+                                : producto.clasificacion_abc === 'B'
+                                ? '#36a2eb'
+                                : '#ffce56'
+                          }}
+                        ></span>
+                        Tipo {producto.clasificacion_abc}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedArticleCode(producto.art_cod);
+                        setShowMovementModal(true);
+                      }}
+                      className="p-2 text-[#64748b] hover:text-[#f58ea3] hover:bg-[#fff5f7] rounded-lg transition-colors"
+                      title="Ver movimientos del artículo"
+                    >
+                      <FaHistory className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1657,6 +1674,16 @@ const DashboardCostos = () => {
           cargarResumenCostosPendientes();
           refrescarDatos();
         }}
+      />
+
+      {/* Modal para ver movimientos del artículo */}
+      <ArticleMovementModal
+        isOpen={showMovementModal}
+        onClose={() => {
+          setShowMovementModal(false);
+          setSelectedArticleCode(null);
+        }}
+        articleCode={selectedArticleCode}
       />
     </div>
   );

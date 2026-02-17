@@ -8,6 +8,7 @@ import { FaUpload, FaTrash, FaSpinner, FaSyncAlt } from 'react-icons/fa';
 import ProductTypeSelector from '../components/product/ProductTypeSelector';
 import AttributeManager from '../components/product/AttributeManager';
 import BundleManager from '../components/product/BundleManager';
+import ProfitMarginDisplay from '../components/product/ProfitMarginDisplay';
 
 const CreateProduct = () => {
   const navigate = useNavigate();
@@ -37,6 +38,18 @@ const CreateProduct = () => {
 
   // Estados para componentes (producto bundle)
   const [bundleComponents, setBundleComponents] = useState([]);
+  
+  // Estado para costo promedio (se obtiene cuando se busca un producto existente)
+  const [costoPromedio, setCostoPromedio] = useState(0);
+  
+  // Estado para datos de rentabilidad del backend (cuando se edita un producto existente)
+  const [rentabilidadData, setRentabilidadData] = useState({
+    rentabilidadDetal: null,
+    margenGananciaDetal: null,
+    utilidadBrutaDetal: null,
+    clasificacionRentabilidad: null,
+    rentabilidadMayor: null
+  });
 
   // Estados para los errores de validación
   const [errorArtCod, setErrorArtCod] = useState('');
@@ -803,6 +816,8 @@ const CreateProduct = () => {
                 components={bundleComponents}
                 onComponentsChange={setBundleComponents}
                 disabled={isSubmitting}
+                precioDetalBundle={parseFloat(formData.precio_detal) || 0}
+                precioMayorBundle={parseFloat(formData.precio_mayor) || 0}
               />
             </div>
           )}
@@ -858,6 +873,22 @@ const CreateProduct = () => {
                 )}
               </div>
             </div>
+            
+            {/* Mostrar márgenes de rentabilidad para productos simples y variables */}
+            {productType !== 'bundle' && (
+              <ProfitMarginDisplay
+                precioDetal={parseFloat(formData.precio_detal) || 0}
+                precioMayor={parseFloat(formData.precio_mayor) || 0}
+                costoPromedio={costoPromedio}
+                tipoProducto={productType === 'variable' ? 'variable' : 'simple'}
+                title="Rentabilidad del Producto"
+                rentabilidadDetal={rentabilidadData.rentabilidadDetal}
+                margenGananciaDetal={rentabilidadData.margenGananciaDetal}
+                utilidadBrutaDetal={rentabilidadData.utilidadBrutaDetal}
+                clasificacionRentabilidad={rentabilidadData.clasificacionRentabilidad}
+                rentabilidadMayor={rentabilidadData.rentabilidadMayor}
+              />
+            )}
           </div>
           {/* Código WooCommerce - solo para producto simple */}
           {productType === 'simple' && (

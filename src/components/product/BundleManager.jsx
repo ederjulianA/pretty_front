@@ -1,16 +1,24 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { API_URL } from '../../config';
 import { FaSearch, FaPlus, FaTrash, FaBoxOpen, FaMinus } from 'react-icons/fa';
+import ProfitMarginDisplay from './ProfitMarginDisplay';
 import debounce from 'lodash/debounce';
 
-const BundleManager = ({ components, onComponentsChange, disabled = false }) => {
+const BundleManager = ({ components, onComponentsChange, disabled = false, precioDetalBundle = 0, precioMayorBundle = 0 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  // Búsqueda de productos con debounce
+  // Función auxiliar para determinar si la búsqueda es por código o nombre
+  const isCodigoSearch = (query) => {
+    // Si la búsqueda es corta (menos de 3 caracteres) o contiene solo números/letras sin espacios, probablemente es código
+    const trimmed = query.trim();
+    return trimmed.length <= 20 && /^[A-Za-z0-9\-_]+$/.test(trimmed);
+  };
+
+  // Búsqueda de productos con debounce - ahora soporta código y nombre
   const searchProducts = useCallback(
     debounce(async (query) => {
       if (!query.trim()) {
@@ -22,12 +30,20 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
       setIsSearching(true);
       try {
         const token = localStorage.getItem('pedidos_pretty_token');
+        const params = {
+          PageSize: 20,
+          PageNumber: 1
+        };
+
+        // Determinar si buscar por código o nombre
+        if (isCodigoSearch(query)) {
+          params.codigo = query;
+        } else {
+          params.nombre = query;
+        }
+
         const response = await axios.get(`${API_URL}/articulos`, {
-          params: {
-            nombre: query,
-            PageSize: 20,
-            PageNumber: 1
-          },
+          params,
           headers: { 'x-access-token': token }
         });
 
@@ -52,6 +68,15 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
     searchProducts(searchQuery);
   }, [searchQuery, searchProducts]);
 
+  // Función auxiliar para obtener costo promedio
+  const getCostoPromedio = (product) => {
+    return product.costo_promedio ??
+      product.costo_promedio_ponderado ??
+      product.costo_promedio_actual ??
+      product.kar_cos_pro ??
+      0;
+  };
+
   const handleAddComponent = (product) => {
     // Verificar si el componente ya existe
     const existingIndex = components.findIndex(c => c.art_sec === product.art_sec);
@@ -62,7 +87,7 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
       updated[existingIndex].cantidad += 1;
       onComponentsChange(updated);
     } else {
-      // Agregar nuevo componente
+      // Agregar nuevo componente con información de precios y costo
       onComponentsChange([
         ...components,
         {
@@ -70,7 +95,10 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
           art_cod: product.art_cod,
           art_nom: product.art_nom,
           cantidad: 1,
-          stock: product.existencia || 0
+          stock: product.existencia || 0,
+          precio_detal: product.precio_detal || 0,
+          precio_mayor: product.precio_mayor || 0,
+          costo_promedio: getCostoPromedio(product)
         }
       ]);
     }
@@ -115,6 +143,44 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
     return { color: 'text-red-600', bg: 'bg-red-50', icon: '❌', label: 'Insuficiente' };
   };
 
+  // Función para formatear precio
+  const formatPrice = (price) => {
+    if (!price || price === 0) return '$0';
+    return `$${parseFloat(price).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  };
+
+  // Calcular totales
+  const totales = useMemo(() => {
+    const totalPrecioDetal = components.reduce((sum, comp) => {
+      return sum + (parseFloat(comp.precio_detal || 0) * comp.cantidad);
+    }, 0);
+
+    const totalPrecioMayor = components.reduce((sum, comp) => {
+      return sum + (parseFloat(comp.precio_mayor || 0) * comp.cantidad);
+    }, 0);
+
+    const totalCosto = components.reduce((sum, comp) => {
+      return sum + (parseFloat(comp.costo_promedio || 0) * comp.cantidad);
+    }, 0);
+
+    // Calcular márgenes de rentabilidad
+    const margenDetal = precioDetalBundle > 0 && totalCosto > 0
+      ? ((precioDetalBundle - totalCosto) / precioDetalBundle) * 100
+      : 0;
+
+    const margenMayor = precioMayorBundle > 0 && totalCosto > 0
+      ? ((precioMayorBundle - totalCosto) / precioMayorBundle) * 100
+      : 0;
+
+    return {
+      totalPrecioDetal,
+      totalPrecioMayor,
+      totalCosto,
+      margenDetal,
+      margenMayor
+    };
+  }, [components, precioDetalBundle, precioMayorBundle]);
+
   return (
     <div className="space-y-4 p-5 bg-[#fffef9] border border-[#f5cad4] rounded-xl">
       <div className="flex items-center gap-2 mb-3">
@@ -139,7 +205,7 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery && setShowResults(true)}
-              placeholder="Buscar productos para agregar..."
+              placeholder="Buscar por nombre o código de producto..."
               className="w-full pl-10 pr-4 py-3 border border-[#f5cad4] rounded-xl bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
               disabled={disabled}
             />
@@ -168,7 +234,7 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-800 text-sm truncate">{product.art_nom}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className="text-xs text-gray-500">{product.art_cod}</span>
                       <span className="text-xs text-gray-400">•</span>
                       <span className={`text-xs font-medium ${
@@ -176,6 +242,14 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
                       }`}>
                         {product.existencia || 0} en stock
                       </span>
+                      {(product.precio_detal || product.precio_mayor) && (
+                        <>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-600">
+                            Detal: {formatPrice(product.precio_detal)} | Mayor: {formatPrice(product.precio_mayor)}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex-shrink-0 ml-2">
@@ -225,7 +299,23 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
                   <h4 className="font-semibold text-gray-800 text-sm line-clamp-2 mb-1">
                     {component.art_nom}
                   </h4>
-                  <p className="text-xs text-gray-500 mb-3">{component.art_cod}</p>
+                  <p className="text-xs text-gray-500 mb-2">{component.art_cod}</p>
+
+                  {/* Precios y Costo */}
+                  <div className="mb-3 space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-600">Precio Detal:</span>
+                      <span className="font-semibold text-gray-800">{formatPrice(component.precio_detal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-600">Precio Mayor:</span>
+                      <span className="font-semibold text-gray-800">{formatPrice(component.precio_mayor)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs border-t border-gray-200 pt-1">
+                      <span className="text-gray-600">Costo Promedio:</span>
+                      <span className="font-semibold text-blue-600">{formatPrice(component.costo_promedio)}</span>
+                    </div>
+                  </div>
 
                   {/* Indicador de stock */}
                   <div className={`${status.bg} ${status.color} px-2 py-1 rounded-lg text-xs font-medium mb-3 flex items-center gap-1.5`}>
@@ -283,13 +373,31 @@ const BundleManager = ({ components, onComponentsChange, disabled = false }) => 
         </div>
       )}
 
-      {/* Información adicional */}
+      {/* Sección de Totales y Rentabilidad usando componente reutilizable */}
       {components.length > 0 && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-blue-700">
-            <strong>💡 Nota:</strong> El precio del bundle es independiente. Los componentes se descontarán del inventario al vender el bundle.
-          </p>
-        </div>
+        <>
+          <ProfitMarginDisplay
+            precioDetal={precioDetalBundle}
+            precioMayor={precioMayorBundle}
+            costoPromedio={totales.totalCosto}
+            tipoProducto="bundle"
+            title="Totales y Rentabilidad del Bundle"
+            showTotals={true}
+            totalesComponentes={totales}
+          />
+          
+          {/* Información adicional */}
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700">
+              <strong>💡 Nota:</strong> El precio del bundle es independiente. Los componentes se descontarán del inventario al vender el bundle.
+              {precioDetalBundle === 0 && precioMayorBundle === 0 && (
+                <span className="block mt-1 text-amber-700">
+                  ⚠️ Define los precios del bundle arriba para ver el margen de rentabilidad.
+                </span>
+              )}
+            </p>
+          </div>
+        </>
       )}
     </div>
   );

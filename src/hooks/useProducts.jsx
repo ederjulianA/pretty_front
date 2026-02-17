@@ -72,6 +72,12 @@ const useProducts = (filters, selectedCategory, selectedSubcategory) => {
             precio_mayor_original: articulo.precio_mayor_original,
             // Bundle
             art_bundle: articulo.art_bundle,
+            // Rentabilidad del backend (columnas calculadas)
+            rentabilidad_detal: articulo.rentabilidad_detal ?? articulo.rentabilidad ?? null,
+            margen_ganancia_detal: articulo.margen_ganancia_detal ?? articulo.margen_ganancia ?? null,
+            utilidad_bruta_detal: articulo.utilidad_bruta_detal ?? articulo.utilidad_bruta ?? null,
+            clasificacion_rentabilidad: articulo.clasificacion_rentabilidad ?? null,
+            rentabilidad_mayor: articulo.rentabilidad_mayor ?? null,
           }));
           
           if (page === 1) {

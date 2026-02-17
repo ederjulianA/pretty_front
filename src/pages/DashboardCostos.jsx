@@ -4,6 +4,10 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Pie } from 'react-chartjs-2';
 import axiosInstance from '../axiosConfig';
 import useCostosData from '../hooks/useCostosData';
+import AsignarCostoInicialModal from '../components/AsignarCostoInicialModal';
+import AprobarCostosAlertasModal from '../components/AprobarCostosAlertasModal';
+import { FaEdit, FaCheckCircle, FaExclamationTriangle, FaSpinner, FaCheck } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 
 // Registrar componentes de Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -42,6 +46,18 @@ const DashboardCostos = () => {
   const [subcategoriasPorCategoria, setSubcategoriasPorCategoria] = useState({});
   const [subcategoriasExpandidas, setSubcategoriasExpandidas] = useState({});
   const [articulosPorSubcategoria, setArticulosPorSubcategoria] = useState({});
+  
+  // Estados para modal de asignar costo inicial
+  const [showAsignarCostoModal, setShowAsignarCostoModal] = useState(false);
+  const [articuloSeleccionado, setArticuloSeleccionado] = useState(null);
+  
+  // Estados para aplicar costos pendientes
+  const [resumenCostosPendientes, setResumenCostosPendientes] = useState(null);
+  const [cargandoResumenCostos, setCargandoResumenCostos] = useState(false);
+  const [aplicandoCostos, setAplicandoCostos] = useState(false);
+  
+  // Estados para modal de aprobar costos con alertas
+  const [showAprobarAlertasModal, setShowAprobarAlertasModal] = useState(false);
   const [categorias, setCategorias] = useState([]);
   const [subcategorias, setSubcategorias] = useState([]);
   const [cargandoCategorias, setCargandoCategorias] = useState(false);
@@ -391,7 +407,101 @@ const DashboardCostos = () => {
 
   useEffect(() => {
     cargarCategorias();
+    cargarResumenCostosPendientes();
   }, []);
+
+  // Función para cargar resumen de costos pendientes
+  const cargarResumenCostosPendientes = async () => {
+    setCargandoResumenCostos(true);
+    try {
+      const response = await axiosInstance.get('/carga-costos/resumen');
+      if (response.data.success) {
+        setResumenCostosPendientes(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error cargando resumen de costos pendientes:', error);
+      // No mostrar error al usuario, simplemente no mostrar el resumen
+      setResumenCostosPendientes(null);
+    } finally {
+      setCargandoResumenCostos(false);
+    }
+  };
+
+  // Función para aplicar costos pendientes
+  const aplicarCostosPendientes = async () => {
+    // Primero mostrar confirmación con resumen
+    const costosValidados = resumenCostosPendientes?.find(r => r.estado === 'VALIDADO');
+    const costosConAlertas = resumenCostosPendientes?.find(r => r.estado === 'VALIDADO_CON_ALERTAS');
+    
+    let mensajeConfirmacion = '¿Desea aplicar los costos pendientes?\n\n';
+    
+    if (costosValidados && costosValidados.cantidad > 0) {
+      mensajeConfirmacion += `✅ Costos validados: ${costosValidados.cantidad}\n`;
+    }
+    
+    if (costosConAlertas && costosConAlertas.cantidad > 0) {
+      mensajeConfirmacion += `⚠️ Costos con alertas: ${costosConAlertas.cantidad} (requieren revisión)\n`;
+    }
+    
+    mensajeConfirmacion += '\nNota: Solo se aplicarán los costos con estado VALIDADO. Los costos con alertas no se aplicarán automáticamente.';
+
+    const confirmacion = await Swal.fire({
+      icon: 'question',
+      title: 'Aplicar Costos Pendientes',
+      text: mensajeConfirmacion,
+      showCancelButton: true,
+      confirmButtonText: 'Sí, aplicar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#f58ea3',
+      cancelButtonColor: '#6b7280'
+    });
+
+    if (!confirmacion.isConfirmed) {
+      return;
+    }
+
+    setAplicandoCostos(true);
+    try {
+      const usuCod = localStorage.getItem('user_pretty') || undefined;
+      const aplicarPayload = usuCod ? { usu_cod: usuCod } : {};
+      
+      const response = await axiosInstance.post('/carga-costos/aplicar', aplicarPayload);
+
+      if (response.data.success) {
+        const { total_aplicados, errores } = response.data.data || {};
+        
+        let mensajeExito = `✅ Costos aplicados exitosamente\n\n`;
+        mensajeExito += `Total aplicados: ${total_aplicados || 0}`;
+        
+        if (errores && errores.length > 0) {
+          mensajeExito += `\n\nErrores: ${errores.join(', ')}`;
+        }
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Costos Aplicados',
+          text: mensajeExito,
+          confirmButtonColor: '#f58ea3'
+        });
+
+        // Refrescar datos y resumen
+        refrescarDatos();
+        cargarResumenCostosPendientes();
+      } else {
+        throw new Error(response.data.message || 'Error al aplicar costos');
+      }
+    } catch (error) {
+      console.error('Error aplicando costos:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || error.message || 'Error al aplicar los costos pendientes',
+        confirmButtonColor: '#f58ea3'
+      });
+    } finally {
+      setAplicandoCostos(false);
+    }
+  };
 
   useEffect(() => {
     cargarSubcategorias(filtroUI.categoria);
@@ -870,6 +980,75 @@ const DashboardCostos = () => {
           )}
         </div>
 
+        {/* Alert Bar - Costos Pendientes de Aplicar */}
+        {resumenCostosPendientes && resumenCostosPendientes.length > 0 && (
+          <div className="mb-6">
+            <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FaCheckCircle className="text-blue-600 w-5 h-5" />
+                    <h3 className="font-bold text-blue-900">
+                      Costos Pendientes de Aplicar
+                    </h3>
+                  </div>
+                  <div className="space-y-1 text-sm text-blue-800">
+                    {resumenCostosPendientes.map((resumen) => {
+                      if (resumen.estado === 'VALIDADO' && resumen.cantidad > 0) {
+                        return (
+                          <div key={resumen.estado} className="flex items-center gap-2">
+                            <FaCheckCircle className="text-green-600 w-4 h-4" />
+                            <span>
+                              <strong>{resumen.cantidad}</strong> costos validados listos para aplicar
+                              {resumen.margen_promedio && ` (Margen promedio: ${parseFloat(resumen.margen_promedio).toFixed(2)}%)`}
+                            </span>
+                          </div>
+                        );
+                      }
+                      if (resumen.estado === 'VALIDADO_CON_ALERTAS' && resumen.cantidad > 0) {
+                        return (
+                          <div key={resumen.estado} className="flex items-center gap-2">
+                            <FaExclamationTriangle className="text-amber-600 w-4 h-4" />
+                            <span>
+                              <strong>{resumen.cantidad}</strong> costos con alertas (requieren revisión)
+                              {resumen.margen_promedio && ` (Margen promedio: ${parseFloat(resumen.margen_promedio).toFixed(2)}%)`}
+                            </span>
+                            <button
+                              onClick={() => setShowAprobarAlertasModal(true)}
+                              className="ml-2 px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded transition-colors flex items-center gap-1"
+                            >
+                              <FaCheck className="w-3 h-3" />
+                              Aprobar
+                            </button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
+                <button
+                  onClick={aplicarCostosPendientes}
+                  disabled={aplicandoCostos || cargandoResumenCostos || !resumenCostosPendientes.some(r => r.estado === 'VALIDADO' && r.cantidad > 0)}
+                  className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {aplicandoCostos ? (
+                    <>
+                      <FaSpinner className="w-4 h-4 animate-spin" />
+                      Aplicando...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheckCircle className="w-4 h-4" />
+                      Aplicar Costos
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Alert Bar - Artículos sin costo */}
         {metricas.articulosSinCostoCount > 0 && (
           <div className="mb-6">
@@ -939,6 +1118,9 @@ const DashboardCostos = () => {
                           <th className="text-right py-3 px-4 text-xs font-semibold text-[#64748b] uppercase tracking-wide">
                             Costo Sugerido
                           </th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-[#64748b] uppercase tracking-wide">
+                            Acción
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[rgba(15,23,42,0.08)]">
@@ -956,6 +1138,19 @@ const DashboardCostos = () => {
                             </td>
                             <td className="py-3 px-4 text-right font-bold tabular-nums text-[#f59e0b]">
                               {formatCurrency(producto.costo_sugerido)}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                onClick={() => {
+                                  setArticuloSeleccionado(producto);
+                                  setShowAsignarCostoModal(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-pink-500 hover:bg-pink-600 rounded-lg transition-colors"
+                                title="Asignar costo inicial"
+                              >
+                                <FaEdit className="w-3 h-3" />
+                                Asignar Costo
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1434,6 +1629,35 @@ const DashboardCostos = () => {
           );
         })()}
       </div>
+
+      {/* Modal para asignar costo inicial */}
+      <AsignarCostoInicialModal
+        isOpen={showAsignarCostoModal}
+        onClose={() => {
+          setShowAsignarCostoModal(false);
+          setArticuloSeleccionado(null);
+        }}
+        articulo={articuloSeleccionado}
+        onSuccess={() => {
+          // Refrescar datos después de asignar costo exitosamente
+          refrescarDatos();
+          // Refrescar también el resumen de costos pendientes
+          cargarResumenCostosPendientes();
+        }}
+      />
+
+      {/* Modal para aprobar costos con alertas */}
+      <AprobarCostosAlertasModal
+        isOpen={showAprobarAlertasModal}
+        onClose={() => {
+          setShowAprobarAlertasModal(false);
+        }}
+        onSuccess={() => {
+          // Refrescar resumen después de aprobar costos
+          cargarResumenCostosPendientes();
+          refrescarDatos();
+        }}
+      />
     </div>
   );
 };

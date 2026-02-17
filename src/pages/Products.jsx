@@ -1,8 +1,10 @@
+// src/pages/Products.jsx - REDISEÑO UX/UI v2
+// Catálogo Operativo: Denso, escaneable, profesional
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { FaPlus, FaEdit, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire, FaFilter, FaTimes, FaLayerGroup, FaSpinner } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaSyncAlt, FaCheckCircle, FaTimesCircle, FaClock, FaHistory, FaFire, FaFilter, FaTimes, FaLayerGroup, FaSpinner, FaSearch } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ArticleMovementModal from '../components/ArticleMovementModal';
 import debounce from 'lodash/debounce';
@@ -14,8 +16,24 @@ const Products = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [syncingProducts, setSyncingProducts] = useState({});
     const [syncingAttributes, setSyncingAttributes] = useState({});
-    const [pageNumber, setPageNumber] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
+    
+    // Paginación tradicional
+    const getStoredPage = () => {
+        try {
+            const stored = localStorage.getItem('products_page');
+            return stored ? parseInt(stored, 10) : 1;
+        } catch (error) {
+            return 1;
+        }
+    };
+    
+    const [pageNumber, setPageNumber] = useState(getStoredPage());
+    const [pageInfo, setPageInfo] = useState({
+        totalElements: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrevious: false,
+    });
 
     // Cargar filtros desde localStorage al iniciar
     const getStoredFilters = () => {
@@ -45,7 +63,7 @@ const Products = () => {
 
     const limit = 15;
 
-    // Guardar filtros en localStorage cuando cambien
+    // Guardar filtros y página en localStorage cuando cambien
     useEffect(() => {
         const filters = {
             codigo: filterCodigo,
@@ -55,7 +73,8 @@ const Products = () => {
             subcategoria: filterSubcategoria,
         };
         localStorage.setItem('products_filters', JSON.stringify(filters));
-    }, [filterCodigo, filterNombre, selectedExistencia, filterCategoria, filterSubcategoria]);
+        localStorage.setItem('products_page', pageNumber.toString());
+    }, [filterCodigo, filterNombre, selectedExistencia, filterCategoria, filterSubcategoria, pageNumber]);
 
     // Función para limpiar todos los filtros
     const clearAllFilters = () => {
@@ -64,7 +83,9 @@ const Products = () => {
         setSelectedExistencia('todas');
         setFilterCategoria('');
         setFilterSubcategoria('');
+        setPageNumber(1); // Resetear paginación al limpiar filtros
         localStorage.removeItem('products_filters');
+        localStorage.removeItem('products_page');
         toast.success('Filtros limpiados correctamente');
     };
 
@@ -115,8 +136,7 @@ const Products = () => {
         }
     }, [filterCategoria]);
 
-    const fetchProducts = useCallback(async (page, currentProducts = []) => {
-        if (!hasMore && page > 1) return;
+    const fetchProducts = useCallback(async (page) => {
         setIsLoading(true);
         try {
             let tieneExistenciaValue;
@@ -156,29 +176,54 @@ const Products = () => {
             const newProducts = response.data.articulos || response.data.products || [];
             console.log(`📦 Received ${newProducts.length} products from API:`, newProducts.map(p => p.art_cod));
 
-            // Limpiar completamente el estado si es la primera página
-            if (page === 1) {
-                console.log(`🧹 Clearing all previous products and setting new ones:`, newProducts.map(p => p.art_cod));
-                setProducts(newProducts);
-            } else {
-                // Agregar a los productos existentes
-                setProducts(prevProducts => {
-                    const updatedProducts = [...prevProducts, ...newProducts];
-                    console.log(`➕ Adding to existing products. Total: ${updatedProducts.length}`);
-                    return updatedProducts;
-                });
-            }
-
-            setHasMore(newProducts.length === limit);
+            // Paginación tradicional: reemplazar productos en lugar de acumular
+            setProducts(newProducts);
             setPageNumber(page);
+
+            // Intentar obtener información de paginación del backend
+            // Si el backend la devuelve, usarla; si no, calcularla basándose en los resultados
+            if (response.data.pageInfo) {
+                // Backend devuelve información completa de paginación
+                setPageInfo({
+                    totalElements: response.data.pageInfo.totalElements || 0,
+                    totalPages: response.data.pageInfo.totalPages || 0,
+                    hasNext: response.data.pageInfo.hasNext || false,
+                    hasPrevious: response.data.pageInfo.hasPrevious || false,
+                });
+            } else if (response.data.totalElements !== undefined) {
+                // Backend devuelve campos directos (formato alternativo)
+                const totalElements = response.data.totalElements || 0;
+                const totalPages = response.data.totalPages || Math.ceil(totalElements / limit);
+                setPageInfo({
+                    totalElements,
+                    totalPages,
+                    hasNext: response.data.hasNext !== undefined ? response.data.hasNext : (page < totalPages),
+                    hasPrevious: response.data.hasPrevious !== undefined ? response.data.hasPrevious : (page > 1),
+                });
+            } else {
+                // Fallback: calcular basándose en si hay más productos
+                // Si recibimos menos productos que el límite, es la última página
+                const hasMore = newProducts.length === limit;
+                setPageInfo(prev => ({
+                    totalElements: prev.totalElements, // Mantener si ya estaba calculado
+                    totalPages: hasMore ? page + 1 : page, // Estimar total de páginas
+                    hasNext: hasMore,
+                    hasPrevious: page > 1,
+                }));
+            }
 
         } catch (error) {
             console.error("Error fetching products:", error);
             if (error.response && error.response.status === 404) {
                 console.error("Endpoint no encontrado. Verifica la URL:", `${API_URL}/articulos`);
             }
-            setProducts(currentProducts);
-            setHasMore(false);
+            setProducts([]);
+            setPageInfo({
+                totalElements: 0,
+                totalPages: 0,
+                hasNext: false,
+                hasPrevious: false,
+            });
         } finally {
             setIsLoading(false);
         }
@@ -187,7 +232,9 @@ const Products = () => {
     // Crear un debounce estable que no se recree constantemente
     const debouncedFetch = useCallback(
         debounce(() => {
-            console.log('🚀 Debounced fetch triggered');
+            console.log('🚀 Debounced fetch triggered - resetting to page 1');
+            setPageNumber(1); // Resetear a página 1 cuando cambian los filtros
+            localStorage.setItem('products_page', '1'); // Actualizar localStorage también
             fetchProducts(1);
         }, 500),
         [fetchProducts]
@@ -203,12 +250,15 @@ const Products = () => {
     // useEffect inicial para cargar productos al montar el componente
     useEffect(() => {
         console.log('🚀 Initial load - fetching products');
-        fetchProducts(1);
+        const initialPage = getStoredPage();
+        fetchProducts(initialPage);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Solo se ejecuta al montar el componente
 
-    const handleLoadMore = () => {
-        if (!isLoading && hasMore) {
-            fetchProducts(pageNumber + 1);
+    // Función para cambiar de página
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= pageInfo.totalPages && !isLoading) {
+            fetchProducts(newPage);
         }
     };
 
@@ -220,7 +270,7 @@ const Products = () => {
     const handleSyncProduct = async (productId, productCode) => {
         try {
             setSyncingProducts(prev => ({ ...prev, [productId]: true }));
-            const response = await axios.put(`${API_URL}/updateWooStock/${productCode}`, 
+            const response = await axios.put(`${API_URL}/updateWooStock/${productCode}`,
                 {},
                 { headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') } }
             );
@@ -265,13 +315,13 @@ const Products = () => {
     const renderSyncStatus = (status, message) => {
         switch (status) {
             case 'success':
-                return <FaCheckCircle className="text-green-500" title="Sincronizado con WooCommerce" />;
+                return <FaCheckCircle className="text-emerald-500 w-3.5 h-3.5" title="Sincronizado con WooCommerce" />;
             case 'error':
-                return <FaTimesCircle className="text-red-500" title={`Error Woo: ${message || 'Desconocido'}`} />;
+                return <FaTimesCircle className="text-red-500 w-3.5 h-3.5" title={`Error Woo: ${message || 'Desconocido'}`} />;
             case 'pending':
-                return <FaClock className="text-yellow-500 animate-pulse" title="Sincronización pendiente" />;
+                return <FaClock className="text-amber-500 w-3.5 h-3.5 animate-pulse" title="Sincronización pendiente" />;
             default:
-                return <span className="text-gray-400 text-xs" title="Estado no disponible">-</span>;
+                return <span className="text-[#b0b0b0] text-xs" title="Estado no disponible">-</span>;
         }
     };
 
@@ -287,372 +337,458 @@ const Products = () => {
         product?.kar_cos_pro ??
         null;
 
-    // Log para debugging del estado actual
+    // Determinar color de existencia (signature element)
+    const getStockColor = (stock) => {
+        const qty = parseInt(stock);
+        if (qty === 0) return 'text-red-600';
+        if (qty < 5) return 'text-amber-600';
+        if (qty < 20) return 'text-[#2c2c2c]';
+        return 'text-emerald-600';
+    };
+
     console.log(`🎯 Current products state: ${products.length} products`, products.map(p => p.art_cod));
 
     return (
-        <div className="min-h-screen bg-[#f7f8fa] p-3 sm:p-4 md:p-6">
-            {/* Card de Filtros + Header */}
-            <div className="bg-white rounded-xl shadow-lg mb-4 sm:mb-6 p-3 sm:p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
+        <div className="h-full flex flex-col bg-[#fafbfc]">
+            {/* TOOLBAR - Filtros + Acciones */}
+            <div className="flex-shrink-0 bg-white border-b border-[#e8eaed]">
+                {/* Acciones superiores - Mobile/Desktop */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8eaed]">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl sm:text-2xl font-bold text-[#f58ea3]">Gestión de Productos</h1>
+                        <h1 className="text-base font-semibold text-[#2c2c2c]">Productos</h1>
                         {hasActiveFilters && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
-                                <FaFilter className="mr-1" />
-                                Filtros activos
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-pink-50 text-[#f58ea3] border border-pink-200">
+                                <FaFilter className="w-2.5 h-2.5" />
+                                {Object.values({ filterCodigo, filterNombre, selectedExistencia: selectedExistencia !== 'todas' ? selectedExistencia : null, filterCategoria, filterSubcategoria }).filter(Boolean).length}
                             </span>
                         )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                         {hasActiveFilters && (
                             <button
-                                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center text-sm transition-colors shadow-sm whitespace-nowrap"
                                 onClick={clearAllFilters}
-                                title="Limpiar todos los filtros"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#5a5a5a] bg-[#f5f6f7] hover:bg-[#e8eaed] rounded-md transition-colors duration-150"
+                                title="Limpiar filtros"
                             >
-                                <FaTimes className="mr-2" /> Limpiar Filtros
+                                <FaTimes className="w-3 h-3" />
+                                <span className="hidden sm:inline">Limpiar</span>
                             </button>
                         )}
                         <button
-                            className="bg-[#f58ea3] hover:bg-[#f7b3c2] text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center text-sm sm:text-base transition-colors shadow-sm whitespace-nowrap"
                             onClick={() => navigate('/products/create')}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#f58ea3] hover:bg-[#f7b3c2] rounded-md transition-colors duration-150"
                         >
-                            <FaPlus className="mr-2" /> Crear Producto
+                            <FaPlus className="w-3 h-3" />
+                            <span className="hidden sm:inline">Crear</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Filtros */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-3">
-                    <input
-                        type="text"
-                        placeholder="Buscar por código..."
-                        value={filterCodigo}
-                        onChange={(e) => setFilterCodigo(e.target.value)}
-                        className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors outline-none"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre..."
-                        value={filterNombre}
-                        onChange={(e) => setFilterNombre(e.target.value)}
-                        className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors outline-none"
-                    />
-                    <select
-                        value={selectedExistencia}
-                        onChange={(e) => setSelectedExistencia(e.target.value)}
-                        className="p-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors outline-none"
-                    >
-                        <option value="todas">Todas existencias</option>
-                        <option value="con_existencia">Con existencia</option>
-                        <option value="sin_existencia">Sin existencia</option>
-                    </select>
-                    <select
-                        value={filterCategoria}
-                        onChange={(e) => setFilterCategoria(e.target.value)}
-                        className="p-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        disabled={isLoadingCategories}
-                    >
-                        <option value="">Todas las categorías</option>
-                        {categories.map(cat => (
-                            <option key={cat.inv_gru_cod} value={cat.inv_gru_cod}>
-                                {cat.inv_gru_nom}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={filterSubcategoria}
-                        onChange={(e) => setFilterSubcategoria(e.target.value)}
-                        className="p-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        disabled={!filterCategoria || isLoadingSubcategories}
-                    >
-                        <option value="">Todas las subcategorías</option>
-                        {subcategories.map(sub => (
-                            <option key={sub.inv_sub_gru_cod} value={sub.inv_sub_gru_cod}>
-                                {sub.inv_sub_gru_nom}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {/* Vista Mobile - Tarjetas */}
-            <div className="block md:hidden">
-                {isLoading && pageNumber === 1 && (
-                    <div className="flex justify-center py-8">
-                        <LoadingSpinner />
-                    </div>
-                )}
-                {!isLoading && products.length === 0 && pageNumber === 1 && (
-                    <div className="bg-white rounded-xl shadow-md p-8 text-center">
-                        <p className="text-gray-500">No hay productos para mostrar.</p>
-                    </div>
-                )}
-                <div className="space-y-3">
-                    {products.map((product) => (
-                        <div key={product.art_sec} className="bg-white rounded-xl shadow-md border border-gray-200 hover:border-[#f58ea3] hover:shadow-lg transition-all">
-                            {/* Header de la tarjeta */}
-                            <div className="p-3 border-b border-gray-100">
-                                <div className="flex justify-between items-start gap-2 mb-2">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                                            <span className="font-bold text-sm text-gray-800">{product.art_cod}</span>
-                                            {product.art_woo_type === 'variable' && (
-                                                <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
-                                                    <FaLayerGroup className="w-2.5 h-2.5" />VAR
-                                                </span>
-                                            )}
-                                            {product.art_woo_type === 'variation' && (
-                                                <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
-                                                    <FaLayerGroup className="w-2.5 h-2.5" />VRN
-                                                </span>
-                                            )}
-                                            {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
-                                            {product.tiene_oferta === 'S' && (
-                                                <FaFire className="text-orange-500 w-3.5 h-3.5" title="En oferta" />
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-gray-700 line-clamp-2">{product.art_nom}</p>
-                                    </div>
-                                    <div className="flex gap-2 flex-shrink-0">
-                                        <button
-                                            onClick={() => navigate(`/products/edit/${product.art_sec}`)}
-                                            className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 hover:bg-pink-50 rounded-lg transition-colors"
-                                            title="Editar"
-                                        >
-                                            <FaEdit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleViewMovements(product.art_cod)}
-                                            className="text-[#f58ea3] hover:text-[#f7b3c2] p-2 hover:bg-pink-50 rounded-lg transition-colors"
-                                            title="Ver Movimientos"
-                                        >
-                                            <FaHistory className="w-4 h-4" />
-                                        </button>
-                                        {product.art_woo_type === 'variable' && (
-                                            <button
-                                                onClick={() => handleSyncAttributes(product.art_sec)}
-                                                className="text-purple-500 hover:text-white hover:bg-purple-500 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Sync Atributos WooCommerce"
-                                                disabled={syncingAttributes[product.art_sec]}
-                                            >
-                                                {syncingAttributes[product.art_sec] ? (
-                                                    <FaSpinner className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    <FaSyncAlt className="w-4 h-4" />
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Categorías */}
-                                {(product.categoria || product.sub_categoria) && (
-                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                        {product.categoria && (
-                                            <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium">
-                                                {product.categoria}
-                                            </span>
-                                        )}
-                                        {product.sub_categoria && (
-                                            <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">
-                                                {product.sub_categoria}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Info de precios */}
-                            <div className="p-3 bg-gray-50">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <span className="text-xs text-gray-500 block mb-1">Existencia</span>
-                                        <span className="font-bold text-sm text-[#f58ea3]">{product.existencia} und</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500 block mb-1">Precio Detal</span>
-                                        <span className="font-bold text-sm text-gray-800">{formatPrice(product.precio_detal_original)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500 block mb-1">Precio Mayor</span>
-                                        <span className="font-bold text-sm text-gray-800">{formatPrice(product.precio_mayor_original)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500 block mb-1">Precio Promo</span>
-                                        <span className={`font-bold text-sm ${product.tiene_oferta === 'S' ? 'text-orange-600' : 'text-gray-400'}`}>
-                                            {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
-                                        </span>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <span className="text-xs text-gray-500 block mb-1">Costo Promedio</span>
-                                        <span className="font-bold text-sm text-gray-800">
-                                            {getAverageCost(product) !== null ? formatPrice(getAverageCost(product)) : '-'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                {/* Filtros - Barra compacta */}
+                <div className="px-4 py-2.5">
+                    <div className="flex flex-wrap gap-2">
+                        {/* Búsqueda por código */}
+                        <div className="relative flex-1 min-w-[140px]">
+                            <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#7a7a7a]" />
+                            <input
+                                type="text"
+                                placeholder="Código..."
+                                value={filterCodigo}
+                                onChange={(e) => setFilterCodigo(e.target.value)}
+                                className="w-full pl-8 pr-2.5 py-1.5 text-xs border border-[#e8eaed] rounded-md bg-white text-[#2c2c2c] placeholder-[#b0b0b0] focus:outline-none focus:ring-1 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                            />
                         </div>
-                    ))}
-                </div>
-                {isLoading && pageNumber > 1 && (
-                    <div className="flex justify-center py-6">
-                        <LoadingSpinner />
+
+                        {/* Búsqueda por nombre */}
+                        <div className="relative flex-1 min-w-[180px]">
+                            <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#7a7a7a]" />
+                            <input
+                                type="text"
+                                placeholder="Nombre del producto..."
+                                value={filterNombre}
+                                onChange={(e) => setFilterNombre(e.target.value)}
+                                className="w-full pl-8 pr-2.5 py-1.5 text-xs border border-[#e8eaed] rounded-md bg-white text-[#2c2c2c] placeholder-[#b0b0b0] focus:outline-none focus:ring-1 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                            />
+                        </div>
+
+                        {/* Existencia */}
+                        <select
+                            value={selectedExistencia}
+                            onChange={(e) => setSelectedExistencia(e.target.value)}
+                            className="px-2.5 py-1.5 text-xs border border-[#e8eaed] rounded-md bg-white text-[#2c2c2c] focus:outline-none focus:ring-1 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors min-w-[120px]"
+                        >
+                            <option value="todas">Todas</option>
+                            <option value="con_existencia">Con stock</option>
+                            <option value="sin_existencia">Sin stock</option>
+                        </select>
+
+                        {/* Categoría */}
+                        <select
+                            value={filterCategoria}
+                            onChange={(e) => setFilterCategoria(e.target.value)}
+                            disabled={isLoadingCategories}
+                            className="px-2.5 py-1.5 text-xs border border-[#e8eaed] rounded-md bg-white text-[#2c2c2c] focus:outline-none focus:ring-1 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors disabled:bg-[#f5f6f7] disabled:cursor-not-allowed min-w-[120px]"
+                        >
+                            <option value="">Categoría</option>
+                            {categories.map(cat => (
+                                <option key={cat.inv_gru_cod} value={cat.inv_gru_cod}>
+                                    {cat.inv_gru_nom}
+                                </option>
+                            ))}
+                        </select>
+
+                        {/* Subcategoría */}
+                        <select
+                            value={filterSubcategoria}
+                            onChange={(e) => setFilterSubcategoria(e.target.value)}
+                            disabled={!filterCategoria || isLoadingSubcategories}
+                            className="px-2.5 py-1.5 text-xs border border-[#e8eaed] rounded-md bg-white text-[#2c2c2c] focus:outline-none focus:ring-1 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors disabled:bg-[#f5f6f7] disabled:cursor-not-allowed min-w-[120px]"
+                        >
+                            <option value="">Subcategoría</option>
+                            {subcategories.map(sub => (
+                                <option key={sub.inv_sub_gru_cod} value={sub.inv_sub_gru_cod}>
+                                    {sub.inv_sub_gru_nom}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                )}
+                </div>
             </div>
 
-            {/* Vista Desktop/Tablet - Tabla */}
-            <div className="hidden md:block bg-white rounded-xl shadow-md overflow-hidden">
-                <div className="overflow-x-auto scrollbar-thin">
-                    <table className="w-full divide-y divide-gray-200">
-                        <thead className="bg-gradient-to-r from-[#fff5f7] to-[#fffbfc]">
-                            <tr>
-                                <th className="px-2 py-2.5 text-left text-xs font-bold text-gray-700 uppercase">Código</th>
-                                <th className="px-2 py-2.5 text-left text-xs font-bold text-gray-700 uppercase">Nombre</th>
-                                <th className="px-2 py-2.5 text-left text-xs font-bold text-gray-700 uppercase">Categoría</th>
-                                <th className="px-2 py-2.5 text-left text-xs font-bold text-gray-700 uppercase">Subcategoría</th>
-                                <th className="px-2 py-2.5 text-center text-xs font-bold text-gray-700 uppercase">Exist.</th>
-                                <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">P. Detal</th>
-                                <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">P. Mayor</th>
-                                <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">P. Promo</th>
-                                <th className="px-2 py-2.5 text-right text-xs font-bold text-gray-700 uppercase">C. Promedio</th>
-                                <th className="px-2 py-2.5 text-center text-xs font-bold text-gray-700 uppercase" title="Estado Sincronización WooCommerce">
-                                    <FaSyncAlt className="inline-block text-[#f58ea3]" />
-                                </th>
-                                <th className="px-2 py-2.5 text-center text-xs font-bold text-gray-700 uppercase">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading && pageNumber === 1 && (
-                                <tr><td colSpan="11" className="text-center py-8"><LoadingSpinner /></td></tr>
-                            )}
-                            {!isLoading && products.length === 0 && pageNumber === 1 && (
-                                <tr><td colSpan="11" className="text-center py-8 text-gray-500 font-medium">No hay productos para mostrar.</td></tr>
-                            )}
-                            {products.map((product) => (
-                                <tr key={product.art_sec} className="hover:bg-pink-50/50 transition-colors border-b border-gray-100">
-                                    <td className="px-2 py-2 text-xs font-semibold text-gray-900 whitespace-nowrap">
-                                        <div className="flex items-center gap-1">
-                                            <span>{product.art_cod}</span>
-                                            {product.art_woo_type === 'variable' && (
-                                                <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0" title="Producto Variable">
-                                                    <FaLayerGroup className="w-2.5 h-2.5" />VAR
-                                                </span>
-                                            )}
-                                            {product.art_woo_type === 'variation' && (
-                                                <span className="inline-flex items-center gap-0.5 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0" title="Variación">
-                                                    <FaLayerGroup className="w-2.5 h-2.5" />VRN
-                                                </span>
-                                            )}
-                                            {product.tiene_oferta === 'S' && (
-                                                <FaFire className="text-orange-500 w-3 h-3 flex-shrink-0" title="En oferta" />
-                                            )}
+            {/* CONTENIDO - Cards (Mobile) / Tabla (Desktop) */}
+            <div className="flex-1 overflow-auto">
+                <div className="p-4">
+                    {/* Vista Mobile - Cards */}
+                    <div className="block lg:hidden space-y-2.5">
+                        {isLoading && (
+                            <div className="flex justify-center py-12">
+                                <LoadingSpinner />
+                            </div>
+                        )}
+                        {!isLoading && products.length === 0 && (
+                            <div className="bg-white border border-[#e8eaed] rounded-lg p-8 text-center">
+                                <p className="text-sm text-[#7a7a7a]">No hay productos para mostrar.</p>
+                            </div>
+                        )}
+                        {products.map((product) => (
+                            <div
+                                key={product.art_sec}
+                                className="bg-white border border-[#e8eaed] rounded-lg hover:border-[#f58ea3] transition-colors duration-150"
+                            >
+                                {/* Header */}
+                                <div className="px-3 py-2.5 border-b border-[#e8eaed]">
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                                <span className="font-semibold text-xs text-[#2c2c2c]">{product.art_cod}</span>
+                                                {product.art_woo_type === 'variable' && (
+                                                    <span className="inline-flex items-center gap-0.5 bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded text-[9px] font-medium border border-purple-200">
+                                                        <FaLayerGroup className="w-2 h-2" />VAR
+                                                    </span>
+                                                )}
+                                                {product.art_woo_type === 'variation' && (
+                                                    <span className="inline-flex items-center gap-0.5 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[9px] font-medium border border-indigo-200">
+                                                        <FaLayerGroup className="w-2 h-2" />VRN
+                                                    </span>
+                                                )}
+                                                {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
+                                                {product.tiene_oferta === 'S' && (
+                                                    <FaFire className="text-orange-500 w-3 h-3" title="En oferta" />
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-[#5a5a5a] line-clamp-2 leading-snug">{product.art_nom}</p>
                                         </div>
-                                    </td>
-                                    <td className="px-2 py-2 text-xs text-gray-700 max-w-[250px]">
-                                        <div className="truncate" title={product.art_nom}>
-                                            {product.art_nom}
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-2 text-xs whitespace-nowrap">
-                                        {product.categoria ? (
-                                            <span className="inline-block bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                                                {product.categoria}
-                                            </span>
-                                        ) : (
-                                            <span className="text-gray-400">-</span>
-                                        )}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs whitespace-nowrap">
-                                        {product.sub_categoria ? (
-                                            <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                                                {product.sub_categoria}
-                                            </span>
-                                        ) : (
-                                            <span className="text-gray-400">-</span>
-                                        )}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs text-gray-900 text-center font-semibold whitespace-nowrap">{product.existencia}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-900 text-right font-medium whitespace-nowrap">{formatPrice(product.precio_detal_original)}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-900 text-right font-medium whitespace-nowrap">{formatPrice(product.precio_mayor_original)}</td>
-                                    <td className="px-2 py-2 text-xs text-right whitespace-nowrap">
-                                        <span className={`font-semibold ${product.tiene_oferta === 'S' ? 'text-orange-600' : 'text-gray-400'}`}>
-                                            {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
-                                        </span>
-                                    </td>
-                                    <td className="px-2 py-2 text-xs text-right font-medium whitespace-nowrap text-gray-900">
-                                        {getAverageCost(product) !== null ? formatPrice(getAverageCost(product)) : '-'}
-                                    </td>
-                                    <td className="px-2 py-2 text-center whitespace-nowrap">
-                                        {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
-                                    </td>
-                                    <td className="px-2 py-2 text-center whitespace-nowrap">
-                                        <div className="flex items-center justify-center gap-1">
+                                        <div className="flex gap-1 flex-shrink-0">
                                             <button
                                                 onClick={() => navigate(`/products/edit/${product.art_sec}`)}
-                                                className="p-1 text-[#f58ea3] hover:text-white hover:bg-[#f58ea3] rounded transition-all"
+                                                className="p-1.5 text-[#7a7a7a] hover:text-[#f58ea3] hover:bg-pink-50 rounded transition-colors duration-150"
                                                 title="Editar"
                                             >
                                                 <FaEdit className="w-3.5 h-3.5" />
                                             </button>
                                             <button
                                                 onClick={() => handleViewMovements(product.art_cod)}
-                                                className="p-1 text-[#f58ea3] hover:text-white hover:bg-[#f58ea3] rounded transition-all"
-                                                title="Ver Movimientos"
+                                                className="p-1.5 text-[#7a7a7a] hover:text-[#f58ea3] hover:bg-pink-50 rounded transition-colors duration-150"
+                                                title="Movimientos"
                                             >
                                                 <FaHistory className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleSyncProduct(product.art_sec, product.art_cod)}
-                                                className="p-1 text-[#f58ea3] hover:text-white hover:bg-[#f58ea3] rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Sincronizar"
-                                                disabled={syncingProducts[product.art_sec]}
-                                            >
-                                                {syncingProducts[product.art_sec] ? (
-                                                    <LoadingSpinner size="small" />
-                                                ) : (
-                                                    <FaSyncAlt className="w-3.5 h-3.5" />
-                                                )}
                                             </button>
                                             {product.art_woo_type === 'variable' && (
                                                 <button
                                                     onClick={() => handleSyncAttributes(product.art_sec)}
-                                                    className="p-1 text-purple-500 hover:text-white hover:bg-purple-500 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    title="Sync Atributos WooCommerce"
                                                     disabled={syncingAttributes[product.art_sec]}
+                                                    className="p-1.5 text-purple-500 hover:text-white hover:bg-purple-500 rounded transition-colors duration-150 disabled:opacity-50"
+                                                    title="Sync Atributos"
                                                 >
                                                     {syncingAttributes[product.art_sec] ? (
                                                         <FaSpinner className="w-3.5 h-3.5 animate-spin" />
                                                     ) : (
-                                                        <FaLayerGroup className="w-3.5 h-3.5" />
+                                                        <FaSyncAlt className="w-3.5 h-3.5" />
                                                     )}
                                                 </button>
                                             )}
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {isLoading && pageNumber > 1 && (
-                                <tr><td colSpan="11" className="text-center py-6"><LoadingSpinner /></td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                                    </div>
+
+                                    {/* Categorías */}
+                                    {(product.categoria || product.sub_categoria) && (
+                                        <div className="flex flex-wrap gap-1 mt-1.5">
+                                            {product.categoria && (
+                                                <span className="text-[9px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium border border-purple-200">
+                                                    {product.categoria}
+                                                </span>
+                                            )}
+                                            {product.sub_categoria && (
+                                                <span className="text-[9px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium border border-blue-200">
+                                                    {product.sub_categoria}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Datos numéricos */}
+                                <div className="px-3 py-2.5 bg-[#fafbfc]">
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                        <div>
+                                            <span className="block text-[10px] text-[#7a7a7a] mb-0.5">Stock</span>
+                                            <span className={`font-semibold text-xs ${getStockColor(product.existencia)}`}>
+                                                {product.existencia} und
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] text-[#7a7a7a] mb-0.5">P. Detal</span>
+                                            <span className="font-medium text-xs text-[#2c2c2c]">{formatPrice(product.precio_detal_original)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] text-[#7a7a7a] mb-0.5">P. Mayor</span>
+                                            <span className="font-medium text-xs text-[#2c2c2c]">{formatPrice(product.precio_mayor_original)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] text-[#7a7a7a] mb-0.5">P. Promo</span>
+                                            <span className={`font-medium text-xs ${product.tiene_oferta === 'S' ? 'text-orange-600' : 'text-[#b0b0b0]'}`}>
+                                                {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <span className="block text-[10px] text-[#7a7a7a] mb-0.5">Costo Promedio</span>
+                                            <span className="font-medium text-xs text-[#2c2c2c]">
+                                                {getAverageCost(product) !== null ? formatPrice(getAverageCost(product)) : '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Vista Desktop - Tabla */}
+                    <div className="hidden lg:block bg-white border border-[#e8eaed] rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-[#fafbfc] border-b border-[#e8eaed]">
+                                    <tr>
+                                        <th className="px-3 py-2 text-left text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Código</th>
+                                        <th className="px-3 py-2 text-left text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Nombre</th>
+                                        <th className="px-3 py-2 text-left text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Categoría</th>
+                                        <th className="px-3 py-2 text-left text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Subcategoría</th>
+                                        <th className="px-3 py-2 text-center text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Stock</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Detal</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Mayor</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Promo</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Costo</th>
+                                        <th className="px-3 py-2 text-center text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider" title="Sincronización WooCommerce">
+                                            <FaSyncAlt className="inline-block w-3 h-3" />
+                                        </th>
+                                        <th className="px-3 py-2 text-center text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[#e8eaed]">
+                                    {isLoading && (
+                                        <tr><td colSpan="11" className="text-center py-12"><LoadingSpinner /></td></tr>
+                                    )}
+                                    {!isLoading && products.length === 0 && (
+                                        <tr><td colSpan="11" className="text-center py-12 text-sm text-[#7a7a7a]">No hay productos para mostrar.</td></tr>
+                                    )}
+                                    {products.map((product) => (
+                                        <tr key={product.art_sec} className="hover:bg-[#fafbfc] transition-colors duration-150">
+                                            <td className="px-3 py-2.5 text-xs font-semibold text-[#2c2c2c] whitespace-nowrap">
+                                                <div className="flex items-center gap-1">
+                                                    <span>{product.art_cod}</span>
+                                                    {product.art_woo_type === 'variable' && (
+                                                        <span className="inline-flex items-center gap-0.5 bg-purple-50 text-purple-600 px-1 py-0.5 rounded text-[8px] font-medium border border-purple-200" title="Variable">
+                                                            <FaLayerGroup className="w-2 h-2" />VAR
+                                                        </span>
+                                                    )}
+                                                    {product.art_woo_type === 'variation' && (
+                                                        <span className="inline-flex items-center gap-0.5 bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-medium border border-indigo-200" title="Variación">
+                                                            <FaLayerGroup className="w-2 h-2" />VRN
+                                                        </span>
+                                                    )}
+                                                    {product.tiene_oferta === 'S' && (
+                                                        <FaFire className="text-orange-500 w-2.5 h-2.5" title="En oferta" />
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs text-[#2c2c2c] max-w-[300px]">
+                                                <div className="truncate" title={product.art_nom}>{product.art_nom}</div>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs whitespace-nowrap">
+                                                {product.categoria ? (
+                                                    <span className="inline-block bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full text-[9px] font-medium border border-purple-200">
+                                                        {product.categoria}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[#b0b0b0]">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs whitespace-nowrap">
+                                                {product.sub_categoria ? (
+                                                    <span className="inline-block bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[9px] font-medium border border-blue-200">
+                                                        {product.sub_categoria}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[#b0b0b0]">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs text-center font-semibold whitespace-nowrap">
+                                                <span className={getStockColor(product.existencia)}>{product.existencia}</span>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs text-right font-medium text-[#2c2c2c] whitespace-nowrap">{formatPrice(product.precio_detal_original)}</td>
+                                            <td className="px-3 py-2.5 text-xs text-right font-medium text-[#2c2c2c] whitespace-nowrap">{formatPrice(product.precio_mayor_original)}</td>
+                                            <td className="px-3 py-2.5 text-xs text-right whitespace-nowrap">
+                                                <span className={`font-medium ${product.tiene_oferta === 'S' ? 'text-orange-600' : 'text-[#b0b0b0]'}`}>
+                                                    {product.tiene_oferta === 'S' ? formatPrice(product.precio_oferta) : '-'}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs text-right font-medium text-[#2c2c2c] whitespace-nowrap">
+                                                {getAverageCost(product) !== null ? formatPrice(getAverageCost(product)) : '-'}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                                {renderSyncStatus(product.art_woo_sync_status, product.art_woo_sync_message)}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button
+                                                        onClick={() => navigate(`/products/edit/${product.art_sec}`)}
+                                                        className="p-1 text-[#7a7a7a] hover:text-white hover:bg-[#f58ea3] rounded transition-all duration-150"
+                                                        title="Editar"
+                                                    >
+                                                        <FaEdit className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleViewMovements(product.art_cod)}
+                                                        className="p-1 text-[#7a7a7a] hover:text-white hover:bg-[#f58ea3] rounded transition-all duration-150"
+                                                        title="Ver Movimientos"
+                                                    >
+                                                        <FaHistory className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSyncProduct(product.art_sec, product.art_cod)}
+                                                        disabled={syncingProducts[product.art_sec]}
+                                                        className="p-1 text-[#7a7a7a] hover:text-white hover:bg-[#f58ea3] rounded transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Sincronizar"
+                                                    >
+                                                        {syncingProducts[product.art_sec] ? (
+                                                            <LoadingSpinner size="small" />
+                                                        ) : (
+                                                            <FaSyncAlt className="w-3 h-3" />
+                                                        )}
+                                                    </button>
+                                                    {product.art_woo_type === 'variable' && (
+                                                        <button
+                                                            onClick={() => handleSyncAttributes(product.art_sec)}
+                                                            disabled={syncingAttributes[product.art_sec]}
+                                                            className="p-1 text-purple-500 hover:text-white hover:bg-purple-500 rounded transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title="Sync Atributos WooCommerce"
+                                                        >
+                                                            {syncingAttributes[product.art_sec] ? (
+                                                                <FaSpinner className="w-3 h-3 animate-spin" />
+                                                            ) : (
+                                                                <FaLayerGroup className="w-3 h-3" />
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Paginación Tradicional */}
+                    {pageInfo.totalPages > 0 && products.length > 0 && (
+                        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white rounded-xl shadow-lg p-4 border border-[#e8eaed]">
+                            <div className="text-xs text-[#5a5a5a]">
+                                Mostrando{' '}
+                                <span className="font-medium text-[#2c2c2c]">
+                                    {products.length > 0 ? (pageNumber - 1) * limit + 1 : 0}
+                                </span>{' '}
+                                a{' '}
+                                <span className="font-medium text-[#2c2c2c]">
+                                    {Math.min(pageNumber * limit, pageInfo.totalElements)}
+                                </span>{' '}
+                                de <span className="font-medium text-[#2c2c2c]">{pageInfo.totalElements}</span> productos
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(pageNumber - 1)}
+                                    disabled={!pageInfo.hasPrevious || isLoading}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                        !pageInfo.hasPrevious || isLoading
+                                            ? 'bg-[#f5f6f7] text-[#b0b0b0] cursor-not-allowed'
+                                            : 'bg-[#fff5f7] text-[#f58ea3] hover:bg-[#fce7eb] border border-[#f58ea3]'
+                                    }`}
+                                >
+                                    Anterior
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, pageInfo.totalPages) }, (_, i) => {
+                                        let pageNum;
+                                        if (pageInfo.totalPages <= 5) {
+                                            pageNum = i + 1;
+                                        } else if (pageNumber <= 3) {
+                                            pageNum = i + 1;
+                                        } else if (pageNumber >= pageInfo.totalPages - 2) {
+                                            pageNum = pageInfo.totalPages - 4 + i;
+                                        } else {
+                                            pageNum = pageNumber - 2 + i;
+                                        }
+
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                disabled={isLoading}
+                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                                    pageNum === pageNumber
+                                                        ? 'bg-[#f58ea3] text-white'
+                                                        : 'bg-[#fff5f7] text-[#f58ea3] hover:bg-[#fce7eb] border border-[#f58ea3]'
+                                                } ${isLoading ? 'cursor-not-allowed opacity-50' : ''}`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => handlePageChange(pageNumber + 1)}
+                                    disabled={!pageInfo.hasNext || isLoading}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                        !pageInfo.hasNext || isLoading
+                                            ? 'bg-[#f5f6f7] text-[#b0b0b0] cursor-not-allowed'
+                                            : 'bg-[#fff5f7] text-[#f58ea3] hover:bg-[#fce7eb] border border-[#f58ea3]'
+                                    }`}
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {/* Botón Cargar Más */}
-            {hasMore && !isLoading && (
-                <div className="mt-6 flex justify-center">
-                    <button
-                        onClick={handleLoadMore}
-                        className="bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2] hover:from-[#f7b3c2] hover:to-[#f58ea3] text-white font-bold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:scale-105 w-full md:w-auto"
-                    >
-                        Cargar Más Productos
-                    </button>
-                </div>
-            )}
 
             <ArticleMovementModal
                 isOpen={isMovementModalOpen}

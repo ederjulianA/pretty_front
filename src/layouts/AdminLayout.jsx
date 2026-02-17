@@ -187,6 +187,19 @@ const AdminLayout = () => {
                       Diferencia Inventario
                     </NavLink>
                     <NavLink
+                      to="/dashboard/ventas"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] font-normal transition-colors duration-150 ${
+                          isActive
+                            ? 'bg-[#f58ea3]/20 text-[#f58ea3] font-medium'
+                            : 'text-[#64748b] hover:bg-[rgba(15,23,42,0.04)] hover:text-[#0f172a]'
+                        }`}
+                      onClick={handleNavClick}
+                    >
+                      <FaChartLine className="w-3.5 h-3.5" />
+                      Dashboard Ventas
+                    </NavLink>
+                    <NavLink
                       to="/dashboard/costos"
                       className={({ isActive }) =>
                         `flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] font-normal transition-colors duration-150 ${

@@ -492,6 +492,11 @@ const Orders = () => {
                     <p className="text-sm font-semibold text-gray-900 mt-1">
                       Total: ${parseFloat(order.total_pedido).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
+                    {order.rentabilidad_real_factura != null && (
+                      <p className="text-xs font-medium text-emerald-700 mt-0.5">
+                        Rentab.: {parseFloat(order.rentabilidad_real_factura).toFixed(1)}%
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col space-y-1 flex-shrink-0">
                     <button onClick={() => handleViewDetail(order)}
@@ -550,6 +555,7 @@ const Orders = () => {
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NIT</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rentab.</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documentos</th>
                 <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario Creador</th>
@@ -558,10 +564,10 @@ const Orders = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading && pageNumber === 1 && (
-                <tr><td colSpan="10" className="text-center py-4"><LoadingSpinner /></td></tr>
+                <tr><td colSpan="11" className="text-center py-4"><LoadingSpinner /></td></tr>
               )}
               {!isLoading && orders.length === 0 && pageNumber === 1 && (
-                <tr><td colSpan="10" className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</td></tr>
+                <tr><td colSpan="11" className="text-center py-4 text-gray-500">No hay órdenes para mostrar.</td></tr>
               )}
               {sortOrders(orders).map((order) => {
                 const isFacturado = order.documentos && order.documentos !== "";
@@ -593,6 +599,15 @@ const Orders = () => {
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 max-w-[180px] truncate overflow-hidden">{order.nit_nom}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-right">
                       ${parseFloat(order.total_pedido).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
+                      {order.rentabilidad_real_factura != null ? (
+                        <span className={`font-medium ${parseFloat(order.rentabilidad_real_factura) >= 30 ? 'text-emerald-600' : parseFloat(order.rentabilidad_real_factura) >= 15 ? 'text-amber-600' : 'text-gray-600'}`}>
+                          {parseFloat(order.rentabilidad_real_factura).toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
                       {isFacturado ? (
@@ -656,7 +671,7 @@ const Orders = () => {
                 );
               })}
               {isLoading && pageNumber > 1 && (
-                <tr><td colSpan="10" className="text-center py-4"><LoadingSpinner /></td></tr>
+                <tr><td colSpan="11" className="text-center py-4"><LoadingSpinner /></td></tr>
               )}
             </tbody>
           </table>

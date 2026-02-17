@@ -62,6 +62,11 @@ const OrderDetailModal = ({ order, onClose }) => {
   const facDescuentoGeneral = header.fac_descuento_general || 0;
   const computedTotal = computedSubtotal - computedDiscount - facDescuentoGeneral;
 
+  // Rentabilidad: usar totales del header si vienen del backend, sino calcular desde details
+  const costoTotalFactura = header.costo_total_factura != null ? Number(header.costo_total_factura) : (details?.reduce((acc, item) => acc + (item.costo_total_linea != null ? Number(item.costo_total_linea) : 0), 0) || 0);
+  const utilidadBrutaFactura = header.utilidad_bruta_factura != null ? Number(header.utilidad_bruta_factura) : (computedTotal - costoTotalFactura);
+  const rentabilidadRealFactura = header.rentabilidad_real_factura != null ? Number(header.rentabilidad_real_factura) : (computedTotal > 0 ? (utilidadBrutaFactura / computedTotal) * 100 : null);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -108,6 +113,10 @@ const OrderDetailModal = ({ order, onClose }) => {
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Desc.</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Costo unit.</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Costo línea</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Utilidad</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rentab.</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -117,6 +126,10 @@ const OrderDetailModal = ({ order, onClose }) => {
                     const discountPercentage = item.kar_des_uno;
                     const discountAmount = unitPrice * quantity * (discountPercentage / 100);
                     const totalItem = unitPrice * quantity - discountAmount;
+                    const costoUnit = item.costo_unitario != null ? Number(item.costo_unitario) : null;
+                    const costoLinea = item.costo_total_linea != null ? Number(item.costo_total_linea) : (costoUnit != null ? costoUnit * quantity : null);
+                    const utilidadLinea = item.utilidad_linea != null ? Number(item.utilidad_linea) : (totalItem != null && costoLinea != null ? totalItem - costoLinea : null);
+                    const rentabilidadReal = item.rentabilidad_real != null ? Number(item.rentabilidad_real) : (totalItem > 0 && utilidadLinea != null ? (utilidadLinea / totalItem) * 100 : null);
                     return (
                       <tr key={index} className="hover:bg-[#fff5f7]/50 transition-colors">
                         <td className="px-4 py-3">
@@ -127,6 +140,26 @@ const OrderDetailModal = ({ order, onClose }) => {
                         <td className="px-4 py-3 text-right text-sm text-gray-600">${formatValue(unitPrice)}</td>
                         <td className="px-4 py-3 text-right text-sm text-gray-600">${formatValue(discountAmount)} ({discountPercentage}%)</td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">${formatValue(totalItem)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-600">
+                          {costoUnit != null ? `$${formatValue(costoUnit)}` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-600">
+                          {costoLinea != null ? `$${formatValue(costoLinea)}` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm">
+                          {utilidadLinea != null ? (
+                            <span className={utilidadLinea >= 0 ? 'text-emerald-600 font-medium' : 'text-red-600'}>
+                              ${formatValue(utilidadLinea)}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm">
+                          {rentabilidadReal != null ? (
+                            <span className={`font-medium ${rentabilidadReal >= 30 ? 'text-emerald-600' : rentabilidadReal >= 15 ? 'text-amber-600' : 'text-gray-600'}`}>
+                              {rentabilidadReal.toFixed(1)}%
+                            </span>
+                          ) : '-'}
+                        </td>
                       </tr>
                     );
                   })}
@@ -161,6 +194,26 @@ const OrderDetailModal = ({ order, onClose }) => {
                   <p className="text-gray-900">Total Pedido:</p>
                   <p className="text-[#f58ea3]">${formatValue(computedTotal)}</p>
                 </div>
+                {(costoTotalFactura > 0 || utilidadBrutaFactura !== 0 || rentabilidadRealFactura != null) && (
+                  <>
+                    <div className="flex justify-between text-sm border-t border-gray-200 pt-3 mt-3">
+                      <p className="text-gray-600">Costo total:</p>
+                      <p className="font-medium text-gray-800">${formatValue(costoTotalFactura)}</p>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <p className="text-gray-600">Utilidad bruta:</p>
+                      <p className={`font-medium ${utilidadBrutaFactura >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        ${formatValue(utilidadBrutaFactura)}
+                      </p>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold">
+                      <p className="text-gray-700">Rentabilidad real:</p>
+                      <p className={rentabilidadRealFactura != null ? (rentabilidadRealFactura >= 30 ? 'text-emerald-600' : rentabilidadRealFactura >= 15 ? 'text-amber-600' : 'text-gray-800') : ''}>
+                        {rentabilidadRealFactura != null ? `${rentabilidadRealFactura.toFixed(1)}%` : '-'}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

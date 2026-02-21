@@ -279,8 +279,10 @@ const EditProduct = () => {
 
           // Detectar tipo de producto
           // Prioridad: art_bundle > art_woo_type > art_variable > fallback por variaciones
-          const wooType = prod.art_woo_type;
-          const isVariable = prod.art_variable === 'S';
+          // Normalizar por si el backend devuelve "Variable", "VARIABLE" o art_variable "s"
+          const wooTypeRaw = prod.art_woo_type || '';
+          const wooType = typeof wooTypeRaw === 'string' ? wooTypeRaw.toLowerCase() : '';
+          const isVariable = (prod.art_variable || '').toString().toUpperCase() === 'S';
           const isBundle = prod.art_bundle === 'S';
 
           if (isBundle) {

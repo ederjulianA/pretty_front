@@ -277,6 +277,7 @@ const CompraForm = () => {
         .map((linea) => [Number(linea.kar_sec), linea])
     );
 
+    // Líneas existentes (con kar_sec): solo las que tengan cambio de cantidad o costo
     const detallesActualizados = detalles
       .filter((linea) => linea.kar_sec)
       .map((linea) => {
@@ -301,6 +302,19 @@ const CompraForm = () => {
       payloadBase.detalles = detallesActualizados;
     }
 
+    // Ítems nuevos (sin kar_sec): art_sec, cantidad, costo_unitario para que el backend pueda insertarlos
+    const detallesNuevos = detalles
+      .filter((linea) => !linea.kar_sec && linea.art_sec && Number(linea.cantidad) > 0 && Number(linea.costo_unitario) > 0)
+      .map((linea) => ({
+        art_sec: linea.art_sec,
+        cantidad: Number(linea.cantidad),
+        costo_unitario: Number(linea.costo_unitario)
+      }));
+
+    if (detallesNuevos.length > 0) {
+      payloadBase.detalles_nuevos = detallesNuevos;
+    }
+
     return payloadBase;
   };
 
@@ -323,15 +337,16 @@ const CompraForm = () => {
 
         if (respuesta.success) {
           const detallesActualizados = respuesta.detalles_actualizados || [];
+          const detallesNuevosInsertados = respuesta.detalles_nuevos_insertados || [];
+          const lineas = [
+            `<p>La compra <b>${respuesta.fac_nro || facNro}</b> fue actualizada correctamente.</p>`,
+            detallesActualizados.length > 0 && `<p>Detalles actualizados: <b>${detallesActualizados.length}</b></p>`,
+            detallesNuevosInsertados.length > 0 && `<p>Ítems nuevos agregados: <b>${detallesNuevosInsertados.length}</b></p>`
+          ].filter(Boolean);
           await Swal.fire({
             icon: 'success',
             title: 'Compra actualizada',
-            html: `
-              <div style="text-align:left">
-                <p>La compra <b>${respuesta.fac_nro || facNro}</b> fue actualizada correctamente.</p>
-                <p>Detalles recalculados: <b>${detallesActualizados.length}</b></p>
-              </div>
-            `,
+            html: `<div style="text-align:left">${lineas.join('')}</div>`,
             confirmButtonColor: '#f58ea3'
           });
           navigate('/compras');

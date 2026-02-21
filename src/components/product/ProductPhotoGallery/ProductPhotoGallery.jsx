@@ -4,7 +4,7 @@ import ProductPhotoGalleryItem from './ProductPhotoGalleryItem';
 import ProductPhotoUploader from './ProductPhotoUploader';
 import { FaSync } from 'react-icons/fa';
 
-const ProductPhotoGallery = ({ productId }) => {
+const ProductPhotoGallery = ({ productId, isVariation = false }) => {
   const {
     photos,
     isLoading,
@@ -20,6 +20,13 @@ const ProductPhotoGallery = ({ productId }) => {
 
   return (
     <div className="bg-white/80 shadow-xl rounded-2xl p-4 sm:p-6 mb-6 max-w-6xl mx-auto">
+      {/* Aviso para variaciones: WooCommerce solo soporta 1 imagen por variación */}
+      {isVariation && (
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200/60 text-amber-800 text-sm">
+          <strong>Variación:</strong> En WooCommerce las variaciones solo admiten 1 imagen. Si subes varias fotos aquí, solo la primera se sincronizará con WooCommerce.
+        </div>
+      )}
+
       {/* Encabezado con acciones */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
         <h3 className="text-lg font-semibold text-gray-700 tracking-tight">Fotos del Producto</h3>
@@ -59,6 +66,7 @@ const ProductPhotoGallery = ({ productId }) => {
               onDelete={deletePhoto}
               onSetMain={setMainPhoto}
               isLoading={isLoading}
+              isVariation={isVariation}
             />
           </div>
         ))}

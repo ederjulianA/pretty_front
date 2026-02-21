@@ -5,7 +5,8 @@ const ProductPhotoGalleryItem = ({
   photo, 
   onDelete, 
   onSetMain, 
-  isLoading 
+  isLoading,
+  isVariation = false 
 }) => {
   // Función para manejar el clic en el botón de eliminar
   const handleDelete = (e) => {
@@ -49,20 +50,22 @@ const ProductPhotoGalleryItem = ({
 
       {/* Barra de acciones fija más abajo con colores de marca */}
       <div className="absolute left-0 bottom-0 w-full flex justify-center gap-4 pb-1 z-10 bg-[#fffafe]/80 backdrop-blur-md rounded-b-xl">
-        {/* Botón Establecer Principal */}
-        <button
-          type="button"
-          onClick={handleSetMain}
-          disabled={isLoading || photo.es_principal}
-          className={`p-2 rounded-full shadow-lg border border-[#f5cad4] focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/60 transition-all duration-200 ${
-            photo.es_principal 
-              ? 'bg-[#a5762f] text-white scale-110' 
-              : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
-          }`}
-          title={photo.es_principal ? 'Foto principal' : 'Establecer como principal'}
-        >
-          {photo.es_principal ? <FaStar className="text-lg" /> : <FaRegStar className="text-lg" />}
-        </button>
+        {/* Botón Establecer Principal: oculto en variaciones (WooCommerce solo permite 1 imagen) */}
+        {!isVariation && (
+          <button
+            type="button"
+            onClick={handleSetMain}
+            disabled={isLoading || photo.es_principal}
+            className={`p-2 rounded-full shadow-lg border border-[#f5cad4] focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/60 transition-all duration-200 ${
+              photo.es_principal 
+                ? 'bg-[#a5762f] text-white scale-110' 
+                : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
+            }`}
+            title={photo.es_principal ? 'Foto principal' : 'Establecer como principal'}
+          >
+            {photo.es_principal ? <FaStar className="text-lg" /> : <FaRegStar className="text-lg" />}
+          </button>
+        )}
 
         {/* Botón Eliminar */}
         <button

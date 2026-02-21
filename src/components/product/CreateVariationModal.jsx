@@ -114,9 +114,27 @@ const CreateVariationModal = ({
       );
 
       if (response.data.success) {
-        toast.success('Variación creada exitosamente');
-        onVariationCreated();
-        onClose();
+        const wooError = response.data.errors?.wooCommerce;
+        if (wooError) {
+          toast.warning('Variación creada en el sistema, pero no se pudo sincronizar con WooCommerce.');
+          Swal.fire({
+            icon: 'warning',
+            title: 'Sincronización WooCommerce fallida',
+            html: `La variación se guardó correctamente en el sistema pero no tiene ID de WooCommerce.<br><br>
+              <strong>Posibles causas:</strong><br>
+              • El producto padre no está convertido a tipo "variable" en WooCommerce.<br>
+              • Error de conexión o credenciales con WooCommerce.<br><br>
+              Revise los logs del backend o que el producto padre esté marcado como variable en WooCommerce y vuelva a intentar.`,
+            confirmButtonColor: '#f58ea3'
+          }).then(() => {
+            onVariationCreated();
+            onClose();
+          });
+        } else {
+          toast.success('Variación creada exitosamente');
+          onVariationCreated();
+          onClose();
+        }
       } else {
         Swal.fire({
           icon: 'error',

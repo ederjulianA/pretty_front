@@ -53,6 +53,12 @@ const EditProduct = () => {
   // Estados para producto bundle
   const [bundleComponents, setBundleComponents] = useState([]);
   const [isLoadingBundle, setIsLoadingBundle] = useState(false);
+
+  // Estados para conversión simple → variable
+  const [convertAttributeName, setConvertAttributeName] = useState('Tono');
+  const [convertAttributeOptions, setConvertAttributeOptions] = useState([]);
+  const [convertOptionInput, setConvertOptionInput] = useState('');
+  const [isConverting, setIsConverting] = useState(false);
   
   // Estado para costo promedio del producto
   const [costoPromedio, setCostoPromedio] = useState(0);
@@ -135,6 +141,78 @@ const EditProduct = () => {
     } finally {
       setIsSyncingAttributes(false);
     }
+  };
+
+  // Convertir producto simple a variable (endpoint backend v2.1)
+  const handleConvertToVariable = async () => {
+    const options = convertAttributeOptions.filter(Boolean).map(o => o.trim());
+    if (options.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Opciones requeridas',
+        text: 'Agrega al menos una opción para el atributo (ej: Rojo, Azul).',
+        confirmButtonColor: '#f58ea3'
+      });
+      return;
+    }
+    setIsConverting(true);
+    try {
+      const token = localStorage.getItem('pedidos_pretty_token');
+      const response = await axios.post(
+        `${API_URL}/articulos/variable/${id}/convert-to-variable`,
+        {
+          attributes: [{ name: convertAttributeName, options }],
+          categoria: formData.categoria || undefined
+        },
+        { headers: { 'x-access-token': token } }
+      );
+      if (response.data.success) {
+        const data = response.data.data;
+        setProductWooType('variable');
+        setParentAttributes(data.attributes || [{ name: convertAttributeName, options }]);
+        setConvertAttributeOptions([]);
+        setConvertOptionInput('');
+        await fetchVariations();
+        const hasWooError = response.data.errors?.wooCommerce;
+        Swal.fire({
+          icon: hasWooError ? 'warning' : 'success',
+          title: hasWooError ? 'Convertido con advertencia' : 'Convertido a variable',
+          text: hasWooError
+            ? 'El producto es variable en el sistema. La sincronización con WooCommerce falló; puedes sincronizar después.'
+            : 'Ahora puedes agregar variaciones desde la sección inferior.',
+          confirmButtonColor: '#f58ea3'
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: response.data.message || 'No se pudo convertir el producto.',
+          confirmButtonColor: '#f58ea3'
+        });
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || error.message || 'Error al convertir a producto variable.';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: msg,
+        confirmButtonColor: '#f58ea3'
+      });
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const addConvertOption = () => {
+    const val = convertOptionInput.trim();
+    if (val && !convertAttributeOptions.includes(val)) {
+      setConvertAttributeOptions(prev => [...prev, val]);
+      setConvertOptionInput('');
+    }
+  };
+
+  const removeConvertOption = (index) => {
+    setConvertAttributeOptions(prev => prev.filter((_, i) => i !== index));
   };
 
   // Función para parsear atributos de forma segura
@@ -303,33 +381,32 @@ const EditProduct = () => {
               }
             }
           } else {
-            // El backend puede no devolver art_woo_type aún
-            // Intentar detectar consultando el endpoint de variaciones
+            // art_woo_type no es 'variable'/'variation' y art_variable no es 'S'
+            // Solo considerar variable si el endpoint de variaciones devuelve al menos una variación.
+            // Importante: el backend devuelve { success: true, data: [] } para productos sin variaciones;
+            // en JS [] es truthy, por eso hay que comprobar data.length > 0 para no marcar simple como variable.
             try {
               const token = localStorage.getItem('pedidos_pretty_token');
               const varResponse = await axios.get(`${API_URL}/articulos/variable/${id}/variations`, {
                 headers: { 'x-access-token': token }
               });
-              if (varResponse.data.success && varResponse.data.data) {
-                // Es un producto variable - tiene variaciones
+              const data = varResponse.data?.data;
+              const hasVariations = Array.isArray(data) && data.length > 0;
+              if (varResponse.data.success && hasVariations) {
                 setProductWooType('variable');
-                setVariations(varResponse.data.data);
-                // Inferir atributos desde las variaciones existentes
-                if (varResponse.data.data.length > 0) {
-                  const firstVar = varResponse.data.data[0];
-                  if (firstVar.art_variation_attributes) {
-                    const attrName = Object.keys(firstVar.art_variation_attributes)[0];
-                    const usedOptions = varResponse.data.data
-                      .map(v => v.art_variation_attributes ? Object.values(v.art_variation_attributes)[0] : null)
-                      .filter(Boolean);
-                    setParentAttributes([{ name: attrName, options: usedOptions }]);
-                  }
+                setVariations(data);
+                const firstVar = data[0];
+                if (firstVar?.art_variation_attributes) {
+                  const attrName = Object.keys(firstVar.art_variation_attributes)[0];
+                  const usedOptions = data
+                    .map(v => v.art_variation_attributes ? Object.values(v.art_variation_attributes)[0] : null)
+                    .filter(Boolean);
+                  setParentAttributes([{ name: attrName, options: usedOptions }]);
                 }
               } else {
                 setProductWooType('simple');
               }
             } catch {
-              // Si el endpoint falla (404, etc.), es un producto simple
               setProductWooType('simple');
             }
           }
@@ -700,11 +777,16 @@ const EditProduct = () => {
             </div>
           </div>
 
-          {/* Clasificación */}
+          {/* Clasificación (variaciones heredan del padre, no editable) */}
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
               Clasificación
             </h3>
+            {isVariation && (
+              <p className="text-sm text-gray-500 mb-4">
+                La variación hereda la categoría y subcategoría del producto padre; no se pueden modificar aquí.
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Categoría */}
               <div>
@@ -719,7 +801,8 @@ const EditProduct = () => {
                     name="categoria"
                     value={formData.categoria}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    disabled={isVariation}
+                    className={`w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${isVariation ? 'bg-gray-100 cursor-not-allowed' : 'bg-[#fffafe]'}`}
                     required
                   >
                     <option value="">Seleccione categoría</option>
@@ -744,7 +827,8 @@ const EditProduct = () => {
                     name="subcategoria"
                     value={formData.subcategoria}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    disabled={isVariation}
+                    className={`w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${isVariation ? 'bg-gray-100 cursor-not-allowed' : 'bg-[#fffafe]'}`}
                     required
                   >
                     <option value="">Seleccione subcategoría</option>
@@ -841,18 +925,20 @@ const EditProduct = () => {
               Integración WooCommerce
             </h3>
             <div className="space-y-4">
-              {/* Código WooCommerce */}
+              {/* Código WooCommerce (productos simples/padre). En variaciones se usa art_woo_variation_id en BD. */}
               <div>
-                <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
+                <label className="block text-gray-700 mb-2 font-medium">
+                  {isVariation ? 'ID WooCommerce (variación)' : 'Código WooCommerce'}
+                </label>
                 <input
                   type="text"
                   name="art_woo_id"
                   value={formData.art_woo_id}
                   onChange={handleChange}
                   onBlur={handleBlurArtWoo}
-                  placeholder="Ingrese código WooCommerce"
+                  placeholder={isVariation ? 'ID de variación en WooCommerce' : 'Ingrese código WooCommerce'}
                   className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
-                  required
+                  required={!isVariation}
                 />
                 {errorArtWoo && (
                   <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
@@ -861,6 +947,11 @@ const EditProduct = () => {
                     </svg>
                     {errorArtWoo}
                   </div>
+                )}
+                {isVariation && !formData.art_woo_id && (
+                  <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2">
+                    Esta variación no tiene ID de WooCommerce. Suele ocurrir cuando la variación se creó pero la sincronización con WooCommerce falló (por ejemplo, si el producto padre no estaba convertido a tipo variable en WooCommerce). Revise los logs del backend al crear variaciones.
+                  </p>
                 )}
               </div>
               {/* Actualizar Fecha Woo */}
@@ -875,16 +966,106 @@ const EditProduct = () => {
                   />
                   <span className="text-gray-700 font-medium">Actualizar Fecha Woo</span>
                 </label>
+          </div>
+          </div>
+        </div>
+
+          {/* Convertir a producto variable — solo para artículos simples */}
+          {productWooType === 'simple' && (
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 shadow-sm">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <FaLayerGroup className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Convertir a producto variable
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Convierte este artículo en un producto variable para gestionar variaciones (por ejemplo tonos o colores) sin perder datos. Luego podrás agregar cada variación desde esta misma página.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium text-sm">Atributo de variación</label>
+                  <select
+                    value={convertAttributeName}
+                    onChange={(e) => setConvertAttributeName(e.target.value)}
+                    className="w-full max-w-xs px-4 py-2.5 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition text-gray-800"
+                  >
+                    <option value="Tono">Tono</option>
+                    <option value="Color">Color</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium text-sm">Opciones del atributo</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {convertAttributeOptions.map((opt, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-800 text-sm font-medium border border-purple-200/60"
+                      >
+                        {opt}
+                        <button
+                          type="button"
+                          onClick={() => removeConvertOption(index)}
+                          className="ml-0.5 text-purple-500 hover:text-purple-700 focus:outline-none"
+                          aria-label="Quitar opción"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={convertOptionInput}
+                      onChange={(e) => setConvertOptionInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addConvertOption())}
+                      placeholder="Ej: Rojo, Azul, Negro..."
+                      className="flex-1 min-w-0 px-4 py-2.5 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition text-gray-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={addConvertOption}
+                      className="px-4 py-2.5 rounded-xl border border-[#f5cad4]/80 text-gray-700 bg-white hover:bg-[#f7b3c2]/20 transition font-medium"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConvertToVariable}
+                  disabled={isConverting || convertAttributeOptions.length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold shadow-md hover:bg-purple-700 hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isConverting ? (
+                    <>
+                      <FaSpinner className="w-4 h-4 animate-spin" />
+                      Convirtiendo...
+                    </>
+                  ) : (
+                    <>
+                      <FaLayerGroup className="w-4 h-4" />
+                      Convertir a producto variable
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Galería de Fotos */}
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
               Galería de Imágenes
             </h3>
-            <ProductPhotoGallery productId={id} />
+            <ProductPhotoGallery productId={id} isVariation={isVariation} />
           </div>
         </form>
 

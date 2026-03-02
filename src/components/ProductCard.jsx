@@ -13,30 +13,27 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
   const handleSyncImage = async (e) => {
     e.preventDefault(); // Prevenir comportamiento por defecto
     e.stopPropagation(); // Evitar que se propague el click al card
-    
+
     if (isSyncing) return;
 
     setIsSyncing(true);
     try {
       // Construir y verificar la URL
       const url = `${API_URL}/woo/sync-article-image/${product.codigo}`;
-      console.log('URL del endpoint:', url);
-      console.log('Código del producto:', product.codigo);
-      
+
       const response = await axios.post(url);
-      console.log('Respuesta del servidor:', response.data);
-      
+
       // Verificar si la respuesta es exitosa según la estructura del servidor
       if (response.data && response.data.success) {
         // Actualizar la imagen localmente
         const newImageUrl = response.data.data.image_url;
         setCurrentImage(newImageUrl);
-        
+
         // Notificar al componente padre
         if (onImageUpdate) {
           onImageUpdate(product.id, newImageUrl);
         }
-        
+
         toast.success(response.data.message || 'Imagen actualizada exitosamente');
       } else {
         toast.error(response.data.message || 'Error al actualizar la imagen');
@@ -72,20 +69,18 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
   return (
     <div
       onClick={handleClick}
-      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col h-full border cursor-pointer relative overflow-hidden ${
-        tieneOferta
+      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col h-full border cursor-pointer relative overflow-hidden ${tieneOferta
           ? 'ring-2 ring-orange-200 shadow-orange-100 border-gray-100'
           : esBundle
             ? 'ring-2 ring-emerald-200 shadow-emerald-100 border-emerald-100'
             : 'border-gray-100'
-      }`}
+        }`}
     >
       {/* Header del card con badges integrados */}
-      <div className={`px-3 py-2 rounded-t-xl flex flex-col gap-0.5 min-h-[2.2rem] relative ${
-        esBundle
+      <div className={`px-3 py-2 rounded-t-xl flex flex-col gap-0.5 min-h-[2.2rem] relative ${esBundle
           ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
           : 'bg-gradient-to-r from-[#f58ea3] to-[#f7b3c2]'
-      }`}>
+        }`}>
         {/* Badge de oferta en la esquina superior derecha */}
         {tieneOferta && (
           <div className="absolute top-1 right-1 z-10">
@@ -107,9 +102,8 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
         )}
 
         {/* Título con padding ajustado para evitar superposición */}
-        <h3 className={`text-base font-bold text-white leading-tight break-words line-clamp-2 ${
-          (tieneOferta || esBundle) ? 'pr-16' : ''
-        }`}>
+        <h3 className={`text-base font-bold text-white leading-tight break-words line-clamp-2 ${(tieneOferta || esBundle) ? 'pr-16' : ''
+          }`}>
           {product.name}
         </h3>
       </div>
@@ -117,9 +111,9 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
       {/* Imagen con botón de sincronización */}
       <div className="flex-1 flex items-center justify-center p-2 bg-gray-50 rounded-b-xl relative group">
         {currentImage ? (
-          <img 
-            src={currentImage} 
-            alt={product.name} 
+          <img
+            src={currentImage}
+            alt={product.name}
             className="object-contain h-24 w-24 rounded-md"
             onError={() => setCurrentImage(null)} // Si la imagen falla, mostrar el placeholder
           />
@@ -193,15 +187,14 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
             handleClick();
           }}
           disabled={product.existencia <= 0}
-          className={`mt-2 w-full py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
-            product.existencia <= 0
+          className={`mt-2 w-full py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${product.existencia <= 0
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : tieneOferta
                 ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
                 : esBundle
                   ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
                   : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
-          }`}
+            }`}
         >
           {esBundle ? <FaCubes className="w-4 h-4" /> : <FaShoppingCart className="w-4 h-4" />}
           {tieneOferta ? '¡Agregar Oferta!' : esBundle ? 'Ver Combo' : 'Agregar'}

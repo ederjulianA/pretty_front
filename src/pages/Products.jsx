@@ -17,7 +17,7 @@ const Products = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [syncingProducts, setSyncingProducts] = useState({});
     const [syncingAttributes, setSyncingAttributes] = useState({});
-    
+
     // Paginación tradicional
     const getStoredPage = () => {
         try {
@@ -27,7 +27,7 @@ const Products = () => {
             return 1;
         }
     };
-    
+
     const [pageNumber, setPageNumber] = useState(getStoredPage());
     const [pageInfo, setPageInfo] = useState({
         totalElements: 0,
@@ -151,7 +151,6 @@ const Products = () => {
                 tieneExistenciaValue = '';
             }
 
-            console.log(`🔍 Fetching products - Page: ${page}, Code: "${filterCodigo}", Name: "${filterNombre}", Existence: "${selectedExistencia}", Categoria: "${filterCategoria}", Subcategoria: "${filterSubcategoria}"`);
 
             const params = {
                 PageNumber: page,
@@ -177,7 +176,6 @@ const Products = () => {
             });
 
             const newProducts = response.data.articulos || response.data.products || [];
-            console.log(`📦 Received ${newProducts.length} products from API:`, newProducts.map(p => p.art_cod));
 
             // Paginación tradicional: reemplazar productos en lugar de acumular
             setProducts(newProducts);
@@ -235,7 +233,6 @@ const Products = () => {
     // Crear un debounce estable que no se recree constantemente
     const debouncedFetch = useCallback(
         debounce(() => {
-            console.log('🚀 Debounced fetch triggered - resetting to page 1');
             setPageNumber(1); // Resetear a página 1 cuando cambian los filtros
             localStorage.setItem('products_page', '1'); // Actualizar localStorage también
             fetchProducts(1);
@@ -245,7 +242,6 @@ const Products = () => {
 
     // useEffect para manejar los cambios de filtros
     useEffect(() => {
-        console.log('🔄 Filter changed - triggering debounced fetch');
         debouncedFetch();
         return () => debouncedFetch.cancel();
     }, [filterCodigo, filterNombre, selectedExistencia, filterCategoria, filterSubcategoria, debouncedFetch]);
@@ -274,7 +270,6 @@ const Products = () => {
 
     // useEffect inicial para cargar productos al montar el componente
     useEffect(() => {
-        console.log('🚀 Initial load - fetching products');
         const initialPage = getStoredPage();
         fetchProducts(initialPage);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,7 +375,6 @@ const Products = () => {
         return 'text-emerald-600';
     };
 
-    console.log(`🎯 Current products state: ${products.length} products`, products.map(p => p.art_cod));
 
     return (
         <div className="h-full flex flex-col bg-[#fafbfc]">
@@ -788,11 +782,10 @@ const Products = () => {
                                 <button
                                     onClick={() => handlePageChange(pageNumber - 1)}
                                     disabled={!pageInfo.hasPrevious || isLoading}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                        !pageInfo.hasPrevious || isLoading
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!pageInfo.hasPrevious || isLoading
                                             ? 'bg-[#f5f6f7] text-[#b0b0b0] cursor-not-allowed'
                                             : 'bg-[#fff5f7] text-[#f58ea3] hover:bg-[#fce7eb] border border-[#f58ea3]'
-                                    }`}
+                                        }`}
                                 >
                                     Anterior
                                 </button>
@@ -814,11 +807,10 @@ const Products = () => {
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 disabled={isLoading}
-                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                                    pageNum === pageNumber
+                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${pageNum === pageNumber
                                                         ? 'bg-[#f58ea3] text-white'
                                                         : 'bg-[#fff5f7] text-[#f58ea3] hover:bg-[#fce7eb] border border-[#f58ea3]'
-                                                } ${isLoading ? 'cursor-not-allowed opacity-50' : ''}`}
+                                                    } ${isLoading ? 'cursor-not-allowed opacity-50' : ''}`}
                                             >
                                                 {pageNum}
                                             </button>
@@ -828,11 +820,10 @@ const Products = () => {
                                 <button
                                     onClick={() => handlePageChange(pageNumber + 1)}
                                     disabled={!pageInfo.hasNext || isLoading}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                        !pageInfo.hasNext || isLoading
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!pageInfo.hasNext || isLoading
                                             ? 'bg-[#f5f6f7] text-[#b0b0b0] cursor-not-allowed'
                                             : 'bg-[#fff5f7] text-[#f58ea3] hover:bg-[#fce7eb] border border-[#f58ea3]'
-                                    }`}
+                                        }`}
                                 >
                                     Siguiente
                                 </button>

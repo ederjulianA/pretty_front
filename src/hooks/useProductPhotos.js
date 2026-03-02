@@ -13,7 +13,6 @@ export const useProductPhotos = (productId) => {
       setIsLoading(true);
       setError(null);
       const response = await photoService.getProductPhotos(productId);
-      console.log('Respuesta de carga de fotos:', response); // Debug
       if (response.success) {
         setPhotos(response.data || []);
       } else {
@@ -40,15 +39,14 @@ export const useProductPhotos = (productId) => {
       setIsLoading(true);
       setError(null);
       const response = await photoService.uploadPhoto(productId, file, isPrincipal);
-      console.log('Respuesta de subida:', response);
-      
+
       if (response.success) {
         if (response.data) {
           setPhotos(prevPhotos => [...prevPhotos, response.data]);
         }
         // Recargar todas las fotos para asegurar consistencia
         await loadPhotos();
-        
+
         Swal.fire({
           icon: 'success',
           title: 'Éxito',
@@ -90,14 +88,13 @@ export const useProductPhotos = (productId) => {
         setIsLoading(true);
         setError(null);
         const response = await photoService.deletePhoto(productId, photoId);
-        console.log('Respuesta de eliminación:', response);
-        
+
         if (response.success) {
           // Actualizar el estado local eliminando la foto
           setPhotos(prevPhotos => prevPhotos.filter(photo => photo.id !== photoId));
           // Recargar todas las fotos para asegurar consistencia
           await loadPhotos();
-          
+
           Swal.fire({
             icon: 'success',
             title: 'Eliminada',
@@ -128,11 +125,10 @@ export const useProductPhotos = (productId) => {
       setIsLoading(true);
       setError(null);
       const response = await photoService.setMainPhoto(productId, photoId);
-      console.log('Respuesta de establecer principal:', response);
-      
+
       if (response.success) {
         // Actualizar el estado local
-        setPhotos(prevPhotos => 
+        setPhotos(prevPhotos =>
           prevPhotos.map(photo => ({
             ...photo,
             es_principal: photo.id === photoId
@@ -140,7 +136,7 @@ export const useProductPhotos = (productId) => {
         );
         // Recargar todas las fotos para asegurar consistencia
         await loadPhotos();
-        
+
         Swal.fire({
           icon: 'success',
           title: 'Éxito',
@@ -170,12 +166,11 @@ export const useProductPhotos = (productId) => {
       setIsLoading(true);
       setError(null);
       const response = await photoService.syncWithWooCommerce(productId);
-      console.log('Respuesta de sincronización:', response);
-      
+
       if (response.success) {
         // Recargar todas las fotos después de la sincronización
         await loadPhotos();
-        
+
         Swal.fire({
           icon: 'success',
           title: 'Éxito',

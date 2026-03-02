@@ -38,10 +38,10 @@ const CreateProduct = () => {
 
   // Estados para componentes (producto bundle)
   const [bundleComponents, setBundleComponents] = useState([]);
-  
+
   // Estado para costo promedio (se obtiene cuando se busca un producto existente)
   const [costoPromedio, setCostoPromedio] = useState(0);
-  
+
   // Estado para datos de rentabilidad del backend (cuando se edita un producto existente)
   const [rentabilidadData, setRentabilidadData] = useState({
     rentabilidadDetal: null,
@@ -209,7 +209,9 @@ const CreateProduct = () => {
   // Función para validar el código único
   const validateUnique = async (field, value) => {
     try {
+      const token = localStorage.getItem('pedidos_pretty_token');
       const response = await axios.get(`${API_URL}/articulos/validar`, {
+        headers: { 'x-access-token': token },
         params: { [field]: value }
       });
       if (response.data.success && response.data.exists) {
@@ -278,9 +280,11 @@ const CreateProduct = () => {
       formDataToSend.append(`image${index + 1}`, image);
     });
 
+    const token = localStorage.getItem('pedidos_pretty_token');
     const response = await axios.post(`${API_URL}/crearArticulo`, formDataToSend, {
       headers: {
-        'Content-Type': 'multipart/form-data'
+        'Content-Type': 'multipart/form-data',
+        'x-access-token': token
       }
     });
 
@@ -426,7 +430,6 @@ const CreateProduct = () => {
         response = await handleSubmitSimple();
       }
 
-      console.log('Respuesta del servidor:', response.data);
 
       if (response.data.success) {
         if (!response.data.errors || Object.keys(response.data.errors).length === 0) {
@@ -664,333 +667,333 @@ const CreateProduct = () => {
         </div>
 
         <div className="relative">
-        {isSubmitting && (
-          <div className="fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
-            <FaSpinner className="animate-spin text-4xl text-[#f58ea3] mb-4" />
-            <p className="text-gray-600 font-medium">Creando producto...</p>
-            <p className="text-sm text-gray-500 mt-2">Por favor espere mientras procesamos su solicitud</p>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className={`space-y-5 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
-          {/* Información Básica */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Información Básica
-            </h3>
-            <div className="space-y-5">
-              {/* Código */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-semibold text-base">Código del Producto</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    name="art_cod"
-                    value={formData.art_cod}
-                    onChange={handleChange}
-                    onBlur={handleBlurArtCod}
-                    placeholder="Ingrese código único"
-                    className={`w-full px-4 py-3.5 text-base border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtCod ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
-                    required
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRefreshCodigo}
-                    className="p-3.5 rounded-xl bg-[#f7b3c2]/30 hover:bg-[#f58ea3] text-[#f58ea3] hover:text-white shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Obtener código sugerido"
-                    disabled={isLoadingCodigo || isSubmitting}
-                  >
-                    {isLoadingCodigo ? <FaSpinner className="animate-spin" /> : <FaSyncAlt />}
-                  </button>
-                </div>
-                {errorArtCod && (
-                  <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
-                    <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {errorArtCod}
-                  </div>
-                )}
-              </div>
-              {/* Nombre */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-semibold text-base">Nombre del Producto</label>
-                <input
-                  type="text"
-                  name="art_nom"
-                  value={formData.art_nom}
-                  onChange={handleChange}
-                  placeholder="Ingrese el nombre completo"
-                  className="w-full px-4 py-3.5 text-base border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Clasificación */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Clasificación
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Categoría */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">Categoría</label>
-                {isLoadingCategories ? (
-                  <div className="flex items-center gap-2 text-[#f58ea3] py-3">
-                    <FaSpinner className="animate-spin" />
-                    <span>Cargando categorías...</span>
-                  </div>
-                ) : (
-                  <select
-                    name="categoria"
-                    value={formData.categoria}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="">Seleccione categoría</option>
-                    {categories.map(cat => (
-                      <option key={cat.inv_gru_cod} value={cat.inv_gru_cod}>
-                        {cat.inv_gru_nom}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              {/* Subcategoría */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">Subcategoría</label>
-                {isLoadingSubcategories ? (
-                  <div className="flex items-center gap-2 text-[#f58ea3] py-3">
-                    <FaSpinner className="animate-spin" />
-                    <span>Cargando subcategorías...</span>
-                  </div>
-                ) : (
-                  <select
-                    name="subcategoria"
-                    value={formData.subcategoria}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="">Seleccione subcategoría</option>
-                    {subcategories.map(sub => (
-                      <option key={sub.inv_sub_gru_cod} value={sub.inv_sub_gru_cod}>
-                        {sub.inv_sub_gru_nom}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sección de Atributos (solo para producto variable) */}
-          {isVariable && (
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-purple-200/40">
-                Atributos del Producto Variable
-              </h3>
-              <AttributeManager
-                attributeType={attributeType}
-                onAttributeTypeChange={setAttributeType}
-                options={attributeOptions}
-                onOptionsChange={setAttributeOptions}
-                disabled={isSubmitting}
-              />
+          {isSubmitting && (
+            <div className="fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
+              <FaSpinner className="animate-spin text-4xl text-[#f58ea3] mb-4" />
+              <p className="text-gray-600 font-medium">Creando producto...</p>
+              <p className="text-sm text-gray-500 mt-2">Por favor espere mientras procesamos su solicitud</p>
             </div>
           )}
-
-          {/* Sección de Componentes (solo para producto bundle) */}
-          {productType === 'bundle' && (
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-pink-200/50 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-pink-200/40">
-                Componentes del Bundle
-              </h3>
-              <BundleManager
-                components={bundleComponents}
-                onComponentsChange={setBundleComponents}
-                disabled={isSubmitting}
-                precioDetalBundle={parseFloat(formData.precio_detal) || 0}
-                precioMayorBundle={parseFloat(formData.precio_mayor) || 0}
-              />
-            </div>
-          )}
-
-          {/* Precios */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Precios
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">
-                  {isVariable ? 'Precio Detal (Referencia)' : 'Precio Detal'}
-                  {productType === 'bundle' && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                <input
-                  type="number"
-                  name="precio_detal"
-                  value={formData.precio_detal}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                  required={productType === 'simple' || productType === 'bundle'}
-                  disabled={isSubmitting}
-                />
-                {isVariable && (
-                  <p className="text-xs text-gray-500 mt-1.5">Opcional. Se usará como referencia al crear variaciones.</p>
-                )}
-                {productType === 'bundle' && (
-                  <p className="text-xs text-gray-500 mt-1.5">Precio independiente del bundle (puede ser menor que la suma de componentes).</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">
-                  {isVariable ? 'Precio Mayor (Referencia)' : 'Precio Mayor'}
-                  {productType === 'bundle' && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                <input
-                  type="number"
-                  name="precio_mayor"
-                  value={formData.precio_mayor}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                  required={productType === 'simple' || productType === 'bundle'}
-                  disabled={isSubmitting}
-                />
-                {isVariable && (
-                  <p className="text-xs text-gray-500 mt-1.5">Opcional. Se usará como referencia al crear variaciones.</p>
-                )}
-                {productType === 'bundle' && (
-                  <p className="text-xs text-gray-500 mt-1.5">Precio mayorista del bundle completo.</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Mostrar márgenes de rentabilidad para productos simples y variables */}
-            {productType !== 'bundle' && (
-              <ProfitMarginDisplay
-                precioDetal={parseFloat(formData.precio_detal) || 0}
-                precioMayor={parseFloat(formData.precio_mayor) || 0}
-                costoPromedio={costoPromedio}
-                tipoProducto={productType === 'variable' ? 'variable' : 'simple'}
-                title="Rentabilidad del Producto"
-                rentabilidadDetal={rentabilidadData.rentabilidadDetal}
-                margenGananciaDetal={rentabilidadData.margenGananciaDetal}
-                utilidadBrutaDetal={rentabilidadData.utilidadBrutaDetal}
-                clasificacionRentabilidad={rentabilidadData.clasificacionRentabilidad}
-                rentabilidadMayor={rentabilidadData.rentabilidadMayor}
-              />
-            )}
-          </div>
-          {/* Código WooCommerce - solo para producto simple */}
-          {productType === 'simple' && (
+          <form onSubmit={handleSubmit} className={`space-y-5 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+            {/* Información Básica */}
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-                Integración WooCommerce
+                Información Básica
               </h3>
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
-                <input
-                  type="text"
-                  name="art_woo_id"
-                  value={formData.art_woo_id}
-                  onChange={handleChange}
-                  onBlur={handleBlurArtWoo}
-                  placeholder="Ingrese código WooCommerce (opcional)"
-                  className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
-                  disabled={isSubmitting}
-                />
-                {errorArtWoo && (
-                  <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
-                    <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {errorArtWoo}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {/* Imágenes */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Galería de Imágenes
-            </h3>
-            <div className="border-2 border-dashed border-[#f5cad4]/60 rounded-xl p-6 text-center bg-[#fffafe]">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageChange}
-                accept=".jpg,.jpeg,.png,.webp"
-                multiple
-                className="hidden"
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current.click()}
-                className="bg-[#f7b3c2]/30 hover:bg-[#f58ea3] text-[#f58ea3] hover:text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 mx-auto font-medium shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSubmitting}
-              >
-                <FaUpload />
-                Seleccionar Imágenes
-              </button>
-              <p className="text-xs text-gray-500 mt-3">
-                Formatos permitidos: JPG, JPEG, PNG, WEBP. Máximo 4 imágenes.
-              </p>
-            </div>
-            {/* Previsualización de imágenes */}
-            {previewUrls.length > 0 && (
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {previewUrls.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={url}
-                      alt={`Previsualización ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-xl border border-[#f5cad4]/60 bg-[#fffafe] shadow-sm"
+              <div className="space-y-5">
+                {/* Código */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-base">Código del Producto</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      name="art_cod"
+                      value={formData.art_cod}
+                      onChange={handleChange}
+                      onBlur={handleBlurArtCod}
+                      placeholder="Ingrese código único"
+                      className={`w-full px-4 py-3.5 text-base border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtCod ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
+                      required
+                      disabled={isSubmitting}
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 bg-[#f58ea3] text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                      title="Eliminar imagen"
-                      disabled={isSubmitting}
+                      onClick={handleRefreshCodigo}
+                      className="p-3.5 rounded-xl bg-[#f7b3c2]/30 hover:bg-[#f58ea3] text-[#f58ea3] hover:text-white shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Obtener código sugerido"
+                      disabled={isLoadingCodigo || isSubmitting}
                     >
-                      <FaTrash size="0.75em" />
+                      {isLoadingCodigo ? <FaSpinner className="animate-spin" /> : <FaSyncAlt />}
                     </button>
                   </div>
-                ))}
+                  {errorArtCod && (
+                    <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
+                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errorArtCod}
+                    </div>
+                  )}
+                </div>
+                {/* Nombre */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-base">Nombre del Producto</label>
+                  <input
+                    type="text"
+                    name="art_nom"
+                    value={formData.art_nom}
+                    onChange={handleChange}
+                    placeholder="Ingrese el nombre completo"
+                    className="w-full px-4 py-3.5 text-base border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Clasificación */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Clasificación
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Categoría */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Categoría</label>
+                  {isLoadingCategories ? (
+                    <div className="flex items-center gap-2 text-[#f58ea3] py-3">
+                      <FaSpinner className="animate-spin" />
+                      <span>Cargando categorías...</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="categoria"
+                      value={formData.categoria}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Seleccione categoría</option>
+                      {categories.map(cat => (
+                        <option key={cat.inv_gru_cod} value={cat.inv_gru_cod}>
+                          {cat.inv_gru_nom}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                {/* Subcategoría */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Subcategoría</label>
+                  {isLoadingSubcategories ? (
+                    <div className="flex items-center gap-2 text-[#f58ea3] py-3">
+                      <FaSpinner className="animate-spin" />
+                      <span>Cargando subcategorías...</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="subcategoria"
+                      value={formData.subcategoria}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Seleccione subcategoría</option>
+                      {subcategories.map(sub => (
+                        <option key={sub.inv_sub_gru_cod} value={sub.inv_sub_gru_cod}>
+                          {sub.inv_sub_gru_nom}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de Atributos (solo para producto variable) */}
+            {isVariable && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-purple-200/40">
+                  Atributos del Producto Variable
+                </h3>
+                <AttributeManager
+                  attributeType={attributeType}
+                  onAttributeTypeChange={setAttributeType}
+                  options={attributeOptions}
+                  onOptionsChange={setAttributeOptions}
+                  disabled={isSubmitting}
+                />
               </div>
             )}
-          </div>
 
-          {/* Info para producto variable */}
-          {isVariable && (
-            <div className="bg-purple-50/60 border border-purple-200/60 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-sm text-purple-800">
-                <strong>💡 Nota:</strong> Después de crear el producto variable, serás redirigido a la pantalla de edición donde podrás crear las variaciones individuales con sus precios y stock.
-              </p>
-            </div>
-          )}
+            {/* Sección de Componentes (solo para producto bundle) */}
+            {productType === 'bundle' && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-pink-200/50 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-pink-200/40">
+                  Componentes del Bundle
+                </h3>
+                <BundleManager
+                  components={bundleComponents}
+                  onComponentsChange={setBundleComponents}
+                  disabled={isSubmitting}
+                  precioDetalBundle={parseFloat(formData.precio_detal) || 0}
+                  precioMayorBundle={parseFloat(formData.precio_mayor) || 0}
+                />
+              </div>
+            )}
 
-          {/* Info para producto bundle */}
-          {productType === 'bundle' && bundleComponents.length > 0 && (
-            <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-sm text-amber-800">
-                <strong>💡 Recordatorio:</strong> Este bundle se creará con los {bundleComponents.length} componentes seleccionados.
-                El stock del bundle es independiente y debe gestionarse manualmente. Al vender un bundle, se descontará automáticamente el stock de cada componente.
-              </p>
+            {/* Precios */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Precios
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    {isVariable ? 'Precio Detal (Referencia)' : 'Precio Detal'}
+                    {productType === 'bundle' && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  <input
+                    type="number"
+                    name="precio_detal"
+                    value={formData.precio_detal}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    required={productType === 'simple' || productType === 'bundle'}
+                    disabled={isSubmitting}
+                  />
+                  {isVariable && (
+                    <p className="text-xs text-gray-500 mt-1.5">Opcional. Se usará como referencia al crear variaciones.</p>
+                  )}
+                  {productType === 'bundle' && (
+                    <p className="text-xs text-gray-500 mt-1.5">Precio independiente del bundle (puede ser menor que la suma de componentes).</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    {isVariable ? 'Precio Mayor (Referencia)' : 'Precio Mayor'}
+                    {productType === 'bundle' && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  <input
+                    type="number"
+                    name="precio_mayor"
+                    value={formData.precio_mayor}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    required={productType === 'simple' || productType === 'bundle'}
+                    disabled={isSubmitting}
+                  />
+                  {isVariable && (
+                    <p className="text-xs text-gray-500 mt-1.5">Opcional. Se usará como referencia al crear variaciones.</p>
+                  )}
+                  {productType === 'bundle' && (
+                    <p className="text-xs text-gray-500 mt-1.5">Precio mayorista del bundle completo.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Mostrar márgenes de rentabilidad para productos simples y variables */}
+              {productType !== 'bundle' && (
+                <ProfitMarginDisplay
+                  precioDetal={parseFloat(formData.precio_detal) || 0}
+                  precioMayor={parseFloat(formData.precio_mayor) || 0}
+                  costoPromedio={costoPromedio}
+                  tipoProducto={productType === 'variable' ? 'variable' : 'simple'}
+                  title="Rentabilidad del Producto"
+                  rentabilidadDetal={rentabilidadData.rentabilidadDetal}
+                  margenGananciaDetal={rentabilidadData.margenGananciaDetal}
+                  utilidadBrutaDetal={rentabilidadData.utilidadBrutaDetal}
+                  clasificacionRentabilidad={rentabilidadData.clasificacionRentabilidad}
+                  rentabilidadMayor={rentabilidadData.rentabilidadMayor}
+                />
+              )}
             </div>
-          )}
-        </form>
+            {/* Código WooCommerce - solo para producto simple */}
+            {productType === 'simple' && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                  Integración WooCommerce
+                </h3>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
+                  <input
+                    type="text"
+                    name="art_woo_id"
+                    value={formData.art_woo_id}
+                    onChange={handleChange}
+                    onBlur={handleBlurArtWoo}
+                    placeholder="Ingrese código WooCommerce (opcional)"
+                    className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
+                    disabled={isSubmitting}
+                  />
+                  {errorArtWoo && (
+                    <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
+                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errorArtWoo}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* Imágenes */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Galería de Imágenes
+              </h3>
+              <div className="border-2 border-dashed border-[#f5cad4]/60 rounded-xl p-6 text-center bg-[#fffafe]">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  accept=".jpg,.jpeg,.png,.webp"
+                  multiple
+                  className="hidden"
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current.click()}
+                  className="bg-[#f7b3c2]/30 hover:bg-[#f58ea3] text-[#f58ea3] hover:text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 mx-auto font-medium shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
+                >
+                  <FaUpload />
+                  Seleccionar Imágenes
+                </button>
+                <p className="text-xs text-gray-500 mt-3">
+                  Formatos permitidos: JPG, JPEG, PNG, WEBP. Máximo 4 imágenes.
+                </p>
+              </div>
+              {/* Previsualización de imágenes */}
+              {previewUrls.length > 0 && (
+                <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {previewUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Previsualización ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-xl border border-[#f5cad4]/60 bg-[#fffafe] shadow-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 bg-[#f58ea3] text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                        title="Eliminar imagen"
+                        disabled={isSubmitting}
+                      >
+                        <FaTrash size="0.75em" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Info para producto variable */}
+            {isVariable && (
+              <div className="bg-purple-50/60 border border-purple-200/60 rounded-xl p-4 backdrop-blur-sm">
+                <p className="text-sm text-purple-800">
+                  <strong>💡 Nota:</strong> Después de crear el producto variable, serás redirigido a la pantalla de edición donde podrás crear las variaciones individuales con sus precios y stock.
+                </p>
+              </div>
+            )}
+
+            {/* Info para producto bundle */}
+            {productType === 'bundle' && bundleComponents.length > 0 && (
+              <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl p-4 backdrop-blur-sm">
+                <p className="text-sm text-amber-800">
+                  <strong>💡 Recordatorio:</strong> Este bundle se creará con los {bundleComponents.length} componentes seleccionados.
+                  El stock del bundle es independiente y debe gestionarse manualmente. Al vender un bundle, se descontará automáticamente el stock de cada componente.
+                </p>
+              </div>
+            )}
+          </form>
         </div>
       </div>
 
@@ -1039,8 +1042,8 @@ const CreateProduct = () => {
               ) : (
                 <>
                   {productType === 'variable' ? 'Crear Producto Variable' :
-                  productType === 'bundle' ? 'Crear Bundle/Combo' :
-                  'Crear Producto'}
+                    productType === 'bundle' ? 'Crear Bundle/Combo' :
+                      'Crear Producto'}
                 </>
               )}
             </button>

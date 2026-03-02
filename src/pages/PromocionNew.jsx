@@ -150,7 +150,7 @@ const PromocionNew = () => {
   // Eliminar fila (solo artículos nuevos)
   const removeRow = (index) => {
     const row = articleRows[index];
-    
+
     // Solo permitir eliminar artículos nuevos
     if (!row.isNew) {
       Swal.fire({
@@ -161,7 +161,7 @@ const PromocionNew = () => {
       });
       return;
     }
-    
+
     if (articleRows.length > 1) {
       const updatedRows = articleRows.filter((_, i) => i !== index);
       setArticleRows(updatedRows);
@@ -171,7 +171,7 @@ const PromocionNew = () => {
   // Función para abrir búsqueda de artículo
   const buscarArticulo = (index) => {
     const row = articleRows[index];
-    
+
     // Solo permitir búsqueda para artículos nuevos
     if (!row.isNew) {
       Swal.fire({
@@ -182,7 +182,7 @@ const PromocionNew = () => {
       });
       return;
     }
-    
+
     setCurrentRowIndex(index);
     setShowArticleModal(true);
   };
@@ -190,18 +190,22 @@ const PromocionNew = () => {
   // Función para consultar artículo cuando se pierde el foco
   const handleArtCodBlur = async (index, artCodValue) => {
     const row = articleRows[index];
-    
+
     // Solo permitir consulta para artículos nuevos
     if (!row.isNew) return;
-    
+
     if (!artCodValue) return;
-    
+
     try {
-      const response = await axios.get(`${API_URL}/consultarArticuloByArtCod/articulo/${artCodValue}`);
-      
+      const response = await axios.get(`${API_URL}/consultarArticuloByArtCod/articulo/${artCodValue}`, {
+        headers: {
+          'x-access-token': localStorage.getItem('pedidos_pretty_token')
+        }
+      });
+
       if (response.data.success) {
         const articulo = response.data.articulo;
-        
+
         // Verificar si el artículo ya existe en otra fila
         if (isArticleDuplicate(articulo.art_sec, index)) {
           Swal.fire({
@@ -210,7 +214,7 @@ const PromocionNew = () => {
             text: `El artículo "${articulo.art_nom}" ya está agregado a esta promoción`,
             confirmButtonColor: '#f58ea3'
           });
-          
+
           // Limpiar campos del artículo duplicado
           const updatedRows = [...articleRows];
           updatedRows[index] = {
@@ -224,7 +228,7 @@ const PromocionNew = () => {
           setArticleRows(updatedRows);
           return;
         }
-        
+
         const updatedRows = [...articleRows];
         updatedRows[index] = {
           ...updatedRows[index],
@@ -278,9 +282,9 @@ const PromocionNew = () => {
 
   // Función para verificar si un artículo ya existe en la promoción
   const isArticleDuplicate = (artSec, excludeIndex = null) => {
-    return articleRows.some((row, index) => 
-      row.art_sec && 
-      row.art_sec === artSec && 
+    return articleRows.some((row, index) =>
+      row.art_sec &&
+      row.art_sec === artSec &&
       index !== excludeIndex
     );
   };
@@ -288,14 +292,14 @@ const PromocionNew = () => {
   // Función para obtener el estado de validación de una fila
   const getRowValidationState = (row, index) => {
     if (!row.art_sec) return null;
-    
+
     if (isArticleDuplicate(row.art_sec, index)) {
       return {
         isValid: false,
         message: 'Artículo duplicado'
       };
     }
-    
+
     return {
       isValid: true,
       message: ''
@@ -335,7 +339,7 @@ const PromocionNew = () => {
   // Función para guardar promoción
   const handleGuardar = async () => {
     setIsSubmitting(true);
-    
+
     try {
       // Validaciones de encabezado
       if (!headerData.codigo.trim()) {
@@ -372,8 +376,8 @@ const PromocionNew = () => {
       }
 
       // Filtrar artículos válidos
-      const articulosValidos = articleRows.filter(row => 
-        row.art_sec && 
+      const articulosValidos = articleRows.filter(row =>
+        row.art_sec &&
         (row.precio_oferta || row.descuento_porcentaje) &&
         ['A', 'I'].includes(row.estado)
       );
@@ -436,10 +440,10 @@ const PromocionNew = () => {
       }
     } catch (error) {
       console.error('Error al guardar promoción:', error);
-      
+
       // Extraer mensaje de error del backend
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error al guardar la promoción';
-      
+
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -516,7 +520,7 @@ const PromocionNew = () => {
             <FaTag className="text-[#f58ea3]" />
             <h2 className="text-xl font-bold text-gray-800">Información General</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Código */}
             <div>
@@ -526,7 +530,7 @@ const PromocionNew = () => {
               <input
                 type="text"
                 value={headerData.codigo}
-                onChange={(e) => setHeaderData({...headerData, codigo: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, codigo: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 placeholder="Ej: OFERTA_VERANO_2024"
                 required
@@ -540,7 +544,7 @@ const PromocionNew = () => {
               </label>
               <select
                 value={headerData.tipo}
-                onChange={(e) => setHeaderData({...headerData, tipo: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, tipo: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
               >
                 <option value="OFERTA">Oferta</option>
@@ -557,7 +561,7 @@ const PromocionNew = () => {
               </label>
               <textarea
                 value={headerData.descripcion}
-                onChange={(e) => setHeaderData({...headerData, descripcion: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, descripcion: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 rows={3}
                 placeholder="Descripción detallada de la promoción..."
@@ -574,7 +578,7 @@ const PromocionNew = () => {
               <input
                 type="date"
                 value={headerData.fecha_inicio}
-                onChange={(e) => setHeaderData({...headerData, fecha_inicio: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, fecha_inicio: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 required
               />
@@ -588,7 +592,7 @@ const PromocionNew = () => {
               <input
                 type="date"
                 value={headerData.fecha_fin}
-                onChange={(e) => setHeaderData({...headerData, fecha_fin: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, fecha_fin: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 required
               />
@@ -601,7 +605,7 @@ const PromocionNew = () => {
               </label>
               <textarea
                 value={headerData.observaciones}
-                onChange={(e) => setHeaderData({...headerData, observaciones: e.target.value})}
+                onChange={(e) => setHeaderData({ ...headerData, observaciones: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
                 rows={2}
                 placeholder="Observaciones adicionales..."
@@ -754,11 +758,10 @@ const PromocionNew = () => {
                         value={row.art_cod}
                         onChange={(e) => handleRowChange(index, 'art_cod', e.target.value)}
                         onBlur={(e) => handleArtCodBlur(index, e.target.value)}
-                        className={`w-full p-2 border rounded text-sm transition-colors ${
-                          !row.isNew 
-                            ? 'bg-gray-100 cursor-not-allowed' 
+                        className={`w-full p-2 border rounded text-sm transition-colors ${!row.isNew
+                            ? 'bg-gray-100 cursor-not-allowed'
                             : 'focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3]'
-                        }`}
+                          }`}
                         placeholder="Código..."
                         readOnly={!row.isNew}
                         disabled={!row.isNew}
@@ -767,11 +770,10 @@ const PromocionNew = () => {
                     <td className="px-3 py-2">
                       <button
                         onClick={() => buscarArticulo(index)}
-                        className={`p-2 border rounded transition-colors ${
-                          !row.isNew 
-                            ? 'bg-gray-100 cursor-not-allowed opacity-50' 
+                        className={`p-2 border rounded transition-colors ${!row.isNew
+                            ? 'bg-gray-100 cursor-not-allowed opacity-50'
                             : 'bg-[#fff5f7] hover:bg-[#fce7eb]'
-                        }`}
+                          }`}
                         disabled={!row.isNew}
                         title={!row.isNew ? 'No se puede modificar artículo existente' : 'Buscar artículo'}
                       >

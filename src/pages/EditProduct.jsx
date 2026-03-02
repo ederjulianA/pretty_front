@@ -59,10 +59,10 @@ const EditProduct = () => {
   const [convertAttributeOptions, setConvertAttributeOptions] = useState([]);
   const [convertOptionInput, setConvertOptionInput] = useState('');
   const [isConverting, setIsConverting] = useState(false);
-  
+
   // Estado para costo promedio del producto
   const [costoPromedio, setCostoPromedio] = useState(0);
-  
+
   // Estado para datos de rentabilidad del backend
   const [rentabilidadData, setRentabilidadData] = useState({
     rentabilidadDetal: null,
@@ -71,15 +71,14 @@ const EditProduct = () => {
     clasificacionRentabilidad: null,
     rentabilidadMayor: null
   });
-  
+
   // Hook para obtener datos de rentabilidad actualizados del backend
   const { rentabilidadData: rentabilidadBackend, refetch: refetchRentabilidad } = useRentabilidad(id, true);
-  
+
   // Actualizar costo promedio si el hook lo devuelve y el costo actual es 0
   // (Solo como fallback si el endpoint de detalle no lo devuelve por alguna razón)
   useEffect(() => {
     if (rentabilidadBackend.costoPromedio && rentabilidadBackend.costoPromedio > 0 && costoPromedio === 0) {
-      console.log('✅ Costo promedio actualizado desde hook de rentabilidad:', rentabilidadBackend.costoPromedio);
       setCostoPromedio(rentabilidadBackend.costoPromedio);
     }
   }, [rentabilidadBackend.costoPromedio, costoPromedio]);
@@ -228,10 +227,13 @@ const EditProduct = () => {
   // Cargar datos del producto a editar
   useEffect(() => {
     setIsLoadingProduct(true);
-    axios.get(`${API_URL}/articulos/${id}`)
+    const token = localStorage.getItem('pedidos_pretty_token');
+    axios.get(`${API_URL}/articulos/${id}`, {
+      headers: { 'x-access-token': token }
+    })
       .then(async (response) => {
         const data = response.data;
-        if(data.success && data.articulo) {
+        if (data.success && data.articulo) {
           const prod = data.articulo;
           setFormData({
             art_cod: prod.art_cod || '',
@@ -245,7 +247,7 @@ const EditProduct = () => {
           });
           setInitialArtCod(prod.art_cod || '');
           setInitialArtWooId(prod.art_woo_id || '');
-          
+
           // Obtener costo promedio del producto
           // Usar la misma lógica que Products.jsx para mantener consistencia
           // El backend ahora devuelve todos los campos de costo promedio en el endpoint de detalle
@@ -256,17 +258,15 @@ const EditProduct = () => {
             articulo.kar_cos_pro ??
             articulo.art_bod_cos_cat ??
             null;
-          
+
           const costoCalculado = getCostoPromedio(prod);
-          
+
           if (costoCalculado !== null && costoCalculado !== undefined) {
-            console.log('✅ Costo promedio obtenido del endpoint /articulos/:id:', costoCalculado);
             setCostoPromedio(parseFloat(costoCalculado));
           } else {
-            console.log('⚠️ Costo promedio no disponible en el endpoint de detalle. Se intentará obtener desde hook de rentabilidad o variaciones.');
             setCostoPromedio(0);
           }
-          
+
           // Guardar datos de rentabilidad del backend para pasarlos al componente
           // Combinar datos de la respuesta inicial con datos del hook (si están disponibles)
           setRentabilidadData({
@@ -295,7 +295,7 @@ const EditProduct = () => {
               });
               if (bundleResponse.data.success && bundleResponse.data.data) {
                 const componentes = bundleResponse.data.data.componentes || [];
-                
+
                 // El backend ahora devuelve directamente precio_detal, precio_mayor y costo_promedio
                 setBundleComponents(componentes.map(c => ({
                   art_sec: c.art_sec,
@@ -322,30 +322,25 @@ const EditProduct = () => {
               // Si el costo promedio es 0, intentar obtenerlo del promedio de variaciones
               if (costoCalculado === 0 && variationsData?.data?.length > 0) {
                 const getCostoVariacion = (v) =>
-                  v.costo_promedio ?? 
-                  v.costo_promedio_ponderado ?? 
-                  v.costo_promedio_actual ?? 
-                  v.art_bod_cos_cat ?? 
-                  v.kar_cos_pro ?? 
+                  v.costo_promedio ??
+                  v.costo_promedio_ponderado ??
+                  v.costo_promedio_actual ??
+                  v.art_bod_cos_cat ??
+                  v.kar_cos_pro ??
                   0;
-                
+
                 const variacionesConCosto = variationsData.data.filter(v => {
                   const costoVar = getCostoVariacion(v);
                   return costoVar > 0;
                 });
-                
+
                 if (variacionesConCosto.length > 0) {
                   const costoPromedioVariaciones = variacionesConCosto.reduce((sum, v) => {
                     return sum + parseFloat(getCostoVariacion(v));
                   }, 0) / variacionesConCosto.length;
-                  
-                  console.log('✅ Costo promedio calculado desde variaciones:', costoPromedioVariaciones);
+
                   setCostoPromedio(costoPromedioVariaciones);
                 } else {
-                  console.log('⚠️ Variaciones cargadas pero ninguna tiene costo promedio:', variationsData.data.map(v => ({
-                    art_cod: v.art_cod,
-                    campos: Object.keys(v).filter(k => k.toLowerCase().includes('costo') || k.toLowerCase().includes('cos'))
-                  })));
                 }
               }
             }
@@ -359,27 +354,25 @@ const EditProduct = () => {
             // Si el costo promedio es 0, intentar obtenerlo del promedio de variaciones
             if (costoCalculado === 0 && variationsData?.data?.length > 0) {
               const getCostoVariacion = (v) =>
-                v.costo_promedio ?? 
-                v.costo_promedio_ponderado ?? 
-                v.costo_promedio_actual ?? 
-                v.art_bod_cos_cat ?? 
-                v.kar_cos_pro ?? 
+                v.costo_promedio ??
+                v.costo_promedio_ponderado ??
+                v.costo_promedio_actual ??
+                v.art_bod_cos_cat ??
+                v.kar_cos_pro ??
                 0;
-              
+
               const variacionesConCosto = variationsData.data.filter(v => {
                 const costoVar = getCostoVariacion(v);
                 return costoVar > 0;
               });
-              
+
               if (variacionesConCosto.length > 0) {
                 const costoPromedioVariaciones = variacionesConCosto.reduce((sum, v) => {
                   return sum + parseFloat(getCostoVariacion(v));
                 }, 0) / variacionesConCosto.length;
-                
-                console.log('✅ Costo promedio calculado desde variaciones:', costoPromedioVariaciones);
+
                 setCostoPromedio(costoPromedioVariaciones);
               } else {
-                console.log('⚠️ Variaciones cargadas pero ninguna tiene costo promedio');
               }
             }
           } else {
@@ -513,19 +506,21 @@ const EditProduct = () => {
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? (e.target.checked ? 'S' : 'N') : e.target.value;
-    setFormData({...formData, [e.target.name]: value});
+    setFormData({ ...formData, [e.target.name]: value });
     // Reiniciar mensaje de error al editar
-    if(e.target.name === 'art_cod') setErrorArtCod('');
-    if(e.target.name === 'art_woo_id') setErrorArtWoo('');
+    if (e.target.name === 'art_cod') setErrorArtCod('');
+    if (e.target.name === 'art_woo_id') setErrorArtWoo('');
   };
 
   // Función para validar la unicidad
   const validateUnique = async (field, value) => {
     try {
+      const token = localStorage.getItem('pedidos_pretty_token');
       const response = await axios.get(`${API_URL}/articulos/validar`, {
+        headers: { 'x-access-token': token },
         params: { [field]: value }
       });
-      if(response.data.success && response.data.exists) {
+      if (response.data.success && response.data.exists) {
         return true;
       }
     } catch (error) {
@@ -536,9 +531,9 @@ const EditProduct = () => {
 
   // Validar en línea para art_cod, excluyendo el valor inicial
   const handleBlurArtCod = async () => {
-    if(formData.art_cod && formData.art_cod !== initialArtCod) {
+    if (formData.art_cod && formData.art_cod !== initialArtCod) {
       const exists = await validateUnique('art_cod', formData.art_cod);
-      if(exists) {
+      if (exists) {
         setErrorArtCod('El código ya existe.');
       }
     }
@@ -546,9 +541,9 @@ const EditProduct = () => {
 
   // Validar en línea para art_woo_id, excluyendo el valor inicial
   const handleBlurArtWoo = async () => {
-    if(formData.art_woo_id && formData.art_woo_id !== initialArtWooId) {
+    if (formData.art_woo_id && formData.art_woo_id !== initialArtWooId) {
       const exists = await validateUnique('art_woo_id', formData.art_woo_id);
-      if(exists) {
+      if (exists) {
         setErrorArtWoo('El código de WooCommerce ya existe.');
       }
     }
@@ -557,7 +552,7 @@ const EditProduct = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Si existen errores, no se envía
-    if(errorArtCod || errorArtWoo) {
+    if (errorArtCod || errorArtWoo) {
       Swal.fire({
         icon: 'error',
         title: 'Error de validación',
@@ -627,10 +622,13 @@ const EditProduct = () => {
           precio_mayor: Number(formData.precio_mayor)
         };
 
-        const response = await axios.put(`${API_URL}/articulos/${id}`, dataToSend);
+        const token = localStorage.getItem('pedidos_pretty_token');
+        const response = await axios.put(`${API_URL}/articulos/${id}`, dataToSend, {
+          headers: { 'x-access-token': token }
+        });
         const data = response.data;
 
-        if(data.success) {
+        if (data.success) {
           Swal.fire({
             icon: 'success',
             title: 'Producto editado',
@@ -677,7 +675,7 @@ const EditProduct = () => {
     return allOptions.filter(opt => !usedOptions.includes(opt));
   };
 
-  if(isLoadingProduct) {
+  if (isLoadingProduct) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#edf3f9]">
         <p className="text-lg text-[#f58ea3] font-semibold">Cargando producto...</p>
@@ -703,13 +701,12 @@ const EditProduct = () => {
           {/* Badge de tipo de producto */}
           {(isVariable || isVariation || isBundle) && (
             <div className="flex-shrink-0">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                isVariable
-                  ? 'bg-purple-100 text-purple-700'
-                  : isVariation
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${isVariable
+                ? 'bg-purple-100 text-purple-700'
+                : isVariation
                   ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-pink-100 text-pink-700'
-              }`}>
+                }`}>
                 {isVariable ? (
                   <>
                     <FaLayerGroup className="w-3 h-3" />
@@ -732,358 +729,358 @@ const EditProduct = () => {
         </div>
 
         <div>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Información Básica */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Información Básica
-            </h3>
-            <div className="space-y-5">
-              {/* Código */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-semibold text-base">Código del Producto</label>
-                <input
-                  type="text"
-                  name="art_cod"
-                  value={formData.art_cod}
-                  onChange={handleChange}
-                  onBlur={handleBlurArtCod}
-                  placeholder="Ingrese código único"
-                  className={`w-full px-4 py-3.5 text-base border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtCod ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
-                  required
-                  disabled={isVariation}
-                />
-                {errorArtCod && (
-                  <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
-                    <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {errorArtCod}
-                  </div>
-                )}
-                {isVariation && <p className="text-xs text-gray-500 mt-1.5">El código de variaciones es generado automáticamente.</p>}
-              </div>
-              {/* Nombre */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-semibold text-base">Nombre del Producto</label>
-                <input
-                  type="text"
-                  name="art_nom"
-                  value={formData.art_nom}
-                  onChange={handleChange}
-                  placeholder="Ingrese el nombre completo"
-                  className="w-full px-4 py-3.5 text-base border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Clasificación (variaciones heredan del padre, no editable) */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Clasificación
-            </h3>
-            {isVariation && (
-              <p className="text-sm text-gray-500 mb-4">
-                La variación hereda la categoría y subcategoría del producto padre; no se pueden modificar aquí.
-              </p>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Categoría */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">Categoría</label>
-                {isLoadingCategories ? (
-                  <div className="flex items-center gap-2 text-[#f58ea3] py-3">
-                    <FaSpinner className="animate-spin" />
-                    <span>Cargando categorías...</span>
-                  </div>
-                ) : (
-                  <select
-                    name="categoria"
-                    value={formData.categoria}
-                    onChange={handleChange}
-                    disabled={isVariation}
-                    className={`w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${isVariation ? 'bg-gray-100 cursor-not-allowed' : 'bg-[#fffafe]'}`}
-                    required
-                  >
-                    <option value="">Seleccione categoría</option>
-                    {categories.map(cat => (
-                      <option key={cat.inv_gru_cod} value={cat.inv_gru_cod}>
-                        {cat.inv_gru_nom}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              {/* Subcategoría */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">Subcategoría</label>
-                {isLoadingSubcategorias ? (
-                  <div className="flex items-center gap-2 text-[#f58ea3] py-3">
-                    <FaSpinner className="animate-spin" />
-                    <span>Cargando subcategorías...</span>
-                  </div>
-                ) : (
-                  <select
-                    name="subcategoria"
-                    value={formData.subcategoria}
-                    onChange={handleChange}
-                    disabled={isVariation}
-                    className={`w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${isVariation ? 'bg-gray-100 cursor-not-allowed' : 'bg-[#fffafe]'}`}
-                    required
-                  >
-                    <option value="">Seleccione subcategoría</option>
-                    {subcategories.map(sub => (
-                      <option key={sub.inv_sub_gru_cod} value={sub.inv_sub_gru_cod}>
-                        {sub.inv_sub_gru_nom}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sección de Componentes (solo para bundle) */}
-          {isBundle && (
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-pink-200/50 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-pink-200/40">
-                Componentes del Bundle
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Información Básica */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Información Básica
               </h3>
-              <BundleManager
-                components={bundleComponents}
-                onComponentsChange={setBundleComponents}
-                disabled={isSubmitting}
-                precioDetalBundle={parseFloat(formData.precio_detal) || 0}
-                precioMayorBundle={parseFloat(formData.precio_mayor) || 0}
-              />
-            </div>
-          )}
-
-          {/* Precios */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Precios
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">
-                  {isVariable ? 'Precio Detal (Referencia)' : 'Precio Detal'}
-                </label>
-                <input
-                  type="number"
-                  name="precio_detal"
-                  value={formData.precio_detal}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                  required
-                />
-                {isVariable && (
-                  <p className="text-xs text-gray-500 mt-1.5">Precio de referencia para las variaciones.</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">
-                  {isVariable ? 'Precio Mayor (Referencia)' : 'Precio Mayor'}
-                </label>
-                <input
-                  type="number"
-                  name="precio_mayor"
-                  value={formData.precio_mayor}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
-                  required
-                />
-                {isVariable && (
-                  <p className="text-xs text-gray-500 mt-1.5">Precio de referencia para las variaciones.</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Mostrar márgenes de rentabilidad para productos simples y variables */}
-            {!isBundle && (
-              <ProfitMarginDisplay
-                precioDetal={parseFloat(formData.precio_detal) || 0}
-                precioMayor={parseFloat(formData.precio_mayor) || 0}
-                costoPromedio={costoPromedio}
-                tipoProducto={isVariable ? 'variable' : 'simple'}
-                title="Rentabilidad del Producto"
-                // Priorizar datos del hook de rentabilidad (más actualizados)
-                rentabilidadDetal={rentabilidadBackend.rentabilidadDetal ?? rentabilidadData.rentabilidadDetal}
-                margenGananciaDetal={rentabilidadBackend.margenGananciaDetal ?? rentabilidadData.margenGananciaDetal}
-                utilidadBrutaDetal={rentabilidadBackend.utilidadBrutaDetal ?? rentabilidadData.utilidadBrutaDetal}
-                clasificacionRentabilidad={rentabilidadBackend.clasificacionRentabilidad ?? rentabilidadData.clasificacionRentabilidad}
-                rentabilidadMayor={rentabilidadBackend.rentabilidadMayor ?? rentabilidadData.rentabilidadMayor}
-              />
-            )}
-          </div>
-
-          {/* Integración WooCommerce */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Integración WooCommerce
-            </h3>
-            <div className="space-y-4">
-              {/* Código WooCommerce (productos simples/padre). En variaciones se usa art_woo_variation_id en BD. */}
-              <div>
-                <label className="block text-gray-700 mb-2 font-medium">
-                  {isVariation ? 'ID WooCommerce (variación)' : 'Código WooCommerce'}
-                </label>
-                <input
-                  type="text"
-                  name="art_woo_id"
-                  value={formData.art_woo_id}
-                  onChange={handleChange}
-                  onBlur={handleBlurArtWoo}
-                  placeholder={isVariation ? 'ID de variación en WooCommerce' : 'Ingrese código WooCommerce'}
-                  className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
-                  required={!isVariation}
-                />
-                {errorArtWoo && (
-                  <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
-                    <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {errorArtWoo}
-                  </div>
-                )}
-                {isVariation && !formData.art_woo_id && (
-                  <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2">
-                    Esta variación no tiene ID de WooCommerce. Suele ocurrir cuando la variación se creó pero la sincronización con WooCommerce falló (por ejemplo, si el producto padre no estaba convertido a tipo variable en WooCommerce). Revise los logs del backend al crear variaciones.
-                  </p>
-                )}
-              </div>
-              {/* Actualizar Fecha Woo */}
-              <div>
-                <label className="flex items-center space-x-2 cursor-pointer">
+              <div className="space-y-5">
+                {/* Código */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-base">Código del Producto</label>
                   <input
-                    type="checkbox"
-                    name="actualiza_fecha"
-                    checked={formData.actualiza_fecha === 'S'}
+                    type="text"
+                    name="art_cod"
+                    value={formData.art_cod}
                     onChange={handleChange}
-                    className="h-4 w-4 text-[#f58ea3] focus:ring-[#f58ea3] border-[#f5cad4] rounded"
+                    onBlur={handleBlurArtCod}
+                    placeholder="Ingrese código único"
+                    className={`w-full px-4 py-3.5 text-base border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtCod ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
+                    required
+                    disabled={isVariation}
                   />
-                  <span className="text-gray-700 font-medium">Actualizar Fecha Woo</span>
-                </label>
-          </div>
-          </div>
-        </div>
-
-          {/* Convertir a producto variable — solo para artículos simples */}
-          {productWooType === 'simple' && (
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 shadow-sm">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <FaLayerGroup className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Convertir a producto variable
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Convierte este artículo en un producto variable para gestionar variaciones (por ejemplo tonos o colores) sin perder datos. Luego podrás agregar cada variación desde esta misma página.
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-4 pt-2">
-                <div>
-                  <label className="block text-gray-700 mb-2 font-medium text-sm">Atributo de variación</label>
-                  <select
-                    value={convertAttributeName}
-                    onChange={(e) => setConvertAttributeName(e.target.value)}
-                    className="w-full max-w-xs px-4 py-2.5 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition text-gray-800"
-                  >
-                    <option value="Tono">Tono</option>
-                    <option value="Color">Color</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-700 mb-2 font-medium text-sm">Opciones del atributo</label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {convertAttributeOptions.map((opt, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-800 text-sm font-medium border border-purple-200/60"
-                      >
-                        {opt}
-                        <button
-                          type="button"
-                          onClick={() => removeConvertOption(index)}
-                          className="ml-0.5 text-purple-500 hover:text-purple-700 focus:outline-none"
-                          aria-label="Quitar opción"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={convertOptionInput}
-                      onChange={(e) => setConvertOptionInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addConvertOption())}
-                      placeholder="Ej: Rojo, Azul, Negro..."
-                      className="flex-1 min-w-0 px-4 py-2.5 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition text-gray-800"
-                    />
-                    <button
-                      type="button"
-                      onClick={addConvertOption}
-                      className="px-4 py-2.5 rounded-xl border border-[#f5cad4]/80 text-gray-700 bg-white hover:bg-[#f7b3c2]/20 transition font-medium"
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleConvertToVariable}
-                  disabled={isConverting || convertAttributeOptions.length === 0}
-                  className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold shadow-md hover:bg-purple-700 hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isConverting ? (
-                    <>
-                      <FaSpinner className="w-4 h-4 animate-spin" />
-                      Convirtiendo...
-                    </>
-                  ) : (
-                    <>
-                      <FaLayerGroup className="w-4 h-4" />
-                      Convertir a producto variable
-                    </>
+                  {errorArtCod && (
+                    <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
+                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errorArtCod}
+                    </div>
                   )}
-                </button>
+                  {isVariation && <p className="text-xs text-gray-500 mt-1.5">El código de variaciones es generado automáticamente.</p>}
+                </div>
+                {/* Nombre */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-base">Nombre del Producto</label>
+                  <input
+                    type="text"
+                    name="art_nom"
+                    value={formData.art_nom}
+                    onChange={handleChange}
+                    placeholder="Ingrese el nombre completo"
+                    className="w-full px-4 py-3.5 text-base border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    required
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Clasificación (variaciones heredan del padre, no editable) */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Clasificación
+              </h3>
+              {isVariation && (
+                <p className="text-sm text-gray-500 mb-4">
+                  La variación hereda la categoría y subcategoría del producto padre; no se pueden modificar aquí.
+                </p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Categoría */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Categoría</label>
+                  {isLoadingCategories ? (
+                    <div className="flex items-center gap-2 text-[#f58ea3] py-3">
+                      <FaSpinner className="animate-spin" />
+                      <span>Cargando categorías...</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="categoria"
+                      value={formData.categoria}
+                      onChange={handleChange}
+                      disabled={isVariation}
+                      className={`w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${isVariation ? 'bg-gray-100 cursor-not-allowed' : 'bg-[#fffafe]'}`}
+                      required
+                    >
+                      <option value="">Seleccione categoría</option>
+                      {categories.map(cat => (
+                        <option key={cat.inv_gru_cod} value={cat.inv_gru_cod}>
+                          {cat.inv_gru_nom}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                {/* Subcategoría */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Subcategoría</label>
+                  {isLoadingSubcategorias ? (
+                    <div className="flex items-center gap-2 text-[#f58ea3] py-3">
+                      <FaSpinner className="animate-spin" />
+                      <span>Cargando subcategorías...</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="subcategoria"
+                      value={formData.subcategoria}
+                      onChange={handleChange}
+                      disabled={isVariation}
+                      className={`w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${isVariation ? 'bg-gray-100 cursor-not-allowed' : 'bg-[#fffafe]'}`}
+                      required
+                    >
+                      <option value="">Seleccione subcategoría</option>
+                      {subcategories.map(sub => (
+                        <option key={sub.inv_sub_gru_cod} value={sub.inv_sub_gru_cod}>
+                          {sub.inv_sub_gru_nom}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de Componentes (solo para bundle) */}
+            {isBundle && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-pink-200/50 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-pink-200/40">
+                  Componentes del Bundle
+                </h3>
+                <BundleManager
+                  components={bundleComponents}
+                  onComponentsChange={setBundleComponents}
+                  disabled={isSubmitting}
+                  precioDetalBundle={parseFloat(formData.precio_detal) || 0}
+                  precioMayorBundle={parseFloat(formData.precio_mayor) || 0}
+                />
+              </div>
+            )}
+
+            {/* Precios */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Precios
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    {isVariable ? 'Precio Detal (Referencia)' : 'Precio Detal'}
+                  </label>
+                  <input
+                    type="number"
+                    name="precio_detal"
+                    value={formData.precio_detal}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    required
+                  />
+                  {isVariable && (
+                    <p className="text-xs text-gray-500 mt-1.5">Precio de referencia para las variaciones.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    {isVariable ? 'Precio Mayor (Referencia)' : 'Precio Mayor'}
+                  </label>
+                  <input
+                    type="number"
+                    name="precio_mayor"
+                    value={formData.precio_mayor}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    required
+                  />
+                  {isVariable && (
+                    <p className="text-xs text-gray-500 mt-1.5">Precio de referencia para las variaciones.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Mostrar márgenes de rentabilidad para productos simples y variables */}
+              {!isBundle && (
+                <ProfitMarginDisplay
+                  precioDetal={parseFloat(formData.precio_detal) || 0}
+                  precioMayor={parseFloat(formData.precio_mayor) || 0}
+                  costoPromedio={costoPromedio}
+                  tipoProducto={isVariable ? 'variable' : 'simple'}
+                  title="Rentabilidad del Producto"
+                  // Priorizar datos del hook de rentabilidad (más actualizados)
+                  rentabilidadDetal={rentabilidadBackend.rentabilidadDetal ?? rentabilidadData.rentabilidadDetal}
+                  margenGananciaDetal={rentabilidadBackend.margenGananciaDetal ?? rentabilidadData.margenGananciaDetal}
+                  utilidadBrutaDetal={rentabilidadBackend.utilidadBrutaDetal ?? rentabilidadData.utilidadBrutaDetal}
+                  clasificacionRentabilidad={rentabilidadBackend.clasificacionRentabilidad ?? rentabilidadData.clasificacionRentabilidad}
+                  rentabilidadMayor={rentabilidadBackend.rentabilidadMayor ?? rentabilidadData.rentabilidadMayor}
+                />
+              )}
+            </div>
+
+            {/* Integración WooCommerce */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Integración WooCommerce
+              </h3>
+              <div className="space-y-4">
+                {/* Código WooCommerce (productos simples/padre). En variaciones se usa art_woo_variation_id en BD. */}
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    {isVariation ? 'ID WooCommerce (variación)' : 'Código WooCommerce'}
+                  </label>
+                  <input
+                    type="text"
+                    name="art_woo_id"
+                    value={formData.art_woo_id}
+                    onChange={handleChange}
+                    onBlur={handleBlurArtWoo}
+                    placeholder={isVariation ? 'ID de variación en WooCommerce' : 'Ingrese código WooCommerce'}
+                    className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
+                    required={!isVariation}
+                  />
+                  {errorArtWoo && (
+                    <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
+                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errorArtWoo}
+                    </div>
+                  )}
+                  {isVariation && !formData.art_woo_id && (
+                    <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2">
+                      Esta variación no tiene ID de WooCommerce. Suele ocurrir cuando la variación se creó pero la sincronización con WooCommerce falló (por ejemplo, si el producto padre no estaba convertido a tipo variable en WooCommerce). Revise los logs del backend al crear variaciones.
+                    </p>
+                  )}
+                </div>
+                {/* Actualizar Fecha Woo */}
+                <div>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="actualiza_fecha"
+                      checked={formData.actualiza_fecha === 'S'}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-[#f58ea3] focus:ring-[#f58ea3] border-[#f5cad4] rounded"
+                    />
+                    <span className="text-gray-700 font-medium">Actualizar Fecha Woo</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Convertir a producto variable — solo para artículos simples */}
+            {productWooType === 'simple' && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 shadow-sm">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                    <FaLayerGroup className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      Convertir a producto variable
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Convierte este artículo en un producto variable para gestionar variaciones (por ejemplo tonos o colores) sin perder datos. Luego podrás agregar cada variación desde esta misma página.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium text-sm">Atributo de variación</label>
+                    <select
+                      value={convertAttributeName}
+                      onChange={(e) => setConvertAttributeName(e.target.value)}
+                      className="w-full max-w-xs px-4 py-2.5 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition text-gray-800"
+                    >
+                      <option value="Tono">Tono</option>
+                      <option value="Color">Color</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium text-sm">Opciones del atributo</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {convertAttributeOptions.map((opt, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-800 text-sm font-medium border border-purple-200/60"
+                        >
+                          {opt}
+                          <button
+                            type="button"
+                            onClick={() => removeConvertOption(index)}
+                            className="ml-0.5 text-purple-500 hover:text-purple-700 focus:outline-none"
+                            aria-label="Quitar opción"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={convertOptionInput}
+                        onChange={(e) => setConvertOptionInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addConvertOption())}
+                        placeholder="Ej: Rojo, Azul, Negro..."
+                        className="flex-1 min-w-0 px-4 py-2.5 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition text-gray-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={addConvertOption}
+                        className="px-4 py-2.5 rounded-xl border border-[#f5cad4]/80 text-gray-700 bg-white hover:bg-[#f7b3c2]/20 transition font-medium"
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConvertToVariable}
+                    disabled={isConverting || convertAttributeOptions.length === 0}
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold shadow-md hover:bg-purple-700 hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isConverting ? (
+                      <>
+                        <FaSpinner className="w-4 h-4 animate-spin" />
+                        Convirtiendo...
+                      </>
+                    ) : (
+                      <>
+                        <FaLayerGroup className="w-4 h-4" />
+                        Convertir a producto variable
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Galería de Fotos */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Galería de Imágenes
+              </h3>
+              <ProductPhotoGallery productId={id} isVariation={isVariation} />
+            </div>
+          </form>
+
+          {/* Sección de Variaciones - solo para producto variable */}
+          {isVariable && (
+            <div className="mt-6">
+              <VariationsTable
+                variations={variations}
+                isLoading={isLoadingVariations}
+                onAddVariation={() => setIsVariationModalOpen(true)}
+                onSyncAttributes={handleSyncAttributes}
+                isSyncing={isSyncingAttributes}
+                parentName={formData.art_nom}
+              />
+            </div>
           )}
-
-          {/* Galería de Fotos */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
-              Galería de Imágenes
-            </h3>
-            <ProductPhotoGallery productId={id} isVariation={isVariation} />
-          </div>
-        </form>
-
-        {/* Sección de Variaciones - solo para producto variable */}
-        {isVariable && (
-          <div className="mt-6">
-            <VariationsTable
-              variations={variations}
-              isLoading={isLoadingVariations}
-              onAddVariation={() => setIsVariationModalOpen(true)}
-              onSyncAttributes={handleSyncAttributes}
-              isSyncing={isSyncingAttributes}
-              parentName={formData.art_nom}
-            />
-          </div>
-        )}
         </div>
       </div>
 

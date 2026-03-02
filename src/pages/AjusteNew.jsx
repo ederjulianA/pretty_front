@@ -195,7 +195,7 @@ const InventoryAdjustment = () => {
           art_sec: row.art_sec,
           kar_nat: row.kar_nat,
           kar_uni: Number(row.kar_uni),
-          kar_pre_pub:  0 // Usando el saldo actual como precio público
+          kar_pre_pub: 0 // Usando el saldo actual como precio público
         }))
       };
 
@@ -282,7 +282,11 @@ const InventoryAdjustment = () => {
   const handleArtCodBlur = async (index, artCodValue) => {
     if (!artCodValue) return;
     try {
-      const response = await axios.get(`${API_URL}/consultarArticuloByArtCod/articulo/${artCodValue}`);
+      const response = await axios.get(`${API_URL}/consultarArticuloByArtCod/articulo/${artCodValue}`, {
+        headers: {
+          'x-access-token': localStorage.getItem('pedidos_pretty_token')
+        }
+      });
       if (response.data.success) {
         const articulo = response.data.articulo;
         const updatedRows = [...rows];
@@ -729,7 +733,7 @@ const InventoryAdjustment = () => {
       />
 
       {/* Estilos globales */}
-      <style global jsx>{`
+      <style jsx="true" global="true">{`
         .focus-within\\:ring-2:focus-within {
           --tw-ring-color: #f58ea3;
         }

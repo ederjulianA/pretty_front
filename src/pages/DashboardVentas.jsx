@@ -4,8 +4,10 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import axiosInstance from '../axiosConfig';
 import useVentasData from '../hooks/useVentasData';
-import { FaSpinner, FaArrowUp, FaArrowDown, FaChartLine, FaShoppingCart, FaUsers, FaDollarSign, FaBox, FaHistory } from 'react-icons/fa';
+import { FaSpinner, FaArrowUp, FaArrowDown, FaChartLine, FaShoppingCart, FaUsers, FaDollarSign, FaBox, FaHistory, FaSearch } from 'react-icons/fa';
 import ArticleMovementModal from '../components/ArticleMovementModal';
+import FacturasListModal from '../components/Auditoria/FacturasListModal';
+import useAuditoriaFacturas from '../hooks/useAuditoriaFacturas';
 
 // Registrar componentes de Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
@@ -24,6 +26,7 @@ const DashboardVentas = () => {
     topClientes,
     ordenesPorEstado,
     ordenesPorCanal,
+    totalesOrdenesPorCanal,
     tendenciaDiaria,
     ventasPorHora,
     isLoading,
@@ -41,6 +44,23 @@ const DashboardVentas = () => {
   // Estados para modal de movimientos del artículo
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [selectedArticleCode, setSelectedArticleCode] = useState(null);
+
+  // Estados para Auditoría de Facturas
+  const [showAuditoriaModal, setShowAuditoriaModal] = useState(false);
+  const {
+    resumenEstados,
+    fetchResumenEstados,
+    isLoadingResumen
+  } = useAuditoriaFacturas({ periodo });
+
+  // Sincronizar resumenEstados cuando el periodo cambia en el dashboard
+  React.useEffect(() => {
+    fetchResumenEstados({
+      periodo: periodo,
+      fecha_inicio: periodoPersonalizado.fechaInicio,
+      fecha_fin: periodoPersonalizado.fechaFin
+    });
+  }, [periodo, periodoPersonalizado, fetchResumenEstados]);
 
   // Formatear moneda colombiana
   const formatCurrency = (value) => {
@@ -157,13 +177,35 @@ const DashboardVentas = () => {
     ]
   };
 
+  // Fallback seguro en caso de que ordenesPorCanal no sea un array temporalmente
+  const safeOrdenesPorCanal = Array.isArray(ordenesPorCanal) ? ordenesPorCanal : [];
+
   // Preparar datos para gráfico de órdenes por canal (Pie)
   const datosOrdenesPorCanal = {
-    labels: ordenesPorCanal.map(item => item.canal),
+    labels: safeOrdenesPorCanal.map(item => item.canal),
     datasets: [
       {
-        data: ordenesPorCanal.map(item => item.numero_ordenes || 0),
+        data: safeOrdenesPorCanal.map(item => item.numero_ordenes || 0),
         backgroundColor: ['#f58ea3', '#36a2eb'],
+        borderWidth: 1
+      }
+    ]
+  };
+
+  // Preparar datos para gráfico de estados de auditoría (Doughnut/Bar)
+  const datosResumenEstados = {
+    labels: resumenEstados.map(item => item.estado || 'No Status'),
+    datasets: [
+      {
+        label: 'Ventas por Estado',
+        data: resumenEstados.map(item => item.total_ventas || 0),
+        backgroundColor: resumenEstados.map(item => {
+          if (item.estado === 'completed') return '#10b981';
+          if (item.estado === 'processing') return '#3b82f6';
+          if (item.estado === 'pending') return '#f59e0b';
+          if (item.estado === 'cancelled' || item.estado === 'failed') return '#ef4444';
+          return '#6b7280';
+        }),
         borderWidth: 1
       }
     ]
@@ -179,7 +221,7 @@ const DashboardVentas = () => {
       },
       tooltip: {
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             if (context.datasetIndex === 0) {
               return `Ventas: ${formatCurrency(context.parsed.y)}`;
             }
@@ -192,7 +234,7 @@ const DashboardVentas = () => {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(value) {
+          callback: function (value) {
             return formatCurrency(value);
           }
         }
@@ -218,7 +260,7 @@ const DashboardVentas = () => {
       },
       tooltip: {
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             return formatCurrency(context.parsed.y);
           }
         }
@@ -228,7 +270,7 @@ const DashboardVentas = () => {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(value) {
+          callback: function (value) {
             return formatCurrency(value);
           }
         }
@@ -245,7 +287,7 @@ const DashboardVentas = () => {
       },
       tooltip: {
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             const label = context.label || '';
             const value = formatCurrency(context.parsed);
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -287,18 +329,30 @@ const DashboardVentas = () => {
           <h1 className="text-2xl font-bold text-gray-900">Dashboard de Ventas</h1>
           <p className="text-sm text-gray-600 mt-1">Análisis de ventas, rentabilidad y tendencias operativas</p>
         </div>
-        <button
-          onClick={refrescarDatos}
-          disabled={isLoading}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <FaSpinner className="w-4 h-4 animate-spin" />
-          ) : (
-            <FaChartLine className="w-4 h-4" />
-          )}
-          Actualizar
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAuditoriaModal(true)}
+            className="px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center gap-2"
+          >
+            <FaSearch className="w-4 h-4" />
+            Auditar Facturas
+          </button>
+          <button
+            onClick={() => {
+              refrescarDatos();
+              fetchResumenEstados({ periodo });
+            }}
+            disabled={isLoading || isLoadingResumen}
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading || isLoadingResumen ? (
+              <FaSpinner className="w-4 h-4 animate-spin" />
+            ) : (
+              <FaChartLine className="w-4 h-4" />
+            )}
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {/* Selector de Período */}
@@ -309,11 +363,10 @@ const DashboardVentas = () => {
             <button
               key={p}
               onClick={() => handlePeriodoChange(p)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                periodo === p
-                  ? 'bg-pink-500 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${periodo === p
+                ? 'bg-pink-500 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {p.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </button>
@@ -359,9 +412,8 @@ const DashboardVentas = () => {
                 ) : (
                   <FaArrowDown className="w-3 h-3 text-red-500" />
                 )}
-                <span className={`text-xs font-medium ${
-                  crecimiento.crecimiento.ventas_porcentaje > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <span className={`text-xs font-medium ${crecimiento.crecimiento.ventas_porcentaje > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
                   {formatPercent(Math.abs(crecimiento.crecimiento.ventas_porcentaje))}
                 </span>
               </div>
@@ -381,9 +433,8 @@ const DashboardVentas = () => {
                 ) : (
                   <FaArrowDown className="w-3 h-3 text-red-500" />
                 )}
-                <span className={`text-xs font-medium ${
-                  crecimiento.crecimiento.ordenes_porcentaje > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <span className={`text-xs font-medium ${crecimiento.crecimiento.ordenes_porcentaje > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
                   {formatPercent(Math.abs(crecimiento.crecimiento.ordenes_porcentaje))}
                 </span>
               </div>
@@ -483,6 +534,39 @@ const DashboardVentas = () => {
             </div>
           </div>
         )}
+
+        {/* Resumen por Estados de Auditoría */}
+        {resumenEstados.length > 0 && (
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Facturas por Estado (WC)</h3>
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">Auditoría Automática</span>
+            </div>
+            <div className="h-64 mb-4">
+              <Pie data={datosResumenEstados} options={opcionesPie} />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 font-semibold text-gray-700">Estado</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Cant. Facturas</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Total Ventas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumenEstados.map((est, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-2 px-3 font-medium capitalize text-gray-800">{est.estado || 'No Aplica'}</td>
+                      <td className="text-right py-2 px-3 text-gray-700">{formatNumber(est.numero_facturas)}</td>
+                      <td className="text-right py-2 px-3 font-semibold text-gray-900">{formatCurrency(est.total_ventas)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tablas */}
@@ -512,12 +596,11 @@ const DashboardVentas = () => {
                       <td className="text-right py-2 px-3 text-gray-700">{formatNumber(producto.unidades_vendidas)}</td>
                       <td className="text-right py-2 px-3 font-semibold text-gray-900">{formatCurrency(producto.ingresos_totales)}</td>
                       <td className="text-right py-2 px-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          producto.rentabilidad_promedio >= 40 ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${producto.rentabilidad_promedio >= 40 ? 'bg-green-100 text-green-800' :
                           producto.rentabilidad_promedio >= 20 ? 'bg-blue-100 text-blue-800' :
-                          producto.rentabilidad_promedio >= 10 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                            producto.rentabilidad_promedio >= 10 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                          }`}>
                           {formatPercent(producto.rentabilidad_promedio)}
                         </span>
                       </td>
@@ -607,7 +690,8 @@ const DashboardVentas = () => {
         )}
 
         {/* Órdenes por Canal */}
-        {ordenesPorCanal.length > 0 && (
+
+        {safeOrdenesPorCanal.length > 0 && (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Órdenes por Canal</h3>
             <div className="h-64 mb-4">
@@ -619,28 +703,45 @@ const DashboardVentas = () => {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-3 font-semibold text-gray-700">Canal</th>
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Órdenes</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Ticket Prom.</th>
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Ventas</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Comisión</th>
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Rentabilidad</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ordenesPorCanal.map((canal, index) => (
+                  {safeOrdenesPorCanal.map((canal, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-2 px-3 font-medium text-gray-900">{canal.canal}</td>
                       <td className="text-right py-2 px-3 text-gray-700">{formatNumber(canal.numero_ordenes)}</td>
+                      <td className="text-right py-2 px-3 text-gray-700">{formatCurrency(canal.ticket_promedio)}</td>
                       <td className="text-right py-2 px-3 font-semibold text-gray-900">{formatCurrency(canal.ventas_totales)}</td>
+                      <td className="text-right py-2 px-3 text-gray-700">
+                        {formatCurrency(canal.comision_venta)} <span className="text-xs text-gray-500">({formatNumber(canal.porcentaje_comision)}%)</span>
+                      </td>
                       <td className="text-right py-2 px-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          canal.rentabilidad_promedio >= 30 ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${canal.rentabilidad_promedio >= 30 ? 'bg-green-100 text-green-800' :
                           canal.rentabilidad_promedio >= 20 ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {formatPercent(canal.rentabilidad_promedio)}
                         </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
+                {totalesOrdenesPorCanal && (
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-gray-900">
+                      <td className="py-3 px-3">Total</td>
+                      <td className="text-right py-3 px-3">{formatNumber(totalesOrdenesPorCanal.numero_ordenes)}</td>
+                      <td className="text-right py-3 px-3">-</td>
+                      <td className="text-right py-3 px-3 text-pink-600">{formatCurrency(totalesOrdenesPorCanal.ventas_totales)}</td>
+                      <td className="text-right py-3 px-3">{formatCurrency(totalesOrdenesPorCanal.comision_total)}</td>
+                      <td className="text-right py-3 px-3">-</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
@@ -655,6 +756,15 @@ const DashboardVentas = () => {
           setSelectedArticleCode(null);
         }}
         articleCode={selectedArticleCode}
+      />
+
+      {/* Modal Lista Auditoría Facturas */}
+      <FacturasListModal
+        isOpen={showAuditoriaModal}
+        onClose={() => setShowAuditoriaModal(false)}
+        periodoActual={periodo}
+        fechaInicio={periodoPersonalizado.fechaInicio}
+        fechaFin={periodoPersonalizado.fechaFin}
       />
     </div>
   );

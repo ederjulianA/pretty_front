@@ -17,6 +17,7 @@ const useVentasData = () => {
   const [topClientes, setTopClientes] = useState([]);
   const [ordenesPorEstado, setOrdenesPorEstado] = useState([]);
   const [ordenesPorCanal, setOrdenesPorCanal] = useState([]);
+  const [totalesOrdenesPorCanal, setTotalesOrdenesPorCanal] = useState(null);
   const [tendenciaDiaria, setTendenciaDiaria] = useState([]);
   const [ventasPorHora, setVentasPorHora] = useState([]);
 
@@ -70,7 +71,15 @@ const useVentasData = () => {
         setVentasPorRentabilidad(data.ventas_por_rentabilidad || []);
         setTopClientes(data.top_clientes || []);
         setOrdenesPorEstado(data.ordenes_por_estado || []);
-        setOrdenesPorCanal(data.ordenes_por_canal || []);
+
+        if (data.ordenes_por_canal && !Array.isArray(data.ordenes_por_canal) && data.ordenes_por_canal.canales) {
+          setOrdenesPorCanal(data.ordenes_por_canal.canales || []);
+          setTotalesOrdenesPorCanal(data.ordenes_por_canal.totales || null);
+        } else {
+          setOrdenesPorCanal(data.ordenes_por_canal || []);
+          setTotalesOrdenesPorCanal(null);
+        }
+
         setTendenciaDiaria(data.tendencia_diaria || []);
         setVentasPorHora(data.ventas_por_hora || []);
       } else {
@@ -113,20 +122,20 @@ const useVentasData = () => {
     setIsLoadingCrecimiento(true);
     try {
       let params;
-      
+
       // Si es período personalizado, calcular período anterior automáticamente
       if (periodo === 'personalizado' && fechaInicio && fechaFin) {
         const fechaInicioDate = new Date(fechaInicio);
         const fechaFinDate = new Date(fechaFin);
-        
+
         // Calcular duración del período
         const duracionMs = fechaFinDate.getTime() - fechaInicioDate.getTime();
-        
+
         // Calcular período anterior (justo antes del período actual)
         const fechaFinAnterior = new Date(fechaInicioDate);
         fechaFinAnterior.setMilliseconds(-1);
         const fechaInicioAnterior = new Date(fechaFinAnterior.getTime() - duracionMs);
-        
+
         // Formatear fechas para el query
         const paramsObj = new URLSearchParams();
         paramsObj.append('fecha_inicio_actual', fechaInicio);
@@ -138,7 +147,7 @@ const useVentasData = () => {
         // Usar período predefinido
         params = construirParams();
       }
-      
+
       const response = await axiosInstance.get(`/dashboard/ventas/crecimiento?${params}`);
 
       if (response.data.success) {
@@ -164,7 +173,7 @@ const useVentasData = () => {
       const params = construirParams();
       params.append('limite', limite);
       params.append('ordenar_por', ordenarPor);
-      
+
       const response = await axiosInstance.get(`/dashboard/ventas/top-productos?${params}`);
 
       if (response.data.success) {
@@ -223,7 +232,7 @@ const useVentasData = () => {
     try {
       const params = construirParams();
       params.append('limite', limite);
-      
+
       const response = await axiosInstance.get(`/dashboard/ventas/top-clientes?${params}`);
 
       if (response.data.success) {
@@ -265,7 +274,11 @@ const useVentasData = () => {
       const response = await axiosInstance.get(`/dashboard/ventas/ordenes-canal?${params}`);
 
       if (response.data.success) {
-        setOrdenesPorCanal(response.data.data);
+        setOrdenesPorCanal(response.data.data || []);
+        // Si el endpoint devuelve totales, los guardamos (caso de /ordenes-canal)
+        if (response.data.totales) {
+          setTotalesOrdenesPorCanal(response.data.totales);
+        }
       } else {
         throw new Error(response.data.message || 'Error obteniendo órdenes por canal');
       }
@@ -352,6 +365,7 @@ const useVentasData = () => {
     topClientes,
     ordenesPorEstado,
     ordenesPorCanal,
+    totalesOrdenesPorCanal,
     tendenciaDiaria,
     ventasPorHora,
 

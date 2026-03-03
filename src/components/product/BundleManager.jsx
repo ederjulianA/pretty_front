@@ -10,15 +10,9 @@ const BundleManager = ({ components, onComponentsChange, disabled = false, preci
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [searchBy, setSearchBy] = useState('nombre'); // 'nombre' o 'codigo'
 
-  // Función auxiliar para determinar si la búsqueda es por código o nombre
-  const isCodigoSearch = (query) => {
-    // Si la búsqueda es corta (menos de 3 caracteres) o contiene solo números/letras sin espacios, probablemente es código
-    const trimmed = query.trim();
-    return trimmed.length <= 20 && /^[A-Za-z0-9\-_]+$/.test(trimmed);
-  };
-
-  // Búsqueda de productos con debounce - ahora soporta código y nombre
+  // Búsqueda de productos con debounce
   const searchProducts = useCallback(
     debounce(async (query) => {
       if (!query.trim()) {
@@ -32,15 +26,9 @@ const BundleManager = ({ components, onComponentsChange, disabled = false, preci
         const token = localStorage.getItem('pedidos_pretty_token');
         const params = {
           PageSize: 20,
-          PageNumber: 1
+          PageNumber: 1,
+          [searchBy]: query
         };
-
-        // Determinar si buscar por código o nombre
-        if (isCodigoSearch(query)) {
-          params.codigo = query;
-        } else {
-          params.nombre = query;
-        }
 
         const response = await axios.get(`${API_URL}/articulos`, {
           params,
@@ -61,7 +49,7 @@ const BundleManager = ({ components, onComponentsChange, disabled = false, preci
         setIsSearching(false);
       }
     }, 300),
-    []
+    [searchBy]
   );
 
   useEffect(() => {
@@ -197,7 +185,34 @@ const BundleManager = ({ components, onComponentsChange, disabled = false, preci
 
       {/* Barra de búsqueda */}
       <div className="relative">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {/* Toggle nombre/código */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => { setSearchBy('nombre'); setSearchQuery(''); setSearchResults([]); setShowResults(false); }}
+              className={`px-3 py-2 text-xs font-medium rounded-md transition-all ${
+                searchBy === 'nombre'
+                  ? 'bg-white text-[#f58ea3] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              disabled={disabled}
+            >
+              Nombre
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSearchBy('codigo'); setSearchQuery(''); setSearchResults([]); setShowResults(false); }}
+              className={`px-3 py-2 text-xs font-medium rounded-md transition-all ${
+                searchBy === 'codigo'
+                  ? 'bg-white text-[#f58ea3] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              disabled={disabled}
+            >
+              Código
+            </button>
+          </div>
           <div className="relative flex-1">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
@@ -205,7 +220,7 @@ const BundleManager = ({ components, onComponentsChange, disabled = false, preci
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery && setShowResults(true)}
-              placeholder="Buscar por nombre o código de producto..."
+              placeholder={searchBy === 'nombre' ? 'Buscar por nombre de producto...' : 'Buscar por código de producto...'}
               className="w-full pl-10 pr-4 py-3 border border-[#f5cad4] rounded-xl bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
               disabled={disabled}
             />

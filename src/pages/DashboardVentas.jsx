@@ -765,6 +765,7 @@ const DashboardVentas = () => {
         periodoActual={periodo}
         fechaInicio={periodoPersonalizado.fechaInicio}
         fechaFin={periodoPersonalizado.fechaFin}
+        ordenesPorCanal={safeOrdenesPorCanal}
       />
     </div>
   );

@@ -3,7 +3,7 @@ import { FaTimes, FaSearch, FaFileInvoiceDollar, FaChevronLeft, FaChevronRight, 
 import useAuditoriaFacturas from '../../hooks/useAuditoriaFacturas';
 import FacturaDetailModal from './FacturaDetailModal';
 
-const FacturasListModal = ({ isOpen, onClose, periodoActual, fechaInicio, fechaFin }) => {
+const FacturasListModal = ({ isOpen, onClose, periodoActual, fechaInicio, fechaFin, ordenesPorCanal = [] }) => {
 
     const [selectedFacSec, setSelectedFacSec] = useState(null);
 
@@ -47,7 +47,7 @@ const FacturasListModal = ({ isOpen, onClose, periodoActual, fechaInicio, fechaF
 
     return (
         <>
-            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-gray-50 rounded-2xl w-full max-w-7xl shadow-2xl flex flex-col h-[90vh]">
 
                     {/* Header */}
@@ -68,12 +68,32 @@ const FacturasListModal = ({ isOpen, onClose, periodoActual, fechaInicio, fechaF
                                 </span>
                             </p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-3 bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                        >
-                            <FaTimes className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-6">
+
+                            {/* Summary Totals */}
+                            <div className="hidden sm:flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-gray-500 font-bold tracking-wider uppercase">Totales WC</span>
+                                    <span className="text-lg font-black text-blue-600 leading-tight">
+                                        {formatCurrency(ordenesPorCanal.find(c => c.canal?.toLowerCase() === 'woocommerce')?.ventas_totales || 0)}
+                                    </span>
+                                </div>
+                                <div className="h-8 w-px bg-gray-200"></div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-gray-500 font-bold tracking-wider uppercase">Totales Local</span>
+                                    <span className="text-lg font-black text-pink-500 leading-tight">
+                                        {formatCurrency(ordenesPorCanal.find(c => c.canal?.toLowerCase() === 'local')?.ventas_totales || 0)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={onClose}
+                                className="p-3 bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                            >
+                                <FaTimes className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Table Container */}

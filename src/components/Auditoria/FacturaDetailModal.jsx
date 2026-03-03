@@ -30,7 +30,7 @@ const FacturaDetailModal = ({ isOpen, onClose, facSec }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
 
                 {/* Header */}
@@ -87,8 +87,8 @@ const FacturaDetailModal = ({ isOpen, onClose, facSec }) => {
                                         <p><span className="text-gray-500 w-24 inline-block">Fecha:</span> <span className="font-medium text-gray-900">{new Date(detalleFactura.encabezado.fecha_factura).toLocaleString('es-CO')}</span></p>
                                         <p><span className="text-gray-500 w-24 inline-block">Estado WC:</span>
                                             <span className={`px-2 py-0.5 ml-1 rounded text-xs font-medium uppercase ${detalleFactura.encabezado.estado_woocommerce === 'completed' ? 'bg-green-100 text-green-800' :
-                                                    detalleFactura.encabezado.estado_woocommerce === 'processing' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-yellow-100 text-yellow-800'
+                                                detalleFactura.encabezado.estado_woocommerce === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-yellow-100 text-yellow-800'
                                                 }`}>
                                                 {detalleFactura.encabezado.estado_woocommerce || 'N/A'}
                                             </span>
@@ -131,8 +131,8 @@ const FacturaDetailModal = ({ isOpen, onClose, facSec }) => {
                                                     <td className="py-3 px-4 text-right">
                                                         {linea.rentabilidad_porcentaje !== null ? (
                                                             <span className={`px-2 py-1 rounded text-xs font-medium ${linea.rentabilidad_porcentaje >= 30 ? 'bg-green-100 text-green-800' :
-                                                                    linea.rentabilidad_porcentaje >= 15 ? 'bg-blue-100 text-blue-800' :
-                                                                        'bg-red-100 text-red-800'
+                                                                linea.rentabilidad_porcentaje >= 15 ? 'bg-blue-100 text-blue-800' :
+                                                                    'bg-red-100 text-red-800'
                                                                 }`}>
                                                                 {formatPercent(linea.rentabilidad_porcentaje)}
                                                             </span>

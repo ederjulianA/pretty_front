@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaArrowLeft, FaPlus, FaSearch, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus, FaSearch, FaTrash, FaUndo } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axiosInstance from '../axiosConfig';
 import { compraService } from '../services/compraService';
@@ -34,7 +34,6 @@ const CompraForm = () => {
     fac_est_fac: 'A'
   });
   const [detalles, setDetalles] = useState([defaultLinea()]);
-  const [detallesOriginales, setDetallesOriginales] = useState([]);
 
   const [proveedorQuery, setProveedorQuery] = useState('');
   const [proveedores, setProveedores] = useState([]);
@@ -45,11 +44,13 @@ const CompraForm = () => {
 
   const totalCompra = useMemo(
     () =>
-      detalles.reduce((sum, item) => {
-        const cantidad = Number(item.cantidad || 0);
-        const costo = Number(item.costo_unitario || 0);
-        return sum + cantidad * costo;
-      }, 0),
+      detalles
+        .filter((item) => !item._eliminado)
+        .reduce((sum, item) => {
+          const cantidad = Number(item.cantidad || 0);
+          const costo = Number(item.costo_unitario || 0);
+          return sum + cantidad * costo;
+        }, 0),
     [detalles]
   );
 
@@ -104,7 +105,6 @@ const CompraForm = () => {
           costo_unitario: Number(item.costo_unitario)
         }));
         setDetalles(detallesMapeados);
-        setDetallesOriginales(detallesMapeados);
       }
     } catch (error) {
       console.error('Error cargando compra para edición:', error);
@@ -131,9 +131,19 @@ const CompraForm = () => {
 
   const eliminarLinea = (id) => {
     setDetalles((prev) => {
-      const siguiente = prev.filter((linea) => linea.id !== id);
+      const linea = prev.find((l) => l.id === id);
+      // Ítems que ya existen en BD: marcar como pendiente de eliminación (se confirma al guardar)
+      if (linea?.kar_sec) {
+        return prev.map((l) => (l.id === id ? { ...l, _eliminado: true } : l));
+      }
+      // Ítems nuevos (sin kar_sec): eliminar directamente
+      const siguiente = prev.filter((l) => l.id !== id);
       return siguiente.length > 0 ? siguiente : [defaultLinea()];
     });
+  };
+
+  const restaurarLinea = (id) => {
+    setDetalles((prev) => prev.map((l) => (l.id === id ? { ...l, _eliminado: false } : l)));
   };
 
   const abrirSelectorArticulo = (idLinea) => {
@@ -231,7 +241,7 @@ const CompraForm = () => {
     if (!encabezado.fac_fec) {
       return 'La fecha de compra es requerida';
     }
-    const lineasValidas = detalles.filter((linea) => linea.art_sec);
+    const lineasValidas = detalles.filter((linea) => linea.art_sec && !linea._eliminado);
     if (lineasValidas.length === 0) {
       return 'Debe agregar al menos un artículo';
     }
@@ -271,48 +281,37 @@ const CompraForm = () => {
       fac_est_fac: encabezado.fac_est_fac || 'A'
     };
 
-    const originalesPorKarSec = new Map(
-      detallesOriginales
-        .filter((linea) => linea.kar_sec)
-        .map((linea) => [Number(linea.kar_sec), linea])
-    );
+    // Ítems existentes que se mantienen (con kar_sec, no eliminados)
+    const detallesExistentes = detalles
+      .filter((linea) => linea.kar_sec && !linea._eliminado)
+      .map((linea) => ({
+        kar_sec: Number(linea.kar_sec),
+        cantidad: Number(linea.cantidad),
+        costo_unitario: Number(linea.costo_unitario)
+      }));
 
-    // Líneas existentes (con kar_sec): solo las que tengan cambio de cantidad o costo
-    const detallesActualizados = detalles
-      .filter((linea) => linea.kar_sec)
-      .map((linea) => {
-        const karSec = Number(linea.kar_sec);
-        const cantidadNueva = Number(linea.cantidad);
-        const costoNuevo = Number(linea.costo_unitario);
-        const original = originalesPorKarSec.get(karSec);
-        const cantidadCambio = !original || Number(original.cantidad) !== cantidadNueva;
-        const costoCambio = !original || Number(original.costo_unitario) !== costoNuevo;
+    // Ítems marcados para eliminar
+    const detallesEliminados = detalles
+      .filter((linea) => linea.kar_sec && linea._eliminado)
+      .map((linea) => Number(linea.kar_sec));
 
-        if (!cantidadCambio && !costoCambio) return null;
-
-        return {
-          kar_sec: karSec,
-          ...(cantidadCambio ? { cantidad: cantidadNueva } : {}),
-          ...(costoCambio ? { costo_unitario: costoNuevo } : {})
-        };
-      })
-      .filter(Boolean);
-
-    if (detallesActualizados.length > 0) {
-      payloadBase.detalles = detallesActualizados;
-    }
-
-    // Ítems nuevos (sin kar_sec): art_sec, cantidad, costo_unitario para que el backend pueda insertarlos
+    // Ítems nuevos (sin kar_sec)
     const detallesNuevos = detalles
-      .filter((linea) => !linea.kar_sec && linea.art_sec && Number(linea.cantidad) > 0 && Number(linea.costo_unitario) > 0)
+      .filter((linea) => !linea.kar_sec && !linea._eliminado && linea.art_sec && Number(linea.cantidad) > 0 && Number(linea.costo_unitario) > 0)
       .map((linea) => ({
         art_sec: linea.art_sec,
         cantidad: Number(linea.cantidad),
         costo_unitario: Number(linea.costo_unitario)
       }));
 
+    payloadBase.detalles = detallesExistentes;
+
     if (detallesNuevos.length > 0) {
       payloadBase.detalles_nuevos = detallesNuevos;
+    }
+
+    if (detallesEliminados.length > 0) {
+      payloadBase.detalles_eliminados = detallesEliminados;
     }
 
     return payloadBase;
@@ -338,10 +337,12 @@ const CompraForm = () => {
         if (respuesta.success) {
           const detallesActualizados = respuesta.detalles_actualizados || [];
           const detallesNuevosInsertados = respuesta.detalles_nuevos_insertados || [];
+          const detallesEliminados = respuesta.detalles_eliminados || [];
           const lineas = [
             `<p>La compra <b>${respuesta.fac_nro || facNro}</b> fue actualizada correctamente.</p>`,
             detallesActualizados.length > 0 && `<p>Detalles actualizados: <b>${detallesActualizados.length}</b></p>`,
-            detallesNuevosInsertados.length > 0 && `<p>Ítems nuevos agregados: <b>${detallesNuevosInsertados.length}</b></p>`
+            detallesNuevosInsertados.length > 0 && `<p>Ítems nuevos agregados: <b>${detallesNuevosInsertados.length}</b></p>`,
+            detallesEliminados.length > 0 && `<p>Ítems eliminados: <b>${detallesEliminados.length}</b></p>`
           ].filter(Boolean);
           await Swal.fire({
             icon: 'success',
@@ -537,72 +538,105 @@ const CompraForm = () => {
               <tbody className="divide-y divide-[rgba(15,23,42,0.08)]">
                 {detalles.map((linea) => {
                   const subtotal = Number(linea.cantidad || 0) * Number(linea.costo_unitario || 0);
+                  const eliminado = linea._eliminado;
                   return (
-                    <tr key={linea.id}>
+                    <tr key={linea.id} className={eliminado ? 'opacity-40' : ''}>
                       <td className="py-2 px-3">
-                        <div className="space-y-2">
+                        {eliminado ? (
                           <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={linea.art_cod || ''}
-                              onChange={(e) => actualizarLinea(linea.id, 'art_cod', e.target.value)}
-                              onBlur={(e) => buscarArticuloPorCodigo(linea.id, e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  buscarArticuloPorCodigo(linea.id, e.currentTarget.value);
-                                }
-                              }}
-                              placeholder="Código artículo"
-                              className="w-full h-9 px-2 rounded-lg border border-[rgba(15,23,42,0.12)] text-sm"
-                            />
-                            <button
-                              onClick={() => abrirSelectorArticulo(linea.id)}
-                              className="px-2 h-9 rounded-lg border border-[rgba(15,23,42,0.12)] text-xs text-[#475569]"
-                              title="Buscar artículo"
-                            >
-                              <FaSearch className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="text-sm line-through text-[#64748b]">{linea.art_cod}</span>
+                            <span className="line-through text-sm text-[#64748b]">{linea.art_nom}</span>
+                            <span className="text-xs text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full">Se eliminará al guardar</span>
                           </div>
-                          {linea.art_sec ? (
-                            <p className="font-medium text-[#0f172a] text-sm">{linea.art_nom}</p>
-                          ) : (
-                            <p className="text-xs text-[#94a3b8]">Sin artículo seleccionado</p>
-                          )}
-                        </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={linea.art_cod || ''}
+                                onChange={(e) => actualizarLinea(linea.id, 'art_cod', e.target.value)}
+                                onBlur={(e) => buscarArticuloPorCodigo(linea.id, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    buscarArticuloPorCodigo(linea.id, e.currentTarget.value);
+                                  }
+                                }}
+                                placeholder="Código artículo"
+                                className="w-full h-9 px-2 rounded-lg border border-[rgba(15,23,42,0.12)] text-sm"
+                              />
+                              <button
+                                onClick={() => abrirSelectorArticulo(linea.id)}
+                                className="px-2 h-9 rounded-lg border border-[rgba(15,23,42,0.12)] text-xs text-[#475569]"
+                                title="Buscar artículo"
+                              >
+                                <FaSearch className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            {linea.art_sec ? (
+                              <p className="font-medium text-[#0f172a] text-sm">{linea.art_nom}</p>
+                            ) : (
+                              <p className="text-xs text-[#94a3b8]">Sin artículo seleccionado</p>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right">
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={linea.cantidad}
-                          onChange={(e) => actualizarLinea(linea.id, 'cantidad', e.target.value)}
-                          className="w-24 h-9 px-2 rounded-lg border border-[rgba(15,23,42,0.12)] text-right"
-                        />
+                        {eliminado ? (
+                          <span className="text-sm line-through text-[#64748b]">{linea.cantidad}</span>
+                        ) : (
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={linea.cantidad}
+                            onChange={(e) => actualizarLinea(linea.id, 'cantidad', e.target.value)}
+                            className="w-24 h-9 px-2 rounded-lg border border-[rgba(15,23,42,0.12)] text-right"
+                          />
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={linea.costo_unitario}
-                          onChange={(e) => actualizarLinea(linea.id, 'costo_unitario', e.target.value)}
-                          className="w-32 h-9 px-2 rounded-lg border border-[rgba(15,23,42,0.12)] text-right"
-                        />
+                        {eliminado ? (
+                          <span className="text-sm line-through text-[#64748b]">{linea.costo_unitario}</span>
+                        ) : (
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={linea.costo_unitario}
+                            onChange={(e) => actualizarLinea(linea.id, 'costo_unitario', e.target.value)}
+                            className="w-32 h-9 px-2 rounded-lg border border-[rgba(15,23,42,0.12)] text-right"
+                          />
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right font-semibold tabular-nums">
-                        {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(subtotal)}
+                        {eliminado ? (
+                          <span className="line-through text-[#64748b]">
+                            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(subtotal)}
+                          </span>
+                        ) : (
+                          new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(subtotal)
+                        )}
                       </td>
                       <td className="py-2 px-3">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => eliminarLinea(linea.id)}
-                            className="p-2 rounded-lg hover:bg-red-50 text-[#ef4444]"
-                            title="Eliminar línea"
-                          >
-                            <FaTrash className="w-4 h-4" />
-                          </button>
+                          {eliminado ? (
+                            <button
+                              onClick={() => restaurarLinea(linea.id)}
+                              className="p-2 rounded-lg hover:bg-blue-50 text-[#3b82f6]"
+                              title="Restaurar línea"
+                            >
+                              <FaUndo className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => eliminarLinea(linea.id)}
+                              className="p-2 rounded-lg hover:bg-red-50 text-[#ef4444]"
+                              title="Eliminar línea"
+                            >
+                              <FaTrash className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

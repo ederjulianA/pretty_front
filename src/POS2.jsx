@@ -163,7 +163,7 @@ const POS = () => {
               price: price,
               price_detal: price_detal,
               quantity: item.kar_uni,
-              existencia: item.existencia || 1,
+              existencia: item.existencia ?? 0,
               kar_des_uno: item.kar_des_uno || 0,
               kar_sec: item.kar_sec,
               fac_sec: item.fac_sec,
@@ -384,11 +384,9 @@ const POS = () => {
 
   // Function to add product to order
   const addToOrder = (product) => {
-    if (product.existencia <= 0) return;
     setOrder(prev => {
       const exists = prev.find(item => item.id === product.id);
       if (exists) {
-        if (exists.quantity >= product.existencia) return prev;
         return prev.map(item =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -627,6 +625,20 @@ const POS = () => {
         icon: 'error',
         title: 'Error',
         text: 'No se encontró el código de usuario. Por favor, inicie sesión nuevamente.',
+        confirmButtonColor: '#f58ea3',
+      });
+      return;
+    }
+
+    const articulosSinStock = order.filter(item => (item.existencia ?? 0) <= 0);
+    if (articulosSinStock.length > 0) {
+      const listaArticulos = articulosSinStock
+        .map(item => `• ${item.name} (${item.codigo}) — Sin existencia`)
+        .join('\n');
+      Swal.fire({
+        icon: 'error',
+        title: 'No se puede generar la factura',
+        html: `<p>Los siguientes artículos no tienen existencia:</p><pre style="text-align:left;font-size:12px;margin-top:8px">${listaArticulos}</pre>`,
         confirmButtonColor: '#f58ea3',
       });
       return;

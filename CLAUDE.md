@@ -178,6 +178,23 @@ See existing hooks in [src/hooks/](src/hooks/) for patterns. Common pattern:
 5. **Notifications**: Use `react-toastify` for success messages, `SweetAlert2` for confirmations
 6. **Date Handling**: Use `date-fns` library (imported in multiple components)
 
+## Development Workflow with Skills
+
+New features, bugs, and improvements follow a two-phase flow using project skills:
+
+### Phase 1 — Analysis (`/spec-analyzer`)
+Run `/spec-analyzer` when a new requirement arrives. The skill:
+1. Reads existing frontend code to understand current state
+2. Reads backend files in `/Users/eder/Developer/GitHub/api_pretty/` (read-only) to validate API contracts
+3. Generates `IMPLEMENTACIONES_2026_IA/{feature-name}_{date}/SPEC.md` with full technical analysis
+4. Generates `SOLICITUD_BACKEND.md` in the same folder if backend gaps are found
+5. Lists all gaps and doubts — implementation is blocked until these are resolved
+
+### Phase 2 — Implementation (`/impl-builder`)
+Run `/impl-builder` only after the SPEC is approved. The skill reads the SPEC and implements phase by phase, then writes `IMPLEMENTACION.md` documenting what was built.
+
+**Rule:** Never implement without an approved SPEC. Never modify backend files.
+
 ## Testing
 
 No automated tests are currently configured. Manual testing is done through the development server.

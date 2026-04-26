@@ -280,17 +280,10 @@ const BundleDetailsModal = ({ isOpen, onClose, bundle, onAddToCart }) => {
             </button>
             <button
               onClick={handleAddToCart}
-              disabled={
-                !bundle?.existencia ||
-                bundle?.existencia <= 0 ||
-                (stockValidation && !stockValidation.puede_vender)
-              }
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition flex items-center gap-2"
             >
               <FaCubes className="w-4 h-4" />
-              {stockValidation && !stockValidation.puede_vender
-                ? 'Stock Insuficiente'
-                : 'Agregar Combo al Carrito'}
+              Agregar Combo al Carrito
             </button>
           </div>
         </div>

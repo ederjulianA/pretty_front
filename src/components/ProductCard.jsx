@@ -57,8 +57,6 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
   const esBundle = product.art_bundle === 'S';
 
   const handleClick = () => {
-    if (product.existencia <= 0) return;
-
     if (esBundle && onShowBundleDetails) {
       onShowBundleDetails(product);
     } else {
@@ -186,14 +184,11 @@ const ProductCard = ({ product, onAdd, orderQuantity, onImageUpdate, onShowBundl
             e.stopPropagation();
             handleClick();
           }}
-          disabled={product.existencia <= 0}
-          className={`mt-2 w-full py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${product.existencia <= 0
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : tieneOferta
-                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
-                : esBundle
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
-                  : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
+          className={`mt-2 w-full py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${tieneOferta
+              ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
+              : esBundle
+                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                : 'bg-[#f58ea3] text-white hover:bg-[#f7b3c2]'
             }`}
         >
           {esBundle ? <FaCubes className="w-4 h-4" /> : <FaShoppingCart className="w-4 h-4" />}

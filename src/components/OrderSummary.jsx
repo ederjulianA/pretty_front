@@ -209,15 +209,12 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
                         </span>
                         <button
                           onClick={() => onAdd(item)}
-                          disabled={item.quantity >= item.existencia}
                           className={`text-white p-1.5 rounded-full transition-colors cursor-pointer ${
-                            item.quantity >= item.existencia
-                              ? 'opacity-50 cursor-not-allowed bg-gray-400'
-                              : tieneOferta
-                                ? 'bg-orange-500 hover:bg-orange-600'
-                                : esBundle
-                                  ? 'bg-emerald-500 hover:bg-emerald-600'
-                                  : 'bg-[#f7b3c2] hover:bg-[#f58ea3]'
+                            tieneOferta
+                              ? 'bg-orange-500 hover:bg-orange-600'
+                              : esBundle
+                                ? 'bg-emerald-500 hover:bg-emerald-600'
+                                : 'bg-[#f7b3c2] hover:bg-[#f58ea3]'
                           }`}
                         >
                           <FaPlus className="w-3 h-3" />

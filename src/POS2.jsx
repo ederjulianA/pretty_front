@@ -18,7 +18,7 @@ import usePersistentState from './hooks/usePersistentState';
 import usePedidoMinimo from './hooks/usePedidoMinimo';
 import { formatValue } from './utils';
 import { FaShoppingCart, FaSpinner } from 'react-icons/fa';
-import usePrintOrder from './hooks/usePrintOrder';
+import usePrintCotizacion from './hooks/usePrintCotizacion';
 import LoadingSpinner from './components/LoadingSpinner';
 import CreateClientModal from './components/CreateClientModal';
 import useEventoPromocional from './hooks/useEventoPromocional';
@@ -35,7 +35,7 @@ const POS = () => {
   const [selectedClient, setSelectedClient] = usePersistentState('selectedClient', null);
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
-  const { printOrder } = usePrintOrder();
+  const { printCotizacion } = usePrintCotizacion();
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
 
   // Filters for products and category
@@ -517,7 +517,7 @@ const POS = () => {
             if (printButton) {
               printButton.addEventListener('click', (e) => {
                 e.stopPropagation();
-                printOrder(cotizacionNumero); // Usamos el número de cotización guardado
+                printCotizacion(cotizacionNumero, 'COT');
               });
             }
             // Reiniciar todas las variables del pedido (sin navegar, ya que se navega a /orders)
@@ -565,7 +565,7 @@ const POS = () => {
           if (printButton) {
             printButton.addEventListener('click', (e) => {
               e.stopPropagation();
-              printOrder(data.fac_nro);
+              printCotizacion(data.fac_nro, 'COT');
             });
           }
           // Reiniciar todas las variables del pedido
@@ -747,7 +747,7 @@ const POS = () => {
           if (printButton) {
             printButton.addEventListener('click', (e) => {
               e.stopPropagation();
-              printOrder(facturaNumero);
+              printCotizacion(facturaNumero, 'VTA');
             });
           }
           // Reiniciar todas las variables del pedido (sin navegar, ya que se navega a /orders)
@@ -795,7 +795,7 @@ const POS = () => {
             if (printButton) {
               printButton.addEventListener('click', (e) => {
                 e.stopPropagation();
-                printOrder(data.fac_nro);
+                printCotizacion(data.fac_nro, 'VTA');
               });
             }
             // Reiniciar todas las variables del pedido

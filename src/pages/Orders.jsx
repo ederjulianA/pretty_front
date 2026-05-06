@@ -8,6 +8,7 @@ import OrderDetailModal from '../components/OrderDetailModal';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, getCurrentDate } from '../utils/dateUtils';
 import usePrintOrder from '../hooks/usePrintOrder';
+import usePrintCotizacion from '../hooks/usePrintCotizacion';
 import { FaPlus, FaEye, FaPrint, FaBroom, FaEdit, FaFileAlt, FaTrash, FaSync, FaStar, FaBolt } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import AnularDocumentoModal from '../components/AnularDocumentoModal';
@@ -64,6 +65,12 @@ const Orders = () => {
 
   // Agregar el hook de impresión
   const { printOrder } = usePrintOrder();
+  const { printCotizacion } = usePrintCotizacion();
+  const handlePrint = (order) => {
+    if (order.fac_tip_cod === 'COT') return printCotizacion(order.fac_nro, 'COT');
+    if (order.fac_tip_cod === 'VTA') return printCotizacion(order.fac_nro, 'VTA');
+    return printOrder(order.fac_nro);
+  };
 
   const [showAnularModal, setShowAnularModal] = useState(false);
 
@@ -504,7 +511,7 @@ const Orders = () => {
                       title="Ver Detalle">
                       <FaEye className="w-5 h-5" />
                     </button>
-                    <button onClick={() => printOrder(order.fac_nro)}
+                    <button onClick={() => handlePrint(order)}
                       className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors"
                       title="Imprimir">
                       <FaPrint className="w-5 h-5" />
@@ -634,7 +641,7 @@ const Orders = () => {
                           title="Ver Detalle">
                           <FaEye />
                         </button>
-                        <button onClick={() => printOrder(order.fac_nro)}
+                        <button onClick={() => handlePrint(order)}
                           className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors"
                           title="Imprimir">
                           <FaPrint />

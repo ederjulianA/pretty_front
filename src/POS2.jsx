@@ -103,6 +103,7 @@ const POS = () => {
             nit_dir: orderData.header.nit_dir,
             fac_nro: orderData.header.fac_nro,
             fac_nro_woo : orderData.header.fac_nro_woo,
+            fac_fec: orderData.header.fac_fec,
           });
           setOrderType(orderData.header.fac_tip_cod);
 
@@ -655,6 +656,11 @@ const POS = () => {
       ? facDescuentoGeneral 
       : (esWooCommerceSinDescuentoGeneral ? 0 : descuentoEventoFinal);
 
+    // Si se factura desde una cotización existente, se conserva su fecha original
+    const facFecParaFactura = (isEditing && orderType === "COT" && selectedClient.fac_fec)
+      ? selectedClient.fac_fec
+      : undefined;
+
     const payload = {
       nit_sec: selectedClient.nit_sec,
       fac_usu_cod_cre: fac_usu_cod,
@@ -664,6 +670,7 @@ const POS = () => {
       fac_descuento_general: descuentoGeneralParaFactura,
       lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
       fac_nro_woo: selectedClient.fac_nro_woo || null,
+      ...(facFecParaFactura ? { fac_fec: facFecParaFactura } : {}),
       detalles: order.map(item => {
         // Determinar si realmente tiene oferta activa
         const tieneOfertaReal = item.tiene_oferta === 'S' && 

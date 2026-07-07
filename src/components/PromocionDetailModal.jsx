@@ -1,16 +1,17 @@
 // src/components/PromocionDetailModal.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { API_URL } from '../config';
 import { FaTag, FaCalendarAlt, FaUser, FaClock, FaEye, FaEdit, FaTrash, FaSpinner } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import LoadingSpinner from './LoadingSpinner';
+import WooCategoryAssignModal from './WooCategoryAssignModal';
+import axiosInstance from '../axiosConfig';
 
 const PromocionDetailModal = ({ isOpen, onClose, promocion, onEdit, onDelete }) => {
   const [detalleCompleto, setDetalleCompleto] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [wooModalOpen, setWooModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && promocion) {
@@ -22,9 +23,7 @@ const PromocionDetailModal = ({ isOpen, onClose, promocion, onEdit, onDelete }) 
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/promociones/${promocion.pro_sec}`, {
-        headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') }
-      });
+      const response = await axiosInstance.get(`/promociones/${promocion.pro_sec}`);
 
       if (response.data.success) {
         setDetalleCompleto(response.data);
@@ -304,7 +303,7 @@ const PromocionDetailModal = ({ isOpen, onClose, promocion, onEdit, onDelete }) 
         </div>
 
         {/* Footer con acciones */}
-        <div className="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-between items-center">
+        <div className="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-between items-center flex-wrap gap-3">
           <div className="flex items-center gap-4">
             <button
               onClick={onClose}
@@ -312,8 +311,15 @@ const PromocionDetailModal = ({ isOpen, onClose, promocion, onEdit, onDelete }) 
             >
               Cerrar
             </button>
+            <button
+              onClick={() => setWooModalOpen(true)}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+            >
+              <FaTag className="w-3.5 h-3.5" />
+              Categoría WooCommerce
+            </button>
           </div>
-          
+
           {canEditOrDelete(promocion.pro_estado) && (
             <div className="flex items-center gap-2">
               <button
@@ -326,7 +332,7 @@ const PromocionDetailModal = ({ isOpen, onClose, promocion, onEdit, onDelete }) 
                 <FaEdit className="w-4 h-4" />
                 Editar
               </button>
-              
+
               <button
                 onClick={() => {
                   onDelete && onDelete(promocion);
@@ -341,6 +347,13 @@ const PromocionDetailModal = ({ isOpen, onClose, promocion, onEdit, onDelete }) 
           )}
         </div>
       </div>
+
+      <WooCategoryAssignModal
+        isOpen={wooModalOpen}
+        onClose={() => setWooModalOpen(false)}
+        promocion={promocion}
+        totalArticulos={detalleCompleto?.articulos?.length ?? 0}
+      />
     </div>
   );
 };

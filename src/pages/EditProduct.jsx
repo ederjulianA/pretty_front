@@ -24,7 +24,8 @@ const EditProduct = () => {
     precio_detal: '',
     precio_mayor: '',
     art_woo_id: '',
-    actualiza_fecha: 'N'
+    actualiza_fecha: 'N',
+    art_max_unidades_pedido: ''
   });
 
   // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
@@ -243,7 +244,8 @@ const EditProduct = () => {
             precio_detal: prod.precio_detal_original || prod.precio_detal || '',
             precio_mayor: prod.precio_mayor_original || prod.precio_mayor || '',
             art_woo_id: prod.art_woo_id || '',
-            actualiza_fecha: prod.actualiza_fecha || 'N'
+            actualiza_fecha: prod.actualiza_fecha || 'N',
+            art_max_unidades_pedido: prod.art_max_unidades_pedido ?? ''
           });
           setInitialArtCod(prod.art_cod || '');
           setInitialArtWooId(prod.art_woo_id || '');
@@ -589,7 +591,8 @@ const EditProduct = () => {
           art_woo_id: formData.art_woo_id,
           precio_detal: Number(formData.precio_detal),
           precio_mayor: Number(formData.precio_mayor),
-          actualiza_fecha: formData.actualiza_fecha
+          actualiza_fecha: formData.actualiza_fecha,
+          art_max_unidades_pedido: formData.art_max_unidades_pedido === '' ? null : Number(formData.art_max_unidades_pedido)
         }, {
           headers: { 'x-access-token': token }
         });
@@ -619,7 +622,8 @@ const EditProduct = () => {
           ...formData,
           subcategoria: formData.subcategoria || 0,
           precio_detal: Number(formData.precio_detal),
-          precio_mayor: Number(formData.precio_mayor)
+          precio_mayor: Number(formData.precio_mayor),
+          art_max_unidades_pedido: formData.art_max_unidades_pedido === '' ? null : Number(formData.art_max_unidades_pedido)
         };
 
         const token = localStorage.getItem('pedidos_pretty_token');
@@ -966,6 +970,26 @@ const EditProduct = () => {
                     <span className="text-gray-700 font-medium">Actualizar Fecha Woo</span>
                   </label>
                 </div>
+                {/* Unidades máximas por pedido - no aplica a variaciones individuales */}
+                {!isVariation && (
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium">Unidades máximas por pedido</label>
+                    <input
+                      type="number"
+                      name="art_max_unidades_pedido"
+                      value={formData.art_max_unidades_pedido}
+                      onChange={handleChange}
+                      placeholder="Sin límite"
+                      min="1"
+                      step="1"
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    />
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Límite de unidades que un cliente puede comprar por pedido en la tienda WooCommerce. Déjalo vacío para no limitar.
+                      {isVariable && ' Aplica a nivel de producto padre (todas las variaciones).'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

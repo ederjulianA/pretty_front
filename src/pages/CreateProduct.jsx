@@ -21,7 +21,8 @@ const CreateProduct = () => {
     subcategoria: '',
     precio_detal: '',
     precio_mayor: '',
-    art_woo_id: ''
+    art_woo_id: '',
+    art_max_unidades_pedido: ''
   });
   const [images, setImages] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -312,6 +313,7 @@ const CreateProduct = () => {
     if (formData.categoria) formDataToSend.append('categoria', formData.categoria);
     if (formData.precio_detal) formDataToSend.append('precio_detal_referencia', formData.precio_detal);
     if (formData.precio_mayor) formDataToSend.append('precio_mayor_referencia', formData.precio_mayor);
+    if (formData.art_max_unidades_pedido) formDataToSend.append('art_max_unidades_pedido', formData.art_max_unidades_pedido);
 
     // Atributos como JSON
     const attributes = [{ name: attributeType, options: attributeOptions }];
@@ -893,32 +895,53 @@ const CreateProduct = () => {
                 />
               )}
             </div>
-            {/* Código WooCommerce - solo para producto simple */}
-            {productType === 'simple' && (
+            {/* Integración WooCommerce */}
+            {productType !== 'bundle' && (
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
                   Integración WooCommerce
                 </h3>
-                <div>
-                  <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
-                  <input
-                    type="text"
-                    name="art_woo_id"
-                    value={formData.art_woo_id}
-                    onChange={handleChange}
-                    onBlur={handleBlurArtWoo}
-                    placeholder="Ingrese código WooCommerce (opcional)"
-                    className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
-                    disabled={isSubmitting}
-                  />
-                  {errorArtWoo && (
-                    <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
-                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {errorArtWoo}
+                <div className="space-y-5">
+                  {productType === 'simple' && (
+                    <div>
+                      <label className="block text-gray-700 mb-2 font-medium">Código WooCommerce</label>
+                      <input
+                        type="text"
+                        name="art_woo_id"
+                        value={formData.art_woo_id}
+                        onChange={handleChange}
+                        onBlur={handleBlurArtWoo}
+                        placeholder="Ingrese código WooCommerce (opcional)"
+                        className={`w-full px-4 py-3 border rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition ${errorArtWoo ? 'border-red-400 focus:border-red-400 bg-red-50/30' : 'border-[#f5cad4]/60'}`}
+                        disabled={isSubmitting}
+                      />
+                      {errorArtWoo && (
+                        <div className="mt-2 flex items-center text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
+                          <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {errorArtWoo}
+                        </div>
+                      )}
                     </div>
                   )}
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium">Unidades máximas por pedido</label>
+                    <input
+                      type="number"
+                      name="art_max_unidades_pedido"
+                      value={formData.art_max_unidades_pedido}
+                      onChange={handleChange}
+                      placeholder="Sin límite"
+                      min="1"
+                      step="1"
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                      disabled={isSubmitting}
+                    />
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Límite de unidades que un cliente puede comprar por pedido en la tienda WooCommerce. Déjalo vacío para no limitar.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

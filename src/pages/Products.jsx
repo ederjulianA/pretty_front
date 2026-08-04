@@ -296,7 +296,12 @@ const Products = () => {
             );
 
             if (response.data.success) {
-                toast.success('Producto sincronizado exitosamente');
+                const isParentVariableNoOp = response.data.data?.stock === null;
+                toast.success(
+                    isParentVariableNoOp
+                        ? 'Este producto es padre de variaciones: el stock se gestiona por variación, no aquí.'
+                        : 'Producto sincronizado exitosamente'
+                );
                 // Refresh the products list
                 fetchProducts(1);
             } else {
@@ -333,12 +338,12 @@ const Products = () => {
     };
 
     const renderSyncStatus = (status, message) => {
-        switch (status) {
-            case 'success':
+        switch ((status || '').toUpperCase()) {
+            case 'SUCCESS':
                 return <FaCheckCircle className="text-emerald-500 w-3.5 h-3.5" title="Sincronizado con WooCommerce" />;
-            case 'error':
+            case 'ERROR':
                 return <FaTimesCircle className="text-red-500 w-3.5 h-3.5" title={`Error Woo: ${message || 'Desconocido'}`} />;
-            case 'pending':
+            case 'PENDING':
                 return <FaClock className="text-amber-500 w-3.5 h-3.5 animate-pulse" title="Sincronización pendiente" />;
             default:
                 return <span className="text-[#b0b0b0] text-xs" title="Estado no disponible">-</span>;

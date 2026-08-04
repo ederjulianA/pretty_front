@@ -1,7 +1,7 @@
 import React from 'react';
-import { FaPlus, FaSyncAlt, FaSpinner } from 'react-icons/fa';
+import { FaPlus, FaSyncAlt, FaSpinner, FaPencilAlt } from 'react-icons/fa';
 
-const VariationsTable = ({ variations, isLoading, onAddVariation, onSyncAttributes, isSyncing, parentName }) => {
+const VariationsTable = ({ variations, isLoading, onAddVariation, onSyncAttributes, isSyncing, parentName, onEditVariation }) => {
   const formatPrice = (price) => {
     if (!price) return '$0';
     return `$${parseInt(price).toLocaleString('es-CO')}`;
@@ -65,11 +65,23 @@ const VariationsTable = ({ variations, isLoading, onAddVariation, onSyncAttribut
                     <p className="font-semibold text-xs text-gray-800">{variation.art_cod}</p>
                     <p className="text-sm text-gray-700 mt-0.5">{variation.art_nom}</p>
                   </div>
-                  {variation.art_variation_attributes && (
-                    <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-medium">
-                      {Object.values(variation.art_variation_attributes)[0]}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {variation.art_variation_attributes && (
+                      <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-medium">
+                        {Object.values(variation.art_variation_attributes)[0]}
+                      </span>
+                    )}
+                    {onEditVariation && (
+                      <button
+                        type="button"
+                        onClick={() => onEditVariation(variation)}
+                        className="p-1.5 text-gray-500 hover:text-[#f58ea3] hover:bg-pink-50 rounded-lg transition"
+                        title="Editar variación"
+                      >
+                        <FaPencilAlt className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-[#f5cad4]/50">
                   <div>
@@ -99,7 +111,10 @@ const VariationsTable = ({ variations, isLoading, onAddVariation, onSyncAttribut
                   <th className="px-3 py-2 text-xs font-bold text-gray-700 uppercase">Atributo</th>
                   <th className="px-3 py-2 text-xs font-bold text-gray-700 uppercase text-right">P. Detal</th>
                   <th className="px-3 py-2 text-xs font-bold text-gray-700 uppercase text-right">P. Mayor</th>
-                  <th className="px-3 py-2 text-xs font-bold text-gray-700 uppercase text-center rounded-tr-lg">Stock</th>
+                  <th className="px-3 py-2 text-xs font-bold text-gray-700 uppercase text-center">Stock</th>
+                  {onEditVariation && (
+                    <th className="px-3 py-2 text-xs font-bold text-gray-700 uppercase text-center rounded-tr-lg">Acciones</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -117,6 +132,18 @@ const VariationsTable = ({ variations, isLoading, onAddVariation, onSyncAttribut
                     <td className="px-3 py-2.5 text-xs text-gray-900 text-right font-medium">{formatPrice(variation.precio_detal)}</td>
                     <td className="px-3 py-2.5 text-xs text-gray-900 text-right font-medium">{formatPrice(variation.precio_mayor)}</td>
                     <td className="px-3 py-2.5 text-xs text-center font-semibold text-[#f58ea3]">{variation.existencia ?? 0}</td>
+                    {onEditVariation && (
+                      <td className="px-3 py-2.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => onEditVariation(variation)}
+                          className="p-1.5 text-gray-500 hover:text-[#f58ea3] hover:bg-pink-50 rounded-lg transition"
+                          title="Editar variación"
+                        >
+                          <FaPencilAlt className="w-3 h-3" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

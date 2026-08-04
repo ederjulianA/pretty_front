@@ -71,7 +71,8 @@ const POS = () => {
   const { products, fetchProducts, pageNumber, hasMore, isLoading, setProducts } = useProducts(
     { filterCodigo, filterNombre, filterExistencia },
     selectedCategory,
-    selectedSubcategory
+    selectedSubcategory,
+    true // excluir padres de producto variable: no gestionan stock propio, no son vendibles en POS
   );
   const { categories: categoryList, isLoadingCategories: isLoadingCategoryList } = useCategories();
   const { clientResults, fetchClients } = useClients();

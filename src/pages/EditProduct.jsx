@@ -7,10 +7,11 @@ import Swal from 'sweetalert2';
 import ProductPhotoGallery from '../components/product/ProductPhotoGallery';
 import VariationsTable from '../components/product/VariationsTable';
 import CreateVariationModal from '../components/product/CreateVariationModal';
+import EditVariationModal from '../components/product/EditVariationModal';
 import BundleManager from '../components/product/BundleManager';
 import ProfitMarginDisplay from '../components/product/ProfitMarginDisplay';
 import useRentabilidad from '../hooks/useRentabilidad';
-import { FaLayerGroup, FaBoxOpen, FaSpinner } from 'react-icons/fa';
+import { FaLayerGroup, FaBoxOpen, FaSpinner, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
 
 const EditProduct = () => {
   const { id } = useParams(); // id del producto (usamos art_sec como id)
@@ -48,6 +49,7 @@ const EditProduct = () => {
   const [variations, setVariations] = useState([]);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
   const [isVariationModalOpen, setIsVariationModalOpen] = useState(false);
+  const [editingVariation, setEditingVariation] = useState(null);
   const [parentAttributes, setParentAttributes] = useState([]); // [{name: "Tono", options: [...]}]
   const [isSyncingAttributes, setIsSyncingAttributes] = useState(false);
 
@@ -63,6 +65,10 @@ const EditProduct = () => {
 
   // Estado para costo promedio del producto
   const [costoPromedio, setCostoPromedio] = useState(0);
+
+  // Estado de sincronización con WooCommerce (SUCCESS/ERROR/PENDING)
+  const [wooSyncStatus, setWooSyncStatus] = useState(null);
+  const [wooSyncMessage, setWooSyncMessage] = useState(null);
 
   // Estado para datos de rentabilidad del backend
   const [rentabilidadData, setRentabilidadData] = useState({
@@ -104,6 +110,22 @@ const EditProduct = () => {
     return null;
   }, [id]);
 
+  // Releer solo el estado de sincronización con WooCommerce tras una acción que lo modifica
+  const refreshSyncStatus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('pedidos_pretty_token');
+      const response = await axios.get(`${API_URL}/articulos/${id}`, {
+        headers: { 'x-access-token': token }
+      });
+      if (response.data.success && response.data.articulo) {
+        setWooSyncStatus(response.data.articulo.art_woo_sync_status || null);
+        setWooSyncMessage(response.data.articulo.art_woo_sync_message || null);
+      }
+    } catch (error) {
+      console.error('Error al releer estado de sincronización:', error);
+    }
+  }, [id]);
+
   // Sincronizar atributos con WooCommerce
   const handleSyncAttributes = async () => {
     setIsSyncingAttributes(true);
@@ -122,6 +144,7 @@ const EditProduct = () => {
           confirmButtonColor: '#f58ea3'
         });
         fetchVariations();
+        refreshSyncStatus();
       } else {
         Swal.fire({
           icon: 'error',
@@ -173,6 +196,7 @@ const EditProduct = () => {
         setConvertAttributeOptions([]);
         setConvertOptionInput('');
         await fetchVariations();
+        refreshSyncStatus();
         const hasWooError = response.data.errors?.wooCommerce;
         Swal.fire({
           icon: hasWooError ? 'warning' : 'success',
@@ -191,10 +215,11 @@ const EditProduct = () => {
         });
       }
     } catch (error) {
+      const status = error.response?.status;
       const msg = error.response?.data?.message || error.message || 'Error al convertir a producto variable.';
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
+        icon: status === 400 ? 'warning' : 'error',
+        title: status === 400 ? 'No se puede convertir todavía' : 'Error',
         text: msg,
         confirmButtonColor: '#f58ea3'
       });
@@ -249,6 +274,8 @@ const EditProduct = () => {
           });
           setInitialArtCod(prod.art_cod || '');
           setInitialArtWooId(prod.art_woo_id || '');
+          setWooSyncStatus(prod.art_woo_sync_status || null);
+          setWooSyncMessage(prod.art_woo_sync_message || null);
 
           // Obtener costo promedio del producto
           // Usar la misma lógica que Products.jsx para mantener consistencia
@@ -633,6 +660,7 @@ const EditProduct = () => {
         const data = response.data;
 
         if (data.success) {
+          refreshSyncStatus();
           Swal.fire({
             icon: 'success',
             title: 'Producto editado',
@@ -731,6 +759,34 @@ const EditProduct = () => {
             </div>
           )}
         </div>
+
+        {/* Badge de estado de sincronización con WooCommerce */}
+        {wooSyncStatus && (
+          <div
+            title={wooSyncStatus.toUpperCase() === 'ERROR' ? wooSyncMessage || undefined : undefined}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ${
+              wooSyncStatus.toUpperCase() === 'SUCCESS'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : wooSyncStatus.toUpperCase() === 'ERROR'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+            {wooSyncStatus.toUpperCase() === 'SUCCESS' ? (
+              <FaCheckCircle className="w-4 h-4 flex-shrink-0" />
+            ) : wooSyncStatus.toUpperCase() === 'ERROR' ? (
+              <FaTimesCircle className="w-4 h-4 flex-shrink-0" />
+            ) : (
+              <FaClock className="w-4 h-4 flex-shrink-0 animate-pulse" />
+            )}
+            <span>
+              {wooSyncStatus.toUpperCase() === 'SUCCESS'
+                ? 'Sincronizado con WooCommerce'
+                : wooSyncStatus.toUpperCase() === 'ERROR'
+                  ? 'Desincronizado con WooCommerce: use "Sync WooCommerce" para reintentar.'
+                  : 'Sincronización con WooCommerce pendiente'}
+            </span>
+          </div>
+        )}
 
         <div>
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -1102,6 +1158,7 @@ const EditProduct = () => {
                 onSyncAttributes={handleSyncAttributes}
                 isSyncing={isSyncingAttributes}
                 parentName={formData.art_nom}
+                onEditVariation={(variation) => setEditingVariation(variation)}
               />
             </div>
           )}
@@ -1162,7 +1219,20 @@ const EditProduct = () => {
             detal: formData.precio_detal,
             mayor: formData.precio_mayor,
           }}
-          onVariationCreated={fetchVariations}
+          onVariationCreated={() => { fetchVariations(); refreshSyncStatus(); }}
+        />
+      )}
+
+      {/* Modal para editar/eliminar variación */}
+      {isVariable && (
+        <EditVariationModal
+          isOpen={!!editingVariation}
+          onClose={() => setEditingVariation(null)}
+          parentArtSec={id}
+          variation={editingVariation}
+          attributeType={parentAttributes[0]?.name || 'Tono'}
+          onVariationUpdated={() => { fetchVariations(); refreshSyncStatus(); }}
+          onVariationDeleted={fetchVariations}
         />
       )}
     </div>

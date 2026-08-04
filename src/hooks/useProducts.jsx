@@ -4,7 +4,7 @@ import axios from 'axios';
 import axiosInstance from '../axiosConfig'; // Importa la instancia configurada
 
 
-const useProducts = (filters, selectedCategory, selectedSubcategory) => {
+const useProducts = (filters, selectedCategory, selectedSubcategory, excluirVariables = false) => {
   const { filterCodigo, filterNombre, filterExistencia } = filters;
   const [products, setProducts] = useState([]);
   const [pageNumber, setPageNumber] = useState(1);
@@ -29,6 +29,7 @@ const useProducts = (filters, selectedCategory, selectedSubcategory) => {
       ...(selectedSubcategory && { inv_sub_gru_cod: selectedSubcategory }),
       ...(filterExistencia === 'con_stock' && { tieneExistencia: 1 }),
       ...(filterExistencia === 'sin_stock' && { tieneExistencia: 0 }),
+      ...(excluirVariables && { excluir_variables: 1 }),
     };
 
     axiosInstance
@@ -99,14 +100,14 @@ const useProducts = (filters, selectedCategory, selectedSubcategory) => {
         setIsLoading(false);
         setHasMore(false);
       });
-  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, selectedSubcategory, pageSize]);
+  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, selectedSubcategory, pageSize, excluirVariables]);
 
   useEffect(() => {
     setProducts([]);
     setPageNumber(1);
     setHasMore(true);
     fetchProducts(1);
-  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, selectedSubcategory, fetchProducts]);
+  }, [filterCodigo, filterNombre, filterExistencia, selectedCategory, selectedSubcategory, excluirVariables, fetchProducts]);
 
   return { products, fetchProducts, pageNumber, hasMore, isLoading, setProducts };
 };

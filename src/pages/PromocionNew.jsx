@@ -32,6 +32,7 @@ const PromocionNew = () => {
     tipo: 'OFERTA',
     fecha_inicio: new Date().toISOString().split('T')[0],
     fecha_fin: new Date().toISOString().split('T')[0],
+    permanente: false,
     observaciones: ''
   });
 
@@ -64,7 +65,8 @@ const PromocionNew = () => {
               descripcion: data.pro_descripcion,
               tipo: data.pro_tipo,
               fecha_inicio: data.pro_fecha_inicio.split('T')[0],
-              fecha_fin: data.pro_fecha_fin.split('T')[0],
+              fecha_fin: data.pro_fecha_fin ? data.pro_fecha_fin.split('T')[0] : new Date().toISOString().split('T')[0],
+              permanente: Boolean(data.pro_permanente),
               observaciones: data.pro_observaciones || ''
             });
 
@@ -364,7 +366,7 @@ const PromocionNew = () => {
         return;
       }
 
-      if (new Date(headerData.fecha_inicio) >= new Date(headerData.fecha_fin)) {
+      if (!headerData.permanente && new Date(headerData.fecha_inicio) >= new Date(headerData.fecha_fin)) {
         Swal.fire({
           icon: 'error',
           title: 'Error de validación',
@@ -398,7 +400,8 @@ const PromocionNew = () => {
         codigo: headerData.codigo,
         descripcion: headerData.descripcion,
         fecha_inicio: new Date(headerData.fecha_inicio).toISOString(),
-        fecha_fin: new Date(headerData.fecha_fin).toISOString(),
+        fecha_fin: headerData.permanente ? null : new Date(headerData.fecha_fin).toISOString(),
+        permanente: headerData.permanente,
         tipo: headerData.tipo,
         observaciones: headerData.observaciones,
         articulos: articulosValidos.map(row => ({
@@ -584,18 +587,34 @@ const PromocionNew = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FaCalendarAlt className="inline mr-1" />
-                Fecha de Fin *
-              </label>
+            {!headerData.permanente && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <FaCalendarAlt className="inline mr-1" />
+                  Fecha de Fin *
+                </label>
+                <input
+                  type="date"
+                  value={headerData.fecha_fin}
+                  onChange={(e) => setHeaderData({ ...headerData, fecha_fin: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Promoción permanente */}
+            <div className="md:col-span-2 flex items-center gap-2">
               <input
-                type="date"
-                value={headerData.fecha_fin}
-                onChange={(e) => setHeaderData({ ...headerData, fecha_fin: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
-                required
+                type="checkbox"
+                id="permanente"
+                checked={headerData.permanente}
+                onChange={(e) => setHeaderData({ ...headerData, permanente: e.target.checked })}
+                className="w-4 h-4 rounded border-gray-300 text-[#f58ea3] focus:ring-[#f58ea3]"
               />
+              <label htmlFor="permanente" className="text-sm font-medium text-gray-700">
+                Promoción permanente / sin fecha de cierre
+              </label>
             </div>
 
             {/* Observaciones */}

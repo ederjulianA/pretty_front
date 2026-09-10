@@ -18,6 +18,10 @@ const EditVariationModal = ({
   const [precioDetal, setPrecioDetal] = useState('');
   const [precioMayor, setPrecioMayor] = useState('');
   const [attributeValue, setAttributeValue] = useState('');
+  const [artPeso, setArtPeso] = useState('');
+  const [artLargo, setArtLargo] = useState('');
+  const [artAncho, setArtAncho] = useState('');
+  const [artAlto, setArtAlto] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -26,6 +30,10 @@ const EditVariationModal = ({
       setVariationName(variation.art_nom || '');
       setPrecioDetal(variation.precio_detal || '');
       setPrecioMayor(variation.precio_mayor || '');
+      setArtPeso(variation.art_peso ?? '');
+      setArtLargo(variation.art_largo ?? '');
+      setArtAncho(variation.art_ancho ?? '');
+      setArtAlto(variation.art_alto ?? '');
       setAttributeValue(
         variation.art_variation_attributes ? Object.values(variation.art_variation_attributes)[0] : ''
       );
@@ -55,6 +63,10 @@ const EditVariationModal = ({
           precio_detal: Number(precioDetal),
           precio_mayor: Number(precioMayor),
           attributes: { [attributeType]: attributeValue },
+          art_peso: artPeso === '' ? null : Number(artPeso),
+          art_largo: artLargo === '' ? null : Number(artLargo),
+          art_ancho: artAncho === '' ? null : Number(artAncho),
+          art_alto: artAlto === '' ? null : Number(artAlto),
         },
         { headers: { 'x-access-token': token } }
       );
@@ -210,6 +222,55 @@ const EditVariationModal = ({
                 disabled={isSubmitting || isDeleting}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-1 text-sm font-medium">Peso y dimensiones (opcional)</label>
+            <div className="grid grid-cols-4 gap-2">
+              <input
+                type="number"
+                value={artPeso}
+                onChange={(e) => setArtPeso(e.target.value)}
+                placeholder="Kg"
+                min="0"
+                step="0.01"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting || isDeleting}
+              />
+              <input
+                type="number"
+                value={artLargo}
+                onChange={(e) => setArtLargo(e.target.value)}
+                placeholder="Largo cm"
+                min="0"
+                step="0.1"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting || isDeleting}
+              />
+              <input
+                type="number"
+                value={artAncho}
+                onChange={(e) => setArtAncho(e.target.value)}
+                placeholder="Ancho cm"
+                min="0"
+                step="0.1"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting || isDeleting}
+              />
+              <input
+                type="number"
+                value={artAlto}
+                onChange={(e) => setArtAlto(e.target.value)}
+                placeholder="Alto cm"
+                min="0"
+                step="0.1"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting || isDeleting}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Necesario para que envia.com cotice el envío de esta variación correctamente. Déjalos vacíos para borrar el valor guardado.
+            </p>
           </div>
 
           <div className="flex justify-between items-center gap-3 pt-2">

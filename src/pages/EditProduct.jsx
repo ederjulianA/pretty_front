@@ -26,7 +26,11 @@ const EditProduct = () => {
     precio_mayor: '',
     art_woo_id: '',
     actualiza_fecha: 'N',
-    art_max_unidades_pedido: ''
+    art_max_unidades_pedido: '',
+    art_peso: '',
+    art_largo: '',
+    art_ancho: '',
+    art_alto: ''
   });
 
   // [NUEVO] Guardar los valores iniciales para excluirlos de la validación
@@ -270,7 +274,11 @@ const EditProduct = () => {
             precio_mayor: prod.precio_mayor_original || prod.precio_mayor || '',
             art_woo_id: prod.art_woo_id || '',
             actualiza_fecha: prod.actualiza_fecha || 'N',
-            art_max_unidades_pedido: prod.art_max_unidades_pedido ?? ''
+            art_max_unidades_pedido: prod.art_max_unidades_pedido ?? '',
+            art_peso: prod.art_peso ?? '',
+            art_largo: prod.art_largo ?? '',
+            art_ancho: prod.art_ancho ?? '',
+            art_alto: prod.art_alto ?? ''
           });
           setInitialArtCod(prod.art_cod || '');
           setInitialArtWooId(prod.art_woo_id || '');
@@ -619,7 +627,11 @@ const EditProduct = () => {
           precio_detal: Number(formData.precio_detal),
           precio_mayor: Number(formData.precio_mayor),
           actualiza_fecha: formData.actualiza_fecha,
-          art_max_unidades_pedido: formData.art_max_unidades_pedido === '' ? null : Number(formData.art_max_unidades_pedido)
+          art_max_unidades_pedido: formData.art_max_unidades_pedido === '' ? null : Number(formData.art_max_unidades_pedido),
+          art_peso: formData.art_peso === '' ? null : Number(formData.art_peso),
+          art_largo: formData.art_largo === '' ? null : Number(formData.art_largo),
+          art_ancho: formData.art_ancho === '' ? null : Number(formData.art_ancho),
+          art_alto: formData.art_alto === '' ? null : Number(formData.art_alto)
         }, {
           headers: { 'x-access-token': token }
         });
@@ -650,7 +662,11 @@ const EditProduct = () => {
           subcategoria: formData.subcategoria || 0,
           precio_detal: Number(formData.precio_detal),
           precio_mayor: Number(formData.precio_mayor),
-          art_max_unidades_pedido: formData.art_max_unidades_pedido === '' ? null : Number(formData.art_max_unidades_pedido)
+          art_max_unidades_pedido: formData.art_max_unidades_pedido === '' ? null : Number(formData.art_max_unidades_pedido),
+          art_peso: formData.art_peso === '' ? null : Number(formData.art_peso),
+          art_largo: formData.art_largo === '' ? null : Number(formData.art_largo),
+          art_ancho: formData.art_ancho === '' ? null : Number(formData.art_ancho),
+          art_alto: formData.art_alto === '' ? null : Number(formData.art_alto)
         };
 
         const token = localStorage.getItem('pedidos_pretty_token');
@@ -1048,6 +1064,73 @@ const EditProduct = () => {
                 )}
               </div>
             </div>
+
+            {/* Peso y dimensiones (envío) — no aplica a variaciones individuales */}
+            {!isVariation && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                  Peso y Dimensiones
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium">Peso (kg)</label>
+                    <input
+                      type="number"
+                      name="art_peso"
+                      value={formData.art_peso}
+                      onChange={handleChange}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium">Largo (cm)</label>
+                    <input
+                      type="number"
+                      name="art_largo"
+                      value={formData.art_largo}
+                      onChange={handleChange}
+                      placeholder="0.0"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium">Ancho (cm)</label>
+                    <input
+                      type="number"
+                      name="art_ancho"
+                      value={formData.art_ancho}
+                      onChange={handleChange}
+                      placeholder="0.0"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2 font-medium">Alto (cm)</label>
+                    <input
+                      type="number"
+                      name="art_alto"
+                      value={formData.art_alto}
+                      onChange={handleChange}
+                      placeholder="0.0"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  Usados por la cotización de envío nacional (envia.com). Déjalos vacíos para borrar el valor guardado.
+                  {isVariable && ' Este valor solo queda como referencia en el producto padre — cada variación necesita su propio peso/dimensiones para que WooCommerce cotice correctamente (edítalo desde cada variación).'}
+                </p>
+              </div>
+            )}
 
             {/* Convertir a producto variable — solo para artículos simples */}
             {productWooType === 'simple' && (

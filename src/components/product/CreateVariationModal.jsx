@@ -20,6 +20,10 @@ const CreateVariationModal = ({
   const [variationName, setVariationName] = useState('');
   const [precioDetal, setPrecioDetal] = useState('');
   const [precioMayor, setPrecioMayor] = useState('');
+  const [artPeso, setArtPeso] = useState('');
+  const [artLargo, setArtLargo] = useState('');
+  const [artAncho, setArtAncho] = useState('');
+  const [artAlto, setArtAlto] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,6 +39,10 @@ const CreateVariationModal = ({
     if (isOpen) {
       setPrecioDetal(referencePrices?.detal || '');
       setPrecioMayor(referencePrices?.mayor || '');
+      setArtPeso('');
+      setArtLargo('');
+      setArtAncho('');
+      setArtAlto('');
       setSelectedOption('');
       setCustomOption('');
       setVariationName('');
@@ -96,6 +104,10 @@ const CreateVariationModal = ({
       formData.append('precio_detal', precioDetal);
       formData.append('precio_mayor', precioMayor);
       formData.append('attributes', JSON.stringify({ [attributeType]: effectiveOption }));
+      if (artPeso) formData.append('art_peso', artPeso);
+      if (artLargo) formData.append('art_largo', artLargo);
+      if (artAncho) formData.append('art_ancho', artAncho);
+      if (artAlto) formData.append('art_alto', artAlto);
 
       if (image) {
         formData.append('image1', image);
@@ -270,6 +282,56 @@ const CreateVariationModal = ({
                 disabled={isSubmitting}
               />
             </div>
+          </div>
+
+          {/* Peso y dimensiones */}
+          <div>
+            <label className="block text-gray-700 mb-1 text-sm font-medium">Peso y dimensiones (opcional)</label>
+            <div className="grid grid-cols-4 gap-2">
+              <input
+                type="number"
+                value={artPeso}
+                onChange={(e) => setArtPeso(e.target.value)}
+                placeholder="Kg"
+                min="0"
+                step="0.01"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting}
+              />
+              <input
+                type="number"
+                value={artLargo}
+                onChange={(e) => setArtLargo(e.target.value)}
+                placeholder="Largo cm"
+                min="0"
+                step="0.1"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting}
+              />
+              <input
+                type="number"
+                value={artAncho}
+                onChange={(e) => setArtAncho(e.target.value)}
+                placeholder="Ancho cm"
+                min="0"
+                step="0.1"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting}
+              />
+              <input
+                type="number"
+                value={artAlto}
+                onChange={(e) => setArtAlto(e.target.value)}
+                placeholder="Alto cm"
+                min="0"
+                step="0.1"
+                className="w-full p-2.5 border border-[#f5cad4] rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] outline-none transition text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Necesario para que envia.com cotice el envío de esta variación correctamente.
+            </p>
           </div>
 
           {/* Imagen */}

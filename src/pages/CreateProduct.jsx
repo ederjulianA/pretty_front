@@ -22,7 +22,11 @@ const CreateProduct = () => {
     precio_detal: '',
     precio_mayor: '',
     art_woo_id: '',
-    art_max_unidades_pedido: ''
+    art_max_unidades_pedido: '',
+    art_peso: '',
+    art_largo: '',
+    art_ancho: '',
+    art_alto: ''
   });
   const [images, setImages] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -314,6 +318,10 @@ const CreateProduct = () => {
     if (formData.precio_detal) formDataToSend.append('precio_detal_referencia', formData.precio_detal);
     if (formData.precio_mayor) formDataToSend.append('precio_mayor_referencia', formData.precio_mayor);
     if (formData.art_max_unidades_pedido) formDataToSend.append('art_max_unidades_pedido', formData.art_max_unidades_pedido);
+    if (formData.art_peso) formDataToSend.append('art_peso', formData.art_peso);
+    if (formData.art_largo) formDataToSend.append('art_largo', formData.art_largo);
+    if (formData.art_ancho) formDataToSend.append('art_ancho', formData.art_ancho);
+    if (formData.art_alto) formDataToSend.append('art_alto', formData.art_alto);
 
     // Atributos como JSON
     const attributes = [{ name: attributeType, options: attributeOptions }];
@@ -366,6 +374,10 @@ const CreateProduct = () => {
     formDataToSend.append('inv_sub_gru_cod', formData.subcategoria);
     formDataToSend.append('precio_detal', formData.precio_detal);
     formDataToSend.append('precio_mayor', formData.precio_mayor);
+    if (formData.art_peso) formDataToSend.append('art_peso', formData.art_peso);
+    if (formData.art_largo) formDataToSend.append('art_largo', formData.art_largo);
+    if (formData.art_ancho) formDataToSend.append('art_ancho', formData.art_ancho);
+    if (formData.art_alto) formDataToSend.append('art_alto', formData.art_alto);
 
     // Agregar componentes como JSON string
     formDataToSend.append('componentes', JSON.stringify(
@@ -945,6 +957,75 @@ const CreateProduct = () => {
                 </div>
               </div>
             )}
+            {/* Peso y dimensiones (envío) */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">
+                Peso y Dimensiones
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Peso (kg)</label>
+                  <input
+                    type="number"
+                    name="art_peso"
+                    value={formData.art_peso}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Largo (cm)</label>
+                  <input
+                    type="number"
+                    name="art_largo"
+                    value={formData.art_largo}
+                    onChange={handleChange}
+                    placeholder="0.0"
+                    min="0"
+                    step="0.1"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Ancho (cm)</label>
+                  <input
+                    type="number"
+                    name="art_ancho"
+                    value={formData.art_ancho}
+                    onChange={handleChange}
+                    placeholder="0.0"
+                    min="0"
+                    step="0.1"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">Alto (cm)</label>
+                  <input
+                    type="number"
+                    name="art_alto"
+                    value={formData.art_alto}
+                    onChange={handleChange}
+                    placeholder="0.0"
+                    min="0"
+                    step="0.1"
+                    className="w-full px-4 py-3 border border-[#f5cad4]/60 rounded-xl bg-[#fffafe] focus:ring-2 focus:ring-[#f58ea3]/50 focus:border-[#f58ea3] outline-none transition"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Usados por la cotización de envío nacional (envia.com). Opcional, pero recomendado para que la tarifa refleje el producto real.
+                {isVariable && ' Para productos variables, cada variación necesita su propio peso/dimensiones — este valor solo queda como referencia en el producto padre.'}
+              </p>
+            </div>
+
             {/* Imágenes */}
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-[#f5cad4]/40 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-3 border-b border-[#f5cad4]/30">

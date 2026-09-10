@@ -29,6 +29,8 @@ import EventoPromocionalNew from './pages/EventoPromocionalNew';
 import Categories from './pages/Categories';
 import Compras from './pages/Compras';
 import CompraForm from './pages/CompraForm';
+import CierreMes from './pages/CierreMes';
+import CierreMesWizard from './pages/CierreMesWizard';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -150,6 +152,24 @@ function App() {
             element={
               <ProtectedRoute requiredModule="dashboard" requiredPermission="view">
                 <CompraForm />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Cierre de Mes */}
+          <Route
+            path="cierre-mes"
+            element={
+              <ProtectedRoute requiredModule="cierre_mes" requiredPermission="view">
+                <CierreMes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="cierre-mes/nuevo"
+            element={
+              <ProtectedRoute requiredModule="cierre_mes" requiredPermission="create">
+                <CierreMesWizard />
               </ProtectedRoute>
             }
           />

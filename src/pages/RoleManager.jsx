@@ -15,6 +15,7 @@ const RoleManager = () => {
     { id: 'ajustes', name: 'Ajustes', actions: ['view', 'create', 'edit'] },
     { id: 'conteos', name: 'Conteos', actions: ['view', 'create', 'edit'] },
     { id: 'promociones', name: 'Promociones', actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'cierre_mes', name: 'Cierre de Mes', actions: ['view', 'create', 'edit', 'delete'] },
     { id: 'admin', name: 'Administración', actions: ['manage_roles', 'manage_users'] },
   ]);
   const [selectedRole, setSelectedRole] = useState(null);

@@ -2,7 +2,7 @@
 // Operativo Premium: Denso pero respirable, profesional con identidad cosmética
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen, FaChartLine, FaShoppingCart } from 'react-icons/fa';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen, FaChartLine, FaShoppingCart, FaFileInvoiceDollar } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
 import { useAuth } from '../contexts/AuthContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -68,6 +68,8 @@ const AdminLayout = () => {
       'promociones': 'Promociones',
       'eventos-promocionales': 'Eventos Promocionales',
       'conteos': 'Conteos',
+      'cierre-mes': 'Cierre de Mes',
+      'nuevo': 'Nuevo Cierre',
       'pos': 'POS',
       'configuraciones': 'Configuraciones',
       'categorias': 'Categorías',
@@ -376,6 +378,26 @@ const AdminLayout = () => {
               </li>
             )}
             
+            {/* Cierre de Mes */}
+            {hasAccess('cierre_mes') && (
+              <li>
+                <NavLink
+                  to="/cierre-mes"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors duration-150 ${
+                      isActive
+                        ? 'bg-[#fff5f7] text-[#f58ea3] border-l-3 border-[#f58ea3] pl-[10px]'
+                        : 'text-[#2c2c2c] hover:bg-[#f5f6f7]'
+                    }`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaFileInvoiceDollar className="w-[18px] h-[18px]" />
+                  Cierre de Mes
+                </NavLink>
+              </li>
+            )}
+
             {/* POS */}
             {hasAccess('pos') && (
               <li>

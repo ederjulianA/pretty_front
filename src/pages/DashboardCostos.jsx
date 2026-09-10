@@ -467,10 +467,9 @@ const DashboardCostos = () => {
 
     setAplicandoCostos(true);
     try {
-      const usuCod = localStorage.getItem('user_pretty') || undefined;
-      const aplicarPayload = usuCod ? { usu_cod: usuCod } : {};
-      
-      const response = await axiosInstance.post('/carga-costos/aplicar', aplicarPayload);
+      // El backend toma la identidad del token (SEC-05), no del cuerpo:
+      // enviar usu_cod aqui no tenia efecto y permitia suplantar a otro usuario.
+      const response = await axiosInstance.post('/carga-costos/aplicar', {});
 
       if (response.data.success) {
         const { total_aplicados, errores } = response.data.data || {};

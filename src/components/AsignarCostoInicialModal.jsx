@@ -70,12 +70,10 @@ const AsignarCostoInicialModal = ({ isOpen, onClose, articulo, onSuccess }) => {
 
       if (response.data.success) {
         const { estado, margen, precio_venta, siguiente_paso } = response.data.data;
-        const usuCod = localStorage.getItem('user_pretty') || undefined;
-        
         // Función auxiliar para aplicar el costo
         const aplicarCosto = async () => {
-          const aplicarPayload = usuCod ? { usu_cod: usuCod } : {};
-          const aplicarResponse = await axiosInstance.post('/carga-costos/aplicar', aplicarPayload);
+          // El backend toma la identidad del token (SEC-05), no del cuerpo.
+          const aplicarResponse = await axiosInstance.post('/carga-costos/aplicar', {});
           
           if (aplicarResponse.data.success) {
             const { total_aplicados } = aplicarResponse.data.data || {};

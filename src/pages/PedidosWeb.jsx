@@ -378,7 +378,11 @@ const PedidosWeb = () => {
                   const ocupado = accionEnCurso === p.fac_nro_rem;
                   return (
                     <tr key={p.woo_order_id} className="hover:bg-[#fafafa] transition-colors align-top">
-                      <td className="py-2 px-3 font-semibold text-[#0f172a]">#{p.woo_order_id}</td>
+                      <td className="py-2 px-3 font-semibold text-[#0f172a]">
+                        {salud?.wc_url ? (
+                          <a href={`${salud.wc_url}/wp-admin/post.php?post=${p.woo_order_id}&action=edit`} target="_blank" rel="noreferrer" className="hover:text-[#f58ea3] underline decoration-dotted" title="Abrir el pedido en WooCommerce (wp-admin)">#{p.woo_order_id}</a>
+                        ) : `#${p.woo_order_id}`}
+                      </td>
                       <td className="py-2 px-3 text-[#475569] whitespace-nowrap">{fmtFecha(p.woo_created_gmt || p.rem_fec)}</td>
                       <td className="py-2 px-3">
                         <p className="text-[#0f172a] font-medium">{p.cliente || '-'}</p>

@@ -1,194 +1,84 @@
 // src/pages/Dashboard.jsx
-import React, { useState } from 'react';
-import axios from 'axios';
-import { formatDate } from '../utils/dateUtils';
-import { baseUrl, API_URL } from '../config.js'; 
+// SPEC-013 (14/sep/2026): el panel "Sincronización de Pedidos WooCommerce" (traer pedidos como
+// cotización por lotes con un estado por corrida) se retiró al pasar el importador automático a
+// modo real. Los pedidos web ahora entran solos como remisiones (REM) y se gestionan en /pedidos-web;
+// el estado del inventario ERP ↔ Woo se ve en /dashboard/inventario (reconciliación nocturna).
+// Este Dashboard queda como punto de entrada con los indicadores de ese flujo.
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import axiosInstance from '../axiosConfig';
+import { FaGlobe, FaBalanceScale, FaChartLine, FaExclamationTriangle } from 'react-icons/fa';
+
+const fmtFecha = (v) => (v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-');
+
+// eslint-disable-next-line react/prop-types
+const Tarjeta = ({ to, icono, titulo, children, alerta }) => (
+  <Link to={to} className={`block bg-white rounded-xl border shadow-sm p-5 hover:shadow-md transition ${alerta ? 'border-red-200' : 'border-gray-100 hover:border-[#f58ea3]'}`}>
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-[#f58ea3]">{icono}</span>
+      <h3 className="text-base font-semibold text-[#0f172a]">{titulo}</h3>
+      {alerta && <FaExclamationTriangle className="text-red-500 w-4 h-4 ml-auto" title={alerta} />}
+    </div>
+    <div className="text-sm text-[#475569] space-y-1">{children}</div>
+  </Link>
+);
 
 const Dashboard = () => {
-  // Estados para los filtros
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [perPage, setPerPage] = useState(100);
-  const [wooStatus, setWooStatus] = useState('on-hold');
-  
-  // Estado para los mensajes de respuesta
-  const [syncMessages, setSyncMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [pedidos, setPedidos] = useState(null);
+  const [recon, setRecon] = useState(null);
 
-  // Opciones de estado de WooCommerce
-  const wooStatusOptions = [
-    { value: 'on-hold', label: 'En espera' },
-    { value: 'processing', label: 'Procesando' },
-    { value: 'completed', label: 'Completado' },
-    { value: 'cancelled', label: 'Cancelado' },
-    { value: 'refunded', label: 'Reembolsado' },
-    { value: 'failed', label: 'Fallido' },
-    { value: 'pending', label: 'Pendiente' },
-    { value: 'epayco_processing', label: 'PAGADO EPAYCO (Pruebas)' },
-    { value: 'epayco-processing', label: 'PAGADO EPAYCO (Producción)' },
-    { value: 'epayco-completed', label: 'EPAYCO COMPLETADO' }
-  ];
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await axiosInstance.get('/pedidos-web', { params: { limite: 1 } });
+        if (data.success) setPedidos({ conteos: data.conteos || {}, salud: data.salud || null });
+      } catch { setPedidos({ error: true }); }
+      try {
+        const { data } = await axiosInstance.get('/woo/reconciliaciones', { params: { limite: 1 } });
+        if (data.success) setRecon({ ultima: data.reconciliaciones?.[0] || null, estado: data.estado || null });
+      } catch { setRecon({ error: true }); }
+    })();
+  }, []);
 
-  const handleSync = async () => {
-    if (!dateFrom || !dateTo) {
-      alert('Por favor seleccione las fechas');
-      return;
-    }
-
-    setIsLoading(true);
-    setSyncMessages([]);
-
-    try {
-      const endpoint = '/woo/sync-orders';
-      const response = await axios.post(`${API_URL}/woo/sync-orders`, {
-        FechaDesde: dateFrom,
-        FechaHasta: dateTo,
-        Estado: wooStatus
-      });
-
-      if (response.data && response.data.messages) {
-        setSyncMessages(response.data.messages);
-      }
-    } catch (error) {
-      console.error('Error en sincronización:', error);
-      setSyncMessages([{
-        Description: 'Error en la sincronización: ' + error.message,
-        Type: 2
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const c = pedidos?.conteos || {};
+  const salud = pedidos?.salud;
+  const u = recon?.ultima;
+  const alertaImportador = salud && (!salud.enabled || salud.alerta) ? (salud.enabled ? 'El importador lleva más de 10 min sin un ciclo OK' : 'El importador de pedidos web está apagado') : null;
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-2">Sincronización de Pedidos WooCommerce</h2>
-          {/* SPEC-013: este panel (COT por lotes) se retira cuando el importador automático pase a modo real.
-              Mientras tanto sigue siendo el camino para registrar el atraso (Fase 0). */}
-          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
-            Este panel trae pedidos como <b>cotización</b> por lotes y será reemplazado por el importador automático de{' '}
-            <a href="/pedidos-web" className="underline font-medium">Pedidos web</a> (remisiones que reservan stock).
-            Úsalo solo para registrar pedidos atrasados hasta que el importador pase a modo real.
-          </p>
-          
-          {/* Panel de Filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Desde
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-pink-300"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Hasta
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-pink-300"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Registros por página
-              </label>
-              <input
-                type="number"
-                value={perPage}
-                onChange={(e) => setPerPage(Number(e.target.value))}
-                min="1"
-                max="100"
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-pink-300"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado WooCommerce
-              </label>
-              <select
-                value={wooStatus}
-                onChange={(e) => setWooStatus(e.target.value)}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-pink-300"
-              >
-                {wooStatusOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-[#0f172a]">Dashboard</h2>
+          <p className="text-sm text-[#64748b]">Los pedidos de la tienda web entran automáticamente al ERP como remisiones; ya no se sincronizan a mano.</p>
+        </div>
 
-          {/* Botón de Sincronización */}
-          <div className="flex justify-end mb-6">
-            <button
-              onClick={handleSync}
-              disabled={isLoading}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded
-                ${isLoading 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-[#f58ea3] hover:bg-[#a5762f]'
-                } 
-                text-white transition-colors
-              `}
-            >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Sincronizando...
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Sincronizar Pedidos
-                </>
-              )}
-            </button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Tarjeta to="/pedidos-web" icono={<FaGlobe className="w-5 h-5" />} titulo="Pedidos web" alerta={alertaImportador}>
+            {pedidos?.error ? <p>No se pudo consultar.</p> : (
+              <>
+                <p><b>{c.REM_ACTIVA?.n ?? 0}</b> reservados (pendientes de pago){c.REM_ACTIVA?.por_vencer ? <span className="text-red-600"> · {c.REM_ACTIVA.por_vencer} por vencer</span> : ''}</p>
+                <p><b>{c.FACTURADO?.n ?? 0}</b> facturados · <b>{c.REVISION?.n ?? 0}</b> en revisión · <b>{c.ERROR?.n ?? 0}</b> con error</p>
+                {c._alerta?.n ? <p className="text-red-700 font-medium">⚠ {c._alerta.n} con stock insuficiente</p> : <p className="text-green-700">Sin alertas de stock</p>}
+                <p className="text-xs text-[#94a3b8]">Importador {salud ? (salud.enabled ? `${salud.modo === 'simulacion' ? 'en simulación' : 'activo'} · último ciclo hace ${Math.round((salud.atraso_seg || 0) / 60)} min` : 'apagado') : '…'}</p>
+              </>
+            )}
+          </Tarjeta>
 
-          {/* Panel de Mensajes */}
-          {syncMessages.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b">
-                <h3 className="text-lg font-medium">Resultados de la Sincronización</h3>
-              </div>
-              <div className="divide-y max-h-96 overflow-y-auto">
-                {syncMessages.map((message, index) => (
-                  <div 
-                    key={index}
-                    className={`p-3 ${
-                      message.Type === 0 ? 'bg-white' :
-                      message.Type === 1 ? 'bg-yellow-50' :
-                      'bg-red-50'
-                    }`}
-                  >
-                    <p className={`text-sm ${
-                      message.Type === 0 ? 'text-gray-700' :
-                      message.Type === 1 ? 'text-yellow-700' :
-                      'text-red-700'
-                    }`}>
-                      {message.Description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <Tarjeta to="/dashboard/inventario" icono={<FaBalanceScale className="w-5 h-5" />} titulo="Inventario ERP ↔ Woo" alerta={u && Number(u.inv_neg_sin_pedido) > 0 ? `${u.inv_neg_sin_pedido} artículos negativos sin pedido web` : null}>
+            {recon?.error ? <p>No se pudo consultar.</p> : !u ? <p>Aún no hay reconciliaciones.</p> : (
+              <>
+                <p>Última reconciliación: {fmtFecha(u.ejecutada_en)} ({u.origen || '-'})</p>
+                <p><b>{u.total_diferentes}</b> diferencias de {u.total_comparados} comparados · {u.corregidos} corregidas</p>
+                <p className={Number(u.inv_neg_sin_pedido) ? 'text-red-700 font-medium' : ''}>{u.inv_neg_sin_pedido ?? 0} negativos sin pedido web · {u.inv_repetidas ?? 0} repetidas</p>
+                <p className="text-xs text-[#94a3b8]">{recon.estado?.enabled ? `Programada a las ${recon.estado.hora}${recon.estado.autocorregir ? ' con autocorrección' : ' (solo reporte)'}` : 'Job nocturno apagado'}</p>
+              </>
+            )}
+          </Tarjeta>
+
+          <Tarjeta to="/dashboard/ventas" icono={<FaChartLine className="w-5 h-5" />} titulo="Ventas">
+            <p>Indicadores de ventas por canal, periodo y producto.</p>
+          </Tarjeta>
         </div>
       </div>
     </div>

@@ -533,7 +533,7 @@ const Orders = () => {
                     <button 
                       onClick={() => handleSyncWoo(order.fac_nro)}
                       className="text-[#f58ea3] hover:text-[#f7b3c2] p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Sync Woo"
+                      title="Reconciliar con Woo (re-escribe en WooCommerce la existencia del ERP de los artículos de este documento)"
                       disabled={isSyncing}
                     >
                       {isSyncing ? (
@@ -663,7 +663,7 @@ const Orders = () => {
                         <button 
                           onClick={() => handleSyncWoo(order.fac_nro)}
                           className="text-[#f58ea3] hover:text-[#f7b3c2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Sync Woo"
+                          title="Reconciliar con Woo (re-escribe en WooCommerce la existencia del ERP de los artículos de este documento)"
                           disabled={isSyncing}
                         >
                           {isSyncing ? (

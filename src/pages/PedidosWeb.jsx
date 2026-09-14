@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../axiosConfig';
 import Swal from 'sweetalert2';
-import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle, FaSearch, FaBroom } from 'react-icons/fa';
+import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle, FaSearch, FaBroom, FaRegClock } from 'react-icons/fa';
 
 const fmtCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(v) || 0);
 const fmtFecha = (v) => (v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-');
@@ -163,6 +163,42 @@ const PedidosWeb = () => {
       cargar();
     } catch (e) {
       Swal.fire({ icon: 'error', title: 'No se pudo anular', text: e.response?.data?.error || e.message, confirmButtonColor: '#f58ea3' });
+    } finally {
+      setAccionEnCurso(null);
+    }
+  };
+
+  const extenderVencimiento = async (p) => {
+    const sugerida = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const r = await Swal.fire({
+      title: 'Extender vencimiento',
+      html: `<p class="text-sm">${p.fac_nro_rem} (pedido #${p.woo_order_id}) vence ${p.vence_el ? fmtFecha(p.vence_el) : 'nunca'}.</p>
+        <label class="block text-left text-xs mt-3 mb-1">Nueva fecha (vacío = sin vencimiento)</label>
+        <input id="sw-hasta" type="date" class="swal2-input" style="margin:0;width:100%" value="${sugerida}" />
+        <label class="block text-left text-xs mt-3 mb-1">Motivo (obligatorio)</label>
+        <input id="sw-motivo" type="text" class="swal2-input" style="margin:0;width:100%" placeholder="Ej: la clienta pidió plazo hasta el viernes" />`,
+      showCancelButton: true,
+      confirmButtonColor: '#f58ea3',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const hasta = document.getElementById('sw-hasta').value;
+        const motivo = document.getElementById('sw-motivo').value.trim();
+        if (!motivo) { Swal.showValidationMessage('Escribe el motivo'); return false; }
+        if (hasta && new Date(`${hasta}T23:59:59`) <= new Date()) { Swal.showValidationMessage('La fecha debe ser futura'); return false; }
+        // fin del día elegido, hora local
+        return { hasta: hasta ? new Date(`${hasta}T23:59:59`).toISOString() : null, motivo };
+      }
+    });
+    if (!r.isConfirmed) return;
+    setAccionEnCurso(p.fac_nro_rem);
+    try {
+      const { data } = await axiosInstance.post(`/pedidos-web/${p.fac_nro_rem}/extender`, r.value);
+      await Swal.fire({ icon: 'success', title: 'Listo', text: data.message, confirmButtonColor: '#f58ea3' });
+      cargar();
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'No se pudo extender', text: e.response?.data?.error || e.message, confirmButtonColor: '#f58ea3' });
     } finally {
       setAccionEnCurso(null);
     }
@@ -342,7 +378,11 @@ const PedidosWeb = () => {
                   const ocupado = accionEnCurso === p.fac_nro_rem;
                   return (
                     <tr key={p.woo_order_id} className="hover:bg-[#fafafa] transition-colors align-top">
-                      <td className="py-2 px-3 font-semibold text-[#0f172a]">#{p.woo_order_id}</td>
+                      <td className="py-2 px-3 font-semibold text-[#0f172a]">
+                        {salud?.wc_url ? (
+                          <a href={`${salud.wc_url}/wp-admin/post.php?post=${p.woo_order_id}&action=edit`} target="_blank" rel="noreferrer" className="hover:text-[#f58ea3] underline decoration-dotted" title="Abrir el pedido en WooCommerce (wp-admin)">#{p.woo_order_id}</a>
+                        ) : `#${p.woo_order_id}`}
+                      </td>
                       <td className="py-2 px-3 text-[#475569] whitespace-nowrap">{fmtFecha(p.woo_created_gmt || p.rem_fec)}</td>
                       <td className="py-2 px-3">
                         <p className="text-[#0f172a] font-medium">{p.cliente || '-'}</p>
@@ -368,7 +408,7 @@ const PedidosWeb = () => {
                         {!p.fac_nro_rem && !p.fac_nro_vta && '-'}
                       </td>
                       <td className="py-2 px-3 text-xs whitespace-nowrap">
-                        {horas === null ? '-' : (
+                        {p.estado_erp === 'REM_ACTIVA' && !p.vence_el ? <span className="text-[#64748b]">sin vencimiento</span> : horas === null ? '-' : (
                           <span className={horas <= 24 ? 'text-red-600 font-semibold' : 'text-[#475569]'}>
                             {horas <= 0 ? 'vencida' : horas < 48 ? `en ${horas} h` : `en ${Math.round(horas / 24)} días`}
                           </span>
@@ -386,6 +426,9 @@ const PedidosWeb = () => {
                               </button>
                               <button onClick={() => anular(p)} disabled={ocupado} className="p-2 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-40" title="Anular remisión">
                                 <FaBan className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => extenderVencimiento(p)} disabled={ocupado} className="p-2 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40" title="Extender o quitar el vencimiento">
+                                <FaRegClock className="w-4 h-4" />
                               </button>
                             </>
                           )}

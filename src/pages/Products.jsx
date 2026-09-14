@@ -738,7 +738,7 @@ const Products = () => {
                                                         onClick={() => handleSyncProduct(product.art_sec, product.art_cod)}
                                                         disabled={syncingProducts[product.art_sec]}
                                                         className="p-1 text-[#7a7a7a] hover:text-white hover:bg-[#f58ea3] rounded transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Sincronizar"
+                                                        title="Reconciliar con Woo (escribe en WooCommerce la existencia actual del ERP; queda auditado)"
                                                     >
                                                         {syncingProducts[product.art_sec] ? (
                                                             <LoadingSpinner size="small" />

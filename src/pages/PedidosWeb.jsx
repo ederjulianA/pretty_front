@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../axiosConfig';
 import Swal from 'sweetalert2';
-import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle, FaSearch, FaBroom } from 'react-icons/fa';
 
 const fmtCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(v) || 0);
 const fmtFecha = (v) => (v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-');
@@ -42,11 +42,20 @@ const FILTROS = [
   { key: 'SIN_DOC', label: 'Sin documento' }
 ];
 
+const LOCAL_STORAGE_KEY = 'pedidos_web_filters';
+const FILTROS_VACIOS = { pedido: '', cliente: '', desde: '', hasta: '' };
+
 const PedidosWeb = () => {
   const [pedidos, setPedidos] = useState([]);
   const [conteos, setConteos] = useState({});
   const [salud, setSalud] = useState(null);
   const [filtro, setFiltro] = useState('REM_ACTIVA');
+  // Búsqueda: lo que el usuario escribe (form) y lo que está aplicado (busqueda) se separan para
+  // que la tabla no recargue en cada tecla; se aplica con Buscar o Enter. Se recuerda entre visitas.
+  const [form, setForm] = useState(() => {
+    try { return { ...FILTROS_VACIOS, ...JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}') }; } catch { return FILTROS_VACIOS; }
+  });
+  const [busqueda, setBusqueda] = useState(form);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accionEnCurso, setAccionEnCurso] = useState(null); // fac_nro_rem o 'importar'
@@ -58,6 +67,10 @@ const PedidosWeb = () => {
     try {
       const params = {};
       if (filtro) params.estado = filtro;
+      if (busqueda.pedido) params.pedido = busqueda.pedido.trim();
+      if (busqueda.cliente) params.cliente = busqueda.cliente.trim();
+      if (busqueda.desde) params.desde = busqueda.desde;
+      if (busqueda.hasta) params.hasta = busqueda.hasta;
       const { data } = await axiosInstance.get('/pedidos-web', { params });
       if (data.success) {
         setPedidos(data.pedidos || []);
@@ -71,9 +84,30 @@ const PedidosWeb = () => {
     } finally {
       setLoading(false);
     }
-  }, [filtro]);
+  }, [filtro, busqueda]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  const aplicarBusqueda = (e) => {
+    if (e) e.preventDefault();
+    if (form.desde && form.hasta && form.desde > form.hasta) {
+      Swal.fire({ icon: 'warning', title: 'Rango inválido', text: 'La fecha "desde" no puede ser mayor que "hasta"', confirmButtonColor: '#f58ea3' });
+      return;
+    }
+    try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(form)); } catch { /* sin persistencia */ }
+    // Buscar por número de pedido/documento debe encontrarlo esté en el estado que esté.
+    if (form.pedido.trim()) setFiltro('');
+    setBusqueda({ ...form });
+  };
+
+  const limpiarBusqueda = () => {
+    setForm(FILTROS_VACIOS);
+    setBusqueda(FILTROS_VACIOS);
+    setFiltro('REM_ACTIVA');
+    try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch { /* nada */ }
+  };
+
+  const hayBusqueda = Object.values(busqueda).some((v) => v);
 
   const confirmarPago = async (p) => {
     const r = await Swal.fire({
@@ -199,7 +233,54 @@ const PedidosWeb = () => {
         </div>
       </div>
 
-      {/* Filtros rápidos con conteo */}
+      {/* Búsqueda: número de pedido / documento, clienta, rango de fechas */}
+      <form onSubmit={aplicarBusqueda} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 md:p-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-2">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Nº pedido / documento</label>
+            <input
+              type="text"
+              value={form.pedido}
+              onChange={(e) => setForm({ ...form, pedido: e.target.value })}
+              placeholder="11270, REM15, VTA2224"
+              className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40"
+            />
+          </div>
+          <div className="md:col-span-3">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Clienta (nombre o email)</label>
+            <input
+              type="text"
+              value={form.cliente}
+              onChange={(e) => setForm({ ...form, cliente: e.target.value })}
+              placeholder="Ej: Jessica"
+              className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Desde</label>
+            <input type="date" value={form.desde} onChange={(e) => setForm({ ...form, desde: e.target.value })} className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Hasta</label>
+            <input type="date" value={form.hasta} onChange={(e) => setForm({ ...form, hasta: e.target.value })} className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40" />
+          </div>
+          <div className="md:col-span-3 flex gap-2">
+            <button type="submit" className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg bg-[#f58ea3] text-white hover:bg-[#e87d93]">
+              <FaSearch className="w-3 h-3" /> Buscar
+            </button>
+            <button type="button" onClick={limpiarBusqueda} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(15,23,42,0.12)] text-[#475569] hover:border-[rgba(15,23,42,0.2)]" title="Limpiar búsqueda">
+              <FaBroom className="w-3 h-3" /> Limpiar
+            </button>
+          </div>
+        </div>
+        {hayBusqueda && (
+          <p className="text-[11px] text-[#64748b] mt-2">
+            Filtrando por{busqueda.pedido ? ` pedido/documento "${busqueda.pedido}" (en cualquier estado)` : ''}{busqueda.cliente ? ` clienta "${busqueda.cliente}"` : ''}{busqueda.desde ? ` desde ${busqueda.desde}` : ''}{busqueda.hasta ? ` hasta ${busqueda.hasta}` : ''} · {pedidos.length} resultado{pedidos.length === 1 ? '' : 's'}
+          </p>
+        )}
+      </form>
+
+      {/* Filtros rápidos con conteo (los conteos son del total, no de la búsqueda) */}
       <div className="flex flex-wrap gap-2">
         {FILTROS.map((f) => {
           const n = f.key ? (conteos[f.key]?.n ?? 0) : Object.values(conteos).reduce((s, c) => s + (c.n || 0), 0);
@@ -208,7 +289,9 @@ const PedidosWeb = () => {
             <button
               key={f.key}
               onClick={() => setFiltro(f.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              disabled={!!busqueda.pedido}
+              title={busqueda.pedido ? 'La búsqueda por número ignora el estado' : ''}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors disabled:opacity-40 ${
                 filtro === f.key ? 'bg-[#f58ea3] text-white border-[#f58ea3]' : 'bg-white text-[#475569] border-[rgba(15,23,42,0.12)] hover:border-[#f58ea3]'
               }`}
             >
@@ -242,7 +325,7 @@ const PedidosWeb = () => {
               {loading ? (
                 <tr><td colSpan={10} className="py-8 text-center text-[#64748b]">Cargando pedidos web...</td></tr>
               ) : pedidos.length === 0 ? (
-                <tr><td colSpan={10} className="py-8 text-center text-[#64748b]">No hay pedidos con este filtro.</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-[#64748b]">{hayBusqueda ? 'Ningún pedido coincide con la búsqueda.' : 'No hay pedidos con este filtro.'}</td></tr>
               ) : (
                 pedidos.map((p) => {
                   const est = ESTADOS_ERP[p.estado_erp] || { label: p.estado_erp, cls: 'bg-gray-100 text-gray-700' };

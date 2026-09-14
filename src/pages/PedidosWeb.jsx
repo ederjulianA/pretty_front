@@ -38,6 +38,7 @@ const FILTROS = [
   { key: 'FACTURADO', label: 'Facturados' },
   { key: 'REVISION', label: 'En revisión' },
   { key: 'ERROR', label: 'Con error' },
+  { key: '_alerta', label: '⚠ Stock insuficiente' }, // no es un estado: filtra por woo_pedidos.alerta
   { key: 'ANULADO', label: 'Anulados' },
   { key: 'SIN_DOC', label: 'Sin documento' }
 ];
@@ -66,7 +67,8 @@ const PedidosWeb = () => {
     setError('');
     try {
       const params = {};
-      if (filtro) params.estado = filtro;
+      if (filtro === '_alerta') params.alerta = 1;
+      else if (filtro) params.estado = filtro;
       if (busqueda.pedido) params.pedido = busqueda.pedido.trim();
       if (busqueda.cliente) params.cliente = busqueda.cliente.trim();
       if (busqueda.desde) params.desde = busqueda.desde;
@@ -283,7 +285,9 @@ const PedidosWeb = () => {
       {/* Filtros rápidos con conteo (los conteos son del total, no de la búsqueda) */}
       <div className="flex flex-wrap gap-2">
         {FILTROS.map((f) => {
-          const n = f.key ? (conteos[f.key]?.n ?? 0) : Object.values(conteos).reduce((s, c) => s + (c.n || 0), 0);
+          const n = f.key
+            ? (conteos[f.key]?.n ?? 0)
+            : Object.entries(conteos).filter(([k]) => k !== '_alerta').reduce((s, [, c]) => s + (c.n || 0), 0);
           const porVencer = f.key === 'REM_ACTIVA' ? conteos.REM_ACTIVA?.por_vencer || 0 : 0;
           return (
             <button
@@ -344,6 +348,11 @@ const PedidosWeb = () => {
                       <td className="py-2 px-3 text-[#475569]">{estadoWooLabel(p.woo_status)}</td>
                       <td className="py-2 px-3">
                         <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${est.cls}`}>{est.label}</span>
+                        {p.alerta && (
+                          <span className="block mt-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 max-w-[260px] truncate" title={p.alerta}>
+                            ⚠ {p.alerta}
+                          </span>
+                        )}
                         {(p.error || p.ultima_accion) && (
                           <p className="text-[11px] text-[#64748b] mt-1 max-w-[260px] truncate" title={p.error || p.ultima_accion}>{p.error || p.ultima_accion}</p>
                         )}

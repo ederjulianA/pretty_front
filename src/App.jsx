@@ -31,6 +31,7 @@ import Compras from './pages/Compras';
 import CompraForm from './pages/CompraForm';
 import CierreMes from './pages/CierreMes';
 import CierreMesWizard from './pages/CierreMesWizard';
+import PedidosWeb from './pages/PedidosWeb';
 
 export const urlMiPunto = import.meta.env.VITE_MIPUNTO_URL
 
@@ -126,6 +127,16 @@ function App() {
             element={
               <ProtectedRoute requiredModule="orders" requiredPermission="view">
                 <Orders />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Pedidos web (SPEC-013): remisiones creadas desde WooCommerce. Mismo permiso que órdenes. */}
+          <Route 
+            path="pedidos-web" 
+            element={
+              <ProtectedRoute requiredModule="orders" requiredPermission="view">
+                <PedidosWeb />
               </ProtectedRoute>
             } 
           />

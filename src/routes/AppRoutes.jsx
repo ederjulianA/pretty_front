@@ -18,7 +18,6 @@ import Users from '../pages/admin/Users';
 import Promociones from '../pages/Promociones';
 import PromocionNew from '../pages/PromocionNew';
 import EventosPromocionales from '../pages/EventosPromocionales';
-import PedidosWeb from '../pages/PedidosWeb';
 
 const AppRoutes = () => {
   return (
@@ -89,16 +88,6 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute requiredModule="orders" requiredPermission="view">
               <Orders />
-            </ProtectedRoute>
-          } 
-        />
-
-        {/* Pedidos web (SPEC-013): remisiones creadas desde WooCommerce. Mismo permiso que órdenes. */}
-        <Route 
-          path="pedidos-web" 
-          element={
-            <ProtectedRoute requiredModule="orders" requiredPermission="view">
-              <PedidosWeb />
             </ProtectedRoute>
           } 
         />

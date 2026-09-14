@@ -2,7 +2,7 @@
 // Operativo Premium: Denso pero respirable, profesional con identidad cosmética
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen, FaChartLine, FaShoppingCart, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaBars, FaTimes, FaChevronDown, FaChevronRight, FaHome, FaBoxOpen, FaUsers, FaClipboardList, FaCogs, FaClipboardCheck, FaBell, FaUserCircle, FaSignOutAlt, FaUsersCog, FaTag, FaCalendarAlt, FaFolderOpen, FaChartLine, FaShoppingCart, FaFileInvoiceDollar, FaGlobe } from 'react-icons/fa';
 import logoPretty from '../assets/prettyLogo1.png';
 import { useAuth } from '../contexts/AuthContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -63,6 +63,7 @@ const AdminLayout = () => {
       'products': 'Productos',
       'clients': 'Clientes',
       'orders': 'Órdenes',
+      'pedidos-web': 'Pedidos web',
       'compras': 'Compras',
       'ajustes': 'Ajustes',
       'promociones': 'Promociones',
@@ -296,6 +297,26 @@ const AdminLayout = () => {
                 >
                   <FaShoppingCart className="w-[18px] h-[18px]" />
                   Compras
+                </NavLink>
+              </li>
+            )}
+            
+            {/* Pedidos web (SPEC-013) — mismo permiso que órdenes */}
+            {(hasAccess('orders') || hasRole('Administrador')) && (
+              <li>
+                <NavLink
+                  to="/pedidos-web"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors duration-150 ${
+                      isActive
+                        ? 'bg-[#fff5f7] text-[#f58ea3] border-l-3 border-[#f58ea3] pl-[10px]'
+                        : 'text-[#2c2c2c] hover:bg-[#f5f6f7]'
+                    }`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <FaGlobe className="w-[18px] h-[18px]" />
+                  Pedidos web
                 </NavLink>
               </li>
             )}

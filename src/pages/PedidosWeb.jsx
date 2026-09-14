@@ -1,0 +1,478 @@
+// src/pages/PedidosWeb.jsx — SPEC-013 Fase 2 (versión mínima de la Tarea 8)
+// Lista las remisiones web (REM) que crea el importador automático a partir de los pedidos
+// de WooCommerce, con las dos acciones del flujo: Confirmar pago (REM → VTA por relevo,
+// pedido Woo → processing) y Anular (REM → I, pedido Woo → cancelled).
+// Fuente: GET /api/pedidos-web (woo_pedidos + factura). Todas las llamadas llevan el token
+// vía axiosInstance (x-access-token).
+import { useState, useEffect, useCallback } from 'react';
+import axiosInstance from '../axiosConfig';
+import Swal from 'sweetalert2';
+import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle, FaSearch, FaBroom } from 'react-icons/fa';
+
+const fmtCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(v) || 0);
+const fmtFecha = (v) => (v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-');
+
+/** Etiquetas y colores del estado en el ERP (woo_pedidos.estado_erp). */
+const ESTADOS_ERP = {
+  REM_ACTIVA: { label: 'Reservado (REM)', cls: 'bg-amber-100 text-amber-800' },
+  FACTURADO: { label: 'Facturado', cls: 'bg-green-100 text-green-800' },
+  ANULADO: { label: 'Anulado', cls: 'bg-gray-100 text-gray-700' },
+  REVISION: { label: 'Revisión', cls: 'bg-red-100 text-red-800' },
+  ERROR: { label: 'Error', cls: 'bg-red-100 text-red-800' },
+  SIN_DOC: { label: 'Sin documento', cls: 'bg-gray-100 text-gray-600' },
+  SIMULADO: { label: 'Simulado', cls: 'bg-blue-100 text-blue-800' }
+};
+
+/** Estados de Woo con guion o guion bajo → texto corto en español. */
+const ESTADOS_WOO = {
+  'on-hold': 'En espera', processing: 'Procesando', completed: 'Completado', cancelled: 'Cancelado',
+  refunded: 'Reembolsado', failed: 'Fallido', pending: 'Pendiente de pago',
+  'epayco-processing': 'Pagado ePayco', 'epayco-completed': 'Completado ePayco',
+  'epayco-cancelled': 'Cancelado ePayco', 'epayco-failed': 'Fallido ePayco', 'epayco-pending': 'Pendiente ePayco'
+};
+const estadoWooLabel = (s) => ESTADOS_WOO[String(s || '').replace(/_/g, '-')] || s || '-';
+
+const FILTROS = [
+  { key: '', label: 'Todos' },
+  { key: 'REM_ACTIVA', label: 'Reservados' },
+  { key: 'FACTURADO', label: 'Facturados' },
+  { key: 'REVISION', label: 'En revisión' },
+  { key: 'ERROR', label: 'Con error' },
+  { key: '_alerta', label: '⚠ Stock insuficiente' }, // no es un estado: filtra por woo_pedidos.alerta
+  { key: 'ANULADO', label: 'Anulados' },
+  { key: 'SIN_DOC', label: 'Sin documento' }
+];
+
+const LOCAL_STORAGE_KEY = 'pedidos_web_filters';
+const FILTROS_VACIOS = { pedido: '', cliente: '', desde: '', hasta: '' };
+
+const PedidosWeb = () => {
+  const [pedidos, setPedidos] = useState([]);
+  const [conteos, setConteos] = useState({});
+  const [salud, setSalud] = useState(null);
+  const [filtro, setFiltro] = useState('REM_ACTIVA');
+  // Búsqueda: lo que el usuario escribe (form) y lo que está aplicado (busqueda) se separan para
+  // que la tabla no recargue en cada tecla; se aplica con Buscar o Enter. Se recuerda entre visitas.
+  const [form, setForm] = useState(() => {
+    try { return { ...FILTROS_VACIOS, ...JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}') }; } catch { return FILTROS_VACIOS; }
+  });
+  const [busqueda, setBusqueda] = useState(form);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [accionEnCurso, setAccionEnCurso] = useState(null); // fac_nro_rem o 'importar'
+  const [detalle, setDetalle] = useState(null); // { woo_order_id, documentos }
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = {};
+      if (filtro === '_alerta') params.alerta = 1;
+      else if (filtro) params.estado = filtro;
+      if (busqueda.pedido) params.pedido = busqueda.pedido.trim();
+      if (busqueda.cliente) params.cliente = busqueda.cliente.trim();
+      if (busqueda.desde) params.desde = busqueda.desde;
+      if (busqueda.hasta) params.hasta = busqueda.hasta;
+      const { data } = await axiosInstance.get('/pedidos-web', { params });
+      if (data.success) {
+        setPedidos(data.pedidos || []);
+        setConteos(data.conteos || {});
+        setSalud(data.salud || null);
+      } else {
+        setError(data.error || 'No se pudo cargar el listado');
+      }
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [filtro, busqueda]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const aplicarBusqueda = (e) => {
+    if (e) e.preventDefault();
+    if (form.desde && form.hasta && form.desde > form.hasta) {
+      Swal.fire({ icon: 'warning', title: 'Rango inválido', text: 'La fecha "desde" no puede ser mayor que "hasta"', confirmButtonColor: '#f58ea3' });
+      return;
+    }
+    try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(form)); } catch { /* sin persistencia */ }
+    // Buscar por número de pedido/documento debe encontrarlo esté en el estado que esté.
+    if (form.pedido.trim()) setFiltro('');
+    setBusqueda({ ...form });
+  };
+
+  const limpiarBusqueda = () => {
+    setForm(FILTROS_VACIOS);
+    setBusqueda(FILTROS_VACIOS);
+    setFiltro('REM_ACTIVA');
+    try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch { /* nada */ }
+  };
+
+  const hayBusqueda = Object.values(busqueda).some((v) => v);
+
+  const confirmarPago = async (p) => {
+    // Con alerta de saldo no se bloquea (el pago es un hecho), pero se obliga a leerla antes:
+    // el procedimiento es contar físicamente y corregir/editar el pedido ANTES de facturar.
+    const avisoSaldo = p.alerta
+      ? `<div style="margin-top:10px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;text-align:left;font-size:12px;color:#991b1b"><b>⚠ ${p.alerta}</b><br/>Verifica el producto en bodega antes de confirmar. Si no está, edita o cancela el pedido en WooCommerce en vez de facturarlo.</div>`
+      : '';
+    const r = await Swal.fire({
+      title: p.alerta ? '¿Confirmar pago con stock insuficiente?' : '¿Confirmar pago?',
+      html: `Se facturará la remisión <b>${p.fac_nro_rem}</b> del pedido web <b>#${p.woo_order_id}</b> (${p.cliente || ''}, ${fmtCOP(p.total_rem)}).<br/>El pedido en WooCommerce pasará a <b>Procesando</b>.${avisoSaldo}`,
+      icon: p.alerta ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonColor: p.alerta ? '#d33' : '#f58ea3',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: p.alerta ? 'Facturar de todas formas' : 'Sí, facturar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!r.isConfirmed) return;
+    setAccionEnCurso(p.fac_nro_rem);
+    try {
+      const { data } = await axiosInstance.post(`/pedidos-web/${p.fac_nro_rem}/facturar`);
+      await Swal.fire({ icon: 'success', title: 'Facturado', text: data.message, confirmButtonColor: '#f58ea3' });
+      cargar();
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'No se pudo facturar', text: e.response?.data?.error || e.message, confirmButtonColor: '#f58ea3' });
+    } finally {
+      setAccionEnCurso(null);
+    }
+  };
+
+  const anular = async (p) => {
+    const r = await Swal.fire({
+      title: '¿Anular remisión?',
+      html: `Se anulará <b>${p.fac_nro_rem}</b> (pedido web <b>#${p.woo_order_id}</b>). El stock vuelve a quedar disponible y el pedido en WooCommerce pasará a <b>Cancelado</b>.`,
+      icon: 'warning',
+      input: 'text',
+      inputLabel: 'Motivo (obligatorio)',
+      inputPlaceholder: 'Ej: la clienta no realizó el pago',
+      inputValidator: (v) => (!v || !v.trim() ? 'Escribe el motivo' : undefined),
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Anular',
+      cancelButtonText: 'Volver'
+    });
+    if (!r.isConfirmed) return;
+    setAccionEnCurso(p.fac_nro_rem);
+    try {
+      const { data } = await axiosInstance.post(`/pedidos-web/${p.fac_nro_rem}/anular`, { motivo: r.value.trim() });
+      await Swal.fire({ icon: 'success', title: 'Anulada', text: data.message, confirmButtonColor: '#f58ea3' });
+      cargar();
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'No se pudo anular', text: e.response?.data?.error || e.message, confirmButtonColor: '#f58ea3' });
+    } finally {
+      setAccionEnCurso(null);
+    }
+  };
+
+  const importarAhora = async () => {
+    setAccionEnCurso('importar');
+    try {
+      const { data } = await axiosInstance.post('/pedidos-web/importar-ahora');
+      const r = data.resumen || {};
+      const acciones = Object.entries(r.acciones || {}).map(([k, v]) => `${k}: ${v}`).join(', ') || 'ninguna';
+      await Swal.fire({
+        icon: data.success ? 'success' : 'error',
+        title: r.omitido ? 'Ciclo omitido' : `Importación (${data.modo})`,
+        html: r.omitido
+          ? r.motivo
+          : `Leídos: ${r.leidos ?? 0} · procesados: ${r.procesados ?? 0} · reintentados: ${r.reintentados ?? 0} · con error: ${r.conError ?? 0}<br/><span class="text-xs">Acciones → ${acciones}</span>${r.error ? `<br/><b>Error:</b> ${r.error}` : ''}`,
+        confirmButtonColor: '#f58ea3'
+      });
+      cargar();
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.error || e.message, confirmButtonColor: '#f58ea3' });
+    } finally {
+      setAccionEnCurso(null);
+    }
+  };
+
+  const verDocumentos = async (p) => {
+    try {
+      const { data } = await axiosInstance.get(`/pedidos-web/${p.woo_order_id}/documentos`);
+      setDetalle({ pedido: p, documentos: data.documentos || [] });
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.error || e.message, confirmButtonColor: '#f58ea3' });
+    }
+  };
+
+  const horasParaVencer = (v) => (v ? Math.round((new Date(v).getTime() - Date.now()) / 36e5) : null);
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      {/* Encabezado + salud del importador */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-[#0f172a]">Pedidos web</h1>
+          <p className="text-xs text-[#64748b]">Remisiones creadas automáticamente desde WooCommerce. Confirma el pago para facturar o anula si no se pagó.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {salud && (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                !salud.enabled ? 'bg-gray-100 text-gray-600' : salud.alerta ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+              }`}
+              title={`Cursor: ${fmtFecha(salud.cursor_gmt)} · último OK: ${fmtFecha(salud.ultimo_ok)}${salud.ultimo_error ? ` · error: ${salud.ultimo_error}` : ''}`}
+            >
+              {salud.alerta && <FaExclamationTriangle className="w-3 h-3" />}
+              Importador {!salud.enabled ? 'apagado' : `${salud.modo === 'simulacion' ? 'en simulación' : 'activo'} · último ciclo ${salud.atraso_seg != null ? `hace ${Math.round(salud.atraso_seg / 60)} min` : 'nunca'}`}
+            </span>
+          )}
+          <button
+            onClick={importarAhora}
+            disabled={accionEnCurso === 'importar'}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-[#f58ea3] text-white hover:bg-[#e87d93] disabled:opacity-50"
+            title="Consultar WooCommerce ahora sin esperar al siguiente ciclo"
+          >
+            <FaCloudDownloadAlt className={`w-3 h-3 ${accionEnCurso === 'importar' ? 'animate-pulse' : ''}`} />
+            Importar ahora
+          </button>
+          <button
+            onClick={cargar}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-[rgba(15,23,42,0.12)] text-[#475569] hover:border-[rgba(15,23,42,0.2)]"
+          >
+            <FaSyncAlt className="w-3 h-3" />
+            Refrescar
+          </button>
+        </div>
+      </div>
+
+      {/* Búsqueda: número de pedido / documento, clienta, rango de fechas */}
+      <form onSubmit={aplicarBusqueda} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 md:p-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-2">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Nº pedido / documento</label>
+            <input
+              type="text"
+              value={form.pedido}
+              onChange={(e) => setForm({ ...form, pedido: e.target.value })}
+              placeholder="11270, REM15, VTA2224"
+              className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40"
+            />
+          </div>
+          <div className="md:col-span-3">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Clienta (nombre o email)</label>
+            <input
+              type="text"
+              value={form.cliente}
+              onChange={(e) => setForm({ ...form, cliente: e.target.value })}
+              placeholder="Ej: Jessica"
+              className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Desde</label>
+            <input type="date" value={form.desde} onChange={(e) => setForm({ ...form, desde: e.target.value })} className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-[11px] font-semibold text-[#64748b] uppercase mb-1">Hasta</label>
+            <input type="date" value={form.hasta} onChange={(e) => setForm({ ...form, hasta: e.target.value })} className="w-full px-3 py-2 text-sm border border-[rgba(15,23,42,0.12)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58ea3]/40" />
+          </div>
+          <div className="md:col-span-3 flex gap-2">
+            <button type="submit" className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg bg-[#f58ea3] text-white hover:bg-[#e87d93]">
+              <FaSearch className="w-3 h-3" /> Buscar
+            </button>
+            <button type="button" onClick={limpiarBusqueda} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(15,23,42,0.12)] text-[#475569] hover:border-[rgba(15,23,42,0.2)]" title="Limpiar búsqueda">
+              <FaBroom className="w-3 h-3" /> Limpiar
+            </button>
+          </div>
+        </div>
+        {hayBusqueda && (
+          <p className="text-[11px] text-[#64748b] mt-2">
+            Filtrando por{busqueda.pedido ? ` pedido/documento "${busqueda.pedido}" (en cualquier estado)` : ''}{busqueda.cliente ? ` clienta "${busqueda.cliente}"` : ''}{busqueda.desde ? ` desde ${busqueda.desde}` : ''}{busqueda.hasta ? ` hasta ${busqueda.hasta}` : ''} · {pedidos.length} resultado{pedidos.length === 1 ? '' : 's'}
+          </p>
+        )}
+      </form>
+
+      {/* Filtros rápidos con conteo (los conteos son del total, no de la búsqueda) */}
+      <div className="flex flex-wrap gap-2">
+        {FILTROS.map((f) => {
+          const n = f.key
+            ? (conteos[f.key]?.n ?? 0)
+            : Object.entries(conteos).filter(([k]) => k !== '_alerta').reduce((s, [, c]) => s + (c.n || 0), 0);
+          const porVencer = f.key === 'REM_ACTIVA' ? conteos.REM_ACTIVA?.por_vencer || 0 : 0;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFiltro(f.key)}
+              disabled={!!busqueda.pedido}
+              title={busqueda.pedido ? 'La búsqueda por número ignora el estado' : ''}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors disabled:opacity-40 ${
+                filtro === f.key ? 'bg-[#f58ea3] text-white border-[#f58ea3]' : 'bg-white text-[#475569] border-[rgba(15,23,42,0.12)] hover:border-[#f58ea3]'
+              }`}
+            >
+              {f.label} <span className="opacity-80">({n})</span>
+              {porVencer > 0 && <span className="ml-1 text-[10px] bg-red-500 text-white rounded-full px-1.5">{porVencer} por vencer</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5">
+        {error && <p className="text-sm text-[#b91c1c] mb-3">{error}</p>}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1000px] text-sm">
+            <thead>
+              <tr className="border-b border-[rgba(15,23,42,0.08)]">
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Pedido Woo</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Fecha</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Cliente</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Pago</th>
+                <th className="text-right py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Total</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Estado Woo</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Estado ERP</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Documentos</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Vence</th>
+                <th className="text-center py-2 px-3 text-xs font-semibold text-[#64748b] uppercase">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[rgba(15,23,42,0.08)]">
+              {loading ? (
+                <tr><td colSpan={10} className="py-8 text-center text-[#64748b]">Cargando pedidos web...</td></tr>
+              ) : pedidos.length === 0 ? (
+                <tr><td colSpan={10} className="py-8 text-center text-[#64748b]">{hayBusqueda ? 'Ningún pedido coincide con la búsqueda.' : 'No hay pedidos con este filtro.'}</td></tr>
+              ) : (
+                pedidos.map((p) => {
+                  const est = ESTADOS_ERP[p.estado_erp] || { label: p.estado_erp, cls: 'bg-gray-100 text-gray-700' };
+                  const horas = p.estado_erp === 'REM_ACTIVA' ? horasParaVencer(p.vence_el) : null;
+                  const ocupado = accionEnCurso === p.fac_nro_rem;
+                  return (
+                    <tr key={p.woo_order_id} className="hover:bg-[#fafafa] transition-colors align-top">
+                      <td className="py-2 px-3 font-semibold text-[#0f172a]">#{p.woo_order_id}</td>
+                      <td className="py-2 px-3 text-[#475569] whitespace-nowrap">{fmtFecha(p.woo_created_gmt || p.rem_fec)}</td>
+                      <td className="py-2 px-3">
+                        <p className="text-[#0f172a] font-medium">{p.cliente || '-'}</p>
+                        <p className="text-xs text-[#64748b]">{p.woo_email || p.nit_ide || ''}</p>
+                      </td>
+                      <td className="py-2 px-3 text-[#475569]">{p.woo_payment_method === 'bacs' ? 'Transferencia' : p.woo_payment_method === 'epayco' ? 'ePayco' : (p.woo_payment_method || '-')}</td>
+                      <td className="py-2 px-3 text-right tabular-nums font-semibold text-[#0f172a]">{fmtCOP(p.woo_total)}</td>
+                      <td className="py-2 px-3 text-[#475569]">{estadoWooLabel(p.woo_status)}</td>
+                      <td className="py-2 px-3">
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${est.cls}`}>{est.label}</span>
+                        {p.alerta && (
+                          <span className="block mt-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 max-w-[260px] truncate" title={p.alerta}>
+                            ⚠ {p.alerta}
+                          </span>
+                        )}
+                        {(p.error || p.ultima_accion) && (
+                          <p className="text-[11px] text-[#64748b] mt-1 max-w-[260px] truncate" title={p.error || p.ultima_accion}>{p.error || p.ultima_accion}</p>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-[#475569] whitespace-nowrap">
+                        {p.fac_nro_rem && <div>{p.fac_nro_rem}{p.rem_est === 'F' ? ' (facturada)' : p.rem_est === 'I' ? ' (anulada)' : ''}</div>}
+                        {p.fac_nro_vta && <div className="font-medium text-[#0f172a]">{p.fac_nro_vta}</div>}
+                        {!p.fac_nro_rem && !p.fac_nro_vta && '-'}
+                      </td>
+                      <td className="py-2 px-3 text-xs whitespace-nowrap">
+                        {horas === null ? '-' : (
+                          <span className={horas <= 24 ? 'text-red-600 font-semibold' : 'text-[#475569]'}>
+                            {horas <= 0 ? 'vencida' : horas < 48 ? `en ${horas} h` : `en ${Math.round(horas / 24)} días`}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => verDocumentos(p)} className="p-2 rounded-lg hover:bg-[#fff5f7] text-[#f58ea3]" title="Ver documentos del ERP">
+                            <FaEye className="w-4 h-4" />
+                          </button>
+                          {p.estado_erp === 'REM_ACTIVA' && p.fac_nro_rem && (
+                            <>
+                              <button onClick={() => confirmarPago(p)} disabled={ocupado} className="p-2 rounded-lg hover:bg-green-50 text-green-600 disabled:opacity-40" title="Confirmar pago (facturar)">
+                                <FaCheck className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => anular(p)} disabled={ocupado} className="p-2 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-40" title="Anular remisión">
+                                <FaBan className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Detalle de documentos */}
+      {detalle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetalle(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-[#0f172a]">Pedido web #{detalle.pedido.woo_order_id} — documentos en el ERP</h2>
+              <button onClick={() => setDetalle(null)} className="text-xs text-[#64748b] hover:text-[#0f172a]">Cerrar</button>
+            </div>
+            {detalle.pedido.ultima_accion && <p className="text-xs text-[#64748b] mb-3">Última acción: {detalle.pedido.ultima_accion}</p>}
+            {detalle.documentos.length === 0 ? (
+              <p className="text-sm text-[#64748b]">Este pedido no tiene documentos vigentes en el ERP.</p>
+            ) : detalle.documentos.map((d) => {
+              const ESTADO_DOC = { A: 'activa', F: 'facturada', I: 'anulada' };
+              const tipo = d.fac_tip_cod === 'REM' ? 'Remisión web' : d.fac_tip_cod === 'VTA' ? 'Factura de venta' : d.fac_tip_cod === 'COT' ? 'Cotización' : d.fac_tip_cod;
+              return (
+                <div key={d.fac_nro} className="mb-4 border border-gray-100 rounded-lg p-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#0f172a]">
+                      {d.fac_nro} <span className="text-xs font-normal text-[#64748b]">{tipo} · {ESTADO_DOC[d.fac_est_fac] || d.fac_est_fac}{d.fac_nro_origen ? ` · vínculo ${d.fac_nro_origen}` : ''} · {fmtFecha(d.fac_fec)}{d.fac_usu_cod_cre ? ` · ${d.fac_usu_cod_cre}` : ''}</span>
+                    </p>
+                    <p className="text-xs text-[#64748b]">{d.unidades} unidad{d.unidades === 1 ? '' : 'es'} en {d.lineas.filter((l) => !l.kar_bundle_padre).length} línea{d.lineas.filter((l) => !l.kar_bundle_padre).length === 1 ? '' : 's'}</p>
+                  </div>
+                  <table className="w-full text-xs mt-2">
+                    <thead>
+                      <tr className="text-[#64748b] border-b border-gray-100">
+                        <th className="text-left py-1 w-20">Código</th>
+                        <th className="text-left py-1">Artículo</th>
+                        <th className="text-right py-1">Cant.</th>
+                        <th className="text-right py-1">Precio</th>
+                        <th className="text-right py-1">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.lineas.map((l) => (
+                        <tr key={l.kar_sec} className={l.kar_bundle_padre ? 'text-[#94a3b8]' : 'text-[#0f172a]'}>
+                          <td className="py-0.5 tabular-nums">{l.kar_bundle_padre ? '↳ ' : ''}{l.art_cod || l.art_sec}</td>
+                          <td className="py-0.5">
+                            {l.art_nom || <span className="text-[#94a3b8]">(artículo {l.art_sec})</span>}
+                            {l.kar_tiene_oferta === 'S' && l.kar_codigo_promocion && <span className="ml-1 text-[10px] text-[#f58ea3]">promo {l.kar_codigo_promocion}</span>}
+                          </td>
+                          <td className="py-0.5 text-right tabular-nums">{Number(l.kar_uni)}</td>
+                          <td className="py-0.5 text-right tabular-nums">{fmtCOP(l.kar_pre_pub)}</td>
+                          <td className="py-0.5 text-right tabular-nums">{fmtCOP(l.kar_total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      {d.descuento_general > 0 && (
+                        <tr className="text-[#64748b]">
+                          <td colSpan={4} className="py-1 text-right">Descuento general (Woo)</td>
+                          <td className="py-1 text-right tabular-nums">−{fmtCOP(d.descuento_general)}</td>
+                        </tr>
+                      )}
+                      <tr className="border-t border-gray-200 font-semibold text-[#0f172a]">
+                        <td colSpan={4} className="py-1.5 text-right">Total documento</td>
+                        <td className="py-1.5 text-right tabular-nums">{fmtCOP(d.total_lineas - (d.descuento_general || 0))}</td>
+                      </tr>
+                      {d.total_woo != null && (
+                        <tr className="text-[11px] text-[#64748b]">
+                          <td colSpan={4} className="py-0.5 text-right">Total pagado en Woo (incluye envío)</td>
+                          <td className="py-0.5 text-right tabular-nums">{fmtCOP(d.total_woo)}</td>
+                        </tr>
+                      )}
+                    </tfoot>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PedidosWeb;

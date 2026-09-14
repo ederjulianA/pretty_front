@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ArticleMovementModal from '../components/ArticleMovementModal';
+import ReconciliacionWooPanel from '../components/ReconciliacionWooPanel';
 
 const DiferenciaInventario = () => {
   const { user, hasPermission } = useAuth();
@@ -156,6 +157,8 @@ const DiferenciaInventario = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* SPEC-013 Fase 3: reconciliación nocturna ERP ↔ Woo (último reporte, invariantes, reconciliar ahora) */}
+        <ReconciliacionWooPanel />
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h2 className="text-2xl font-bold text-[#f58ea3]">Sincronización de Inventario WooCommerce</h2>

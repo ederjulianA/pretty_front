@@ -64,7 +64,14 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-6">Sincronización de Pedidos WooCommerce</h2>
+          <h2 className="text-2xl font-bold mb-2">Sincronización de Pedidos WooCommerce</h2>
+          {/* SPEC-013: este panel (COT por lotes) se retira cuando el importador automático pase a modo real.
+              Mientras tanto sigue siendo el camino para registrar el atraso (Fase 0). */}
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+            Este panel trae pedidos como <b>cotización</b> por lotes y será reemplazado por el importador automático de{' '}
+            <a href="/pedidos-web" className="underline font-medium">Pedidos web</a> (remisiones que reservan stock).
+            Úsalo solo para registrar pedidos atrasados hasta que el importador pase a modo real.
+          </p>
           
           {/* Panel de Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

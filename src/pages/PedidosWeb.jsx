@@ -406,26 +406,63 @@ const PedidosWeb = () => {
             {detalle.pedido.ultima_accion && <p className="text-xs text-[#64748b] mb-3">Última acción: {detalle.pedido.ultima_accion}</p>}
             {detalle.documentos.length === 0 ? (
               <p className="text-sm text-[#64748b]">Este pedido no tiene documentos vigentes en el ERP.</p>
-            ) : detalle.documentos.map((d) => (
-              <div key={d.fac_nro} className="mb-4 border border-gray-100 rounded-lg p-3">
-                <p className="text-sm font-semibold text-[#0f172a]">
-                  {d.fac_nro} <span className="text-xs font-normal text-[#64748b]">({d.fac_tip_cod} · estado {d.fac_est_fac}{d.fac_nro_origen ? ` · vínculo ${d.fac_nro_origen}` : ''} · {fmtFecha(d.fac_fec)})</span>
-                </p>
-                <table className="w-full text-xs mt-2">
-                  <thead><tr className="text-[#64748b]"><th className="text-left py-1">Artículo</th><th className="text-right py-1">Cant.</th><th className="text-right py-1">Precio</th><th className="text-right py-1">Total</th></tr></thead>
-                  <tbody>
-                    {d.lineas.map((l) => (
-                      <tr key={l.kar_sec} className={l.kar_bundle_padre ? 'text-[#94a3b8]' : ''}>
-                        <td className="py-0.5">{l.kar_bundle_padre ? '↳ ' : ''}{l.art_sec}</td>
-                        <td className="py-0.5 text-right tabular-nums">{Number(l.kar_uni)}</td>
-                        <td className="py-0.5 text-right tabular-nums">{fmtCOP(l.kar_pre_pub)}</td>
-                        <td className="py-0.5 text-right tabular-nums">{fmtCOP(l.kar_total)}</td>
+            ) : detalle.documentos.map((d) => {
+              const ESTADO_DOC = { A: 'activa', F: 'facturada', I: 'anulada' };
+              const tipo = d.fac_tip_cod === 'REM' ? 'Remisión web' : d.fac_tip_cod === 'VTA' ? 'Factura de venta' : d.fac_tip_cod === 'COT' ? 'Cotización' : d.fac_tip_cod;
+              return (
+                <div key={d.fac_nro} className="mb-4 border border-gray-100 rounded-lg p-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#0f172a]">
+                      {d.fac_nro} <span className="text-xs font-normal text-[#64748b]">{tipo} · {ESTADO_DOC[d.fac_est_fac] || d.fac_est_fac}{d.fac_nro_origen ? ` · vínculo ${d.fac_nro_origen}` : ''} · {fmtFecha(d.fac_fec)}{d.fac_usu_cod_cre ? ` · ${d.fac_usu_cod_cre}` : ''}</span>
+                    </p>
+                    <p className="text-xs text-[#64748b]">{d.unidades} unidad{d.unidades === 1 ? '' : 'es'} en {d.lineas.filter((l) => !l.kar_bundle_padre).length} línea{d.lineas.filter((l) => !l.kar_bundle_padre).length === 1 ? '' : 's'}</p>
+                  </div>
+                  <table className="w-full text-xs mt-2">
+                    <thead>
+                      <tr className="text-[#64748b] border-b border-gray-100">
+                        <th className="text-left py-1 w-20">Código</th>
+                        <th className="text-left py-1">Artículo</th>
+                        <th className="text-right py-1">Cant.</th>
+                        <th className="text-right py-1">Precio</th>
+                        <th className="text-right py-1">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+                    </thead>
+                    <tbody>
+                      {d.lineas.map((l) => (
+                        <tr key={l.kar_sec} className={l.kar_bundle_padre ? 'text-[#94a3b8]' : 'text-[#0f172a]'}>
+                          <td className="py-0.5 tabular-nums">{l.kar_bundle_padre ? '↳ ' : ''}{l.art_cod || l.art_sec}</td>
+                          <td className="py-0.5">
+                            {l.art_nom || <span className="text-[#94a3b8]">(artículo {l.art_sec})</span>}
+                            {l.kar_tiene_oferta === 'S' && l.kar_codigo_promocion && <span className="ml-1 text-[10px] text-[#f58ea3]">promo {l.kar_codigo_promocion}</span>}
+                          </td>
+                          <td className="py-0.5 text-right tabular-nums">{Number(l.kar_uni)}</td>
+                          <td className="py-0.5 text-right tabular-nums">{fmtCOP(l.kar_pre_pub)}</td>
+                          <td className="py-0.5 text-right tabular-nums">{fmtCOP(l.kar_total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      {d.descuento_general > 0 && (
+                        <tr className="text-[#64748b]">
+                          <td colSpan={4} className="py-1 text-right">Descuento general (Woo)</td>
+                          <td className="py-1 text-right tabular-nums">−{fmtCOP(d.descuento_general)}</td>
+                        </tr>
+                      )}
+                      <tr className="border-t border-gray-200 font-semibold text-[#0f172a]">
+                        <td colSpan={4} className="py-1.5 text-right">Total documento</td>
+                        <td className="py-1.5 text-right tabular-nums">{fmtCOP(d.total_lineas - (d.descuento_general || 0))}</td>
+                      </tr>
+                      {d.total_woo != null && (
+                        <tr className="text-[11px] text-[#64748b]">
+                          <td colSpan={4} className="py-0.5 text-right">Total pagado en Woo (incluye envío)</td>
+                          <td className="py-0.5 text-right tabular-nums">{fmtCOP(d.total_woo)}</td>
+                        </tr>
+                      )}
+                    </tfoot>
+                  </table>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

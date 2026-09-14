@@ -112,14 +112,19 @@ const PedidosWeb = () => {
   const hayBusqueda = Object.values(busqueda).some((v) => v);
 
   const confirmarPago = async (p) => {
+    // Con alerta de saldo no se bloquea (el pago es un hecho), pero se obliga a leerla antes:
+    // el procedimiento es contar físicamente y corregir/editar el pedido ANTES de facturar.
+    const avisoSaldo = p.alerta
+      ? `<div style="margin-top:10px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;text-align:left;font-size:12px;color:#991b1b"><b>⚠ ${p.alerta}</b><br/>Verifica el producto en bodega antes de confirmar. Si no está, edita o cancela el pedido en WooCommerce en vez de facturarlo.</div>`
+      : '';
     const r = await Swal.fire({
-      title: '¿Confirmar pago?',
-      html: `Se facturará la remisión <b>${p.fac_nro_rem}</b> del pedido web <b>#${p.woo_order_id}</b> (${p.cliente || ''}, ${fmtCOP(p.total_rem)}).<br/>El pedido en WooCommerce pasará a <b>Procesando</b>.`,
-      icon: 'question',
+      title: p.alerta ? '¿Confirmar pago con stock insuficiente?' : '¿Confirmar pago?',
+      html: `Se facturará la remisión <b>${p.fac_nro_rem}</b> del pedido web <b>#${p.woo_order_id}</b> (${p.cliente || ''}, ${fmtCOP(p.total_rem)}).<br/>El pedido en WooCommerce pasará a <b>Procesando</b>.${avisoSaldo}`,
+      icon: p.alerta ? 'warning' : 'question',
       showCancelButton: true,
-      confirmButtonColor: '#f58ea3',
+      confirmButtonColor: p.alerta ? '#d33' : '#f58ea3',
       cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Sí, facturar',
+      confirmButtonText: p.alerta ? 'Facturar de todas formas' : 'Sí, facturar',
       cancelButtonText: 'Cancelar'
     });
     if (!r.isConfirmed) return;

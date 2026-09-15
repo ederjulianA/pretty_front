@@ -1,7 +1,8 @@
 // src/components/OrderDrawer.js
 import React from 'react';
 import OrderSummary from './OrderSummary';
-import { FaTimes, FaUser, FaUserPlus, FaShoppingCart } from 'react-icons/fa';
+import { FaTimes, FaUser, FaUserPlus } from 'react-icons/fa';
+import BotoneraDocumento from './pos/BotoneraDocumento';
 
 const OrderDrawer = ({
   order,
@@ -13,7 +14,10 @@ const OrderDrawer = ({
   onShowClientModal,
   onCreateClient,
   onPlaceOrder,
+  onRemisionar,
   onFacturarOrder,
+  bloqueo,
+  badgeDocumento,
   selectedPriceType,
   onPriceTypeChange,
   discountPercent,
@@ -47,7 +51,7 @@ const OrderDrawer = ({
         {isEditing && order.length > 0 && (
           <div className="mt-3 flex justify-center">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#f58ea3]/10 text-[#c53051] border border-[#f58ea3]/50">
-              Editando {orderType === "VTA" ? "Factura" : "Pedido"}: {selectedClient?.fac_nro || "N/A"}
+              {badgeDocumento || `Editando ${orderType === "VTA" ? "Factura" : "Pedido"}: ${selectedClient?.fac_nro || "N/A"}`}
             </span>
           </div>
         )}
@@ -148,6 +152,7 @@ const OrderDrawer = ({
           {/* Resumen de pedido */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
             <OrderSummary
+              readOnly={!!bloqueo}
               order={order}
               onRemove={onRemove}
               onAdd={onAdd}
@@ -167,29 +172,17 @@ const OrderDrawer = ({
         </div>
       </div>
 
-      {/* Footer con botones de acción y sombra */}
-      <div className="bg-white/95 backdrop-blur-xl p-6 space-y-4 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)]">
-        <button 
-          onClick={onPlaceOrder}
-          disabled={isEditing && orderType === "VTA"}
-          className={`w-full px-6 py-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-sm font-medium cursor-pointer ${
-            isEditing && orderType === "VTA" 
-              ? "bg-gray-200 text-gray-500 cursor-not-allowed" 
-              : "bg-[#f58ea3] text-white hover:bg-[#f7b3c2] active:bg-[#e67a90]"
-          }`}
-        >
-          <FaShoppingCart className="w-5 h-5" />
-          {isEditing ? "Editar Pedido" : "Realizar Pedido"}
-        </button>
-        <button
-          onClick={onFacturarOrder}
-          className="w-full bg-green-500 text-white px-6 py-4 rounded-xl shadow-sm hover:shadow-md hover:bg-green-600 active:bg-green-700 transition-all duration-200 flex items-center justify-center gap-3 text-sm font-medium cursor-pointer"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {isEditing && orderType === "VTA" ? "Editar Factura" : "Facturar"}
-        </button>
+      {/* Footer con los botones según el documento cargado (SPEC-014 §2.3) */}
+      <div className="bg-white/95 backdrop-blur-xl p-6 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)]">
+        <BotoneraDocumento
+          compact
+          orderType={orderType}
+          isEditing={isEditing}
+          bloqueo={bloqueo}
+          onCotizar={onPlaceOrder}
+          onRemisionar={onRemisionar}
+          onFacturar={onFacturarOrder}
+        />
       </div>
     </div>
   );

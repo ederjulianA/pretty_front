@@ -25,6 +25,21 @@ import useEventoPromocional from './hooks/useEventoPromocional';
 import PromocionBanner from './components/PromocionBanner';
 import useParametro from './hooks/useParametro';
 import BundleDetailsModal from './components/BundleDetailsModal';
+import BotoneraDocumento from './components/pos/BotoneraDocumento';
+
+// SPEC-014: nombre legible de cada tipo de documento y texto del aviso de bloqueo por vínculo.
+const NOMBRE_DOC = { COT: 'Cotización', REM: 'Remisión', VTA: 'Factura' };
+const textoBloqueo = (h) => {
+  if (!h) return '';
+  if (h.bloqueado_por) return `Cruzada con ${h.bloqueado_por} (${NOMBRE_DOC[h.bloqueado_por_tipo] || h.bloqueado_por_tipo} activa). Para cambiarla, anula ${h.bloqueado_por} y vuelve a cargarla.`;
+  if (h.vta_respaldada) return `Esta factura nació de la remisión ${h.origen || ''} y no se edita por líneas: anula la factura, edita la remisión y vuelve a facturar.`;
+  return 'Este documento no se puede editar.';
+};
+const fmtFechaCorta = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? '' : d.toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' });
+};
 
 const POS = () => {
   const [searchParams] = useSearchParams();
@@ -83,6 +98,8 @@ const POS = () => {
   // Editing mode state
   const [isEditing, setIsEditing] = useState(false);
   const [orderType, setOrderType] = useState(null);
+  // SPEC-014: cabecera del documento cargado (bloqueo por vínculo, vencimiento, pedido web)
+  const [docHeader, setDocHeader] = useState(null);
 
   // Load order for editing if facNroToEdit exists
   useEffect(() => {
@@ -107,6 +124,20 @@ const POS = () => {
             fac_fec: orderData.header.fac_fec,
           });
           setOrderType(orderData.header.fac_tip_cod);
+          // SPEC-014: una VTA respaldada por remisión (líneas 'R') no se edita por líneas (§9.2)
+          const vtaRespaldada = orderData.header.fac_tip_cod === 'VTA' && orderData.details.some((d) => d.kar_nat === 'R');
+          setDocHeader({
+            fac_nro: orderData.header.fac_nro,
+            fac_tip_cod: orderData.header.fac_tip_cod,
+            fac_nro_woo: orderData.header.fac_nro_woo,
+            fac_est_woo: orderData.header.fac_est_woo,
+            fac_vence_el: orderData.header.fac_vence_el,
+            origen: orderData.header.origen,
+            bloqueado: !!orderData.header.bloqueado || vtaRespaldada,
+            bloqueado_por: orderData.header.bloqueado_por,
+            bloqueado_por_tipo: orderData.header.bloqueado_por_tipo,
+            vta_respaldada: vtaRespaldada
+          });
 
           // Si el primer ítem trae kar_des_uno, lo usamos
           let initialListaPrecio = "";
@@ -165,7 +196,8 @@ const POS = () => {
               price: price,
               price_detal: price_detal,
               quantity: item.kar_uni,
-              existencia: item.existencia ?? 0,
+              // SPEC-014 §5.10: lo que este documento ya descontó sigue disponible para él (REM/VTA)
+              existencia: item.existencia_disponible ?? item.existencia ?? 0,
               kar_des_uno: item.kar_des_uno || 0,
               kar_sec: item.kar_sec,
               fac_sec: item.fac_sec,
@@ -286,6 +318,18 @@ const POS = () => {
   
   const finalTotal = totalValue - discountValue - descuentoEventoFinal;
 
+  // SPEC-014: texto del badge "Editando …" y aviso de bloqueo por vínculo
+  const badgeDocumento = (() => {
+    if (!isEditing) return '';
+    const nombre = NOMBRE_DOC[orderType] || 'Pedido';
+    const partes = [`${nombre} ${selectedClient?.fac_nro || 'N/A'}`];
+    if (docHeader?.fac_nro_woo) partes.push(`pedido web #${docHeader.fac_nro_woo}`);
+    if (orderType === 'REM' && docHeader?.fac_vence_el && !docHeader?.bloqueado) partes.push(`vence ${fmtFechaCorta(docHeader.fac_vence_el)}`);
+    if (docHeader?.origen) partes.push(`desde ${docHeader.origen}`);
+    return `Editando ${partes.join(' · ')}`;
+  })();
+  const bloqueo = docHeader?.bloqueado ? { bloqueado: true, mensaje: textoBloqueo(docHeader), bloqueadoPor: docHeader.bloqueado_por || docHeader.origen } : null;
+
   // Función para manejar el scroll infinito
   const handleLoadMore = () => {
     if (!isLoading && hasMore) {
@@ -384,8 +428,12 @@ const POS = () => {
     setSelectedBundle(null);
   };
 
+  // SPEC-014: con el documento bloqueado (cruzado con REM/VTA activa) no se tocan las líneas
+  const avisarBloqueo = () => Swal.fire({ icon: 'info', title: 'Documento en solo lectura', text: textoBloqueo(docHeader), confirmButtonColor: '#f58ea3' });
+
   // Function to add product to order
   const addToOrder = (product) => {
+    if (docHeader?.bloqueado) { avisarBloqueo(); return; }
     setOrder(prev => {
       const exists = prev.find(item => item.id === product.id);
       if (exists) {
@@ -398,6 +446,7 @@ const POS = () => {
   };
 
   const removeFromOrder = (productId) => {
+    if (docHeader?.bloqueado) { avisarBloqueo(); return; }
     setOrder(prev => prev
       .map(item => item.id === productId ? { ...item, quantity: item.quantity - 1 } : item)
       .filter(item => item.quantity > 0)
@@ -412,6 +461,7 @@ const POS = () => {
     setDiscountPercent(0);
     setIsEditing(false);
     setOrderType(null);
+    setDocHeader(null);
     setShowOrderDrawer(false);
     // Reinicia la URL para eliminar el query param "fac_nro" solo si se solicita
     if (shouldNavigate) {
@@ -478,7 +528,6 @@ const POS = () => {
         return {
           art_sec: item.id,
           kar_uni: item.quantity,
-          kar_nat: "c",
           kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
           kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
           // Campos de oferta - solo enviar si realmente hay oferta activa
@@ -597,11 +646,151 @@ const POS = () => {
     }
   };
 
-  // Nueva función para facturar el pedido.
-  // Utiliza el mismo flujo de validación que handlePlaceOrder, pero al construir el payload:
-  // - fac_tip_cod se establece en "VTA"
-  // - En cada detalle se añade kar_nat: "-"
+  // ---------------------------------------------------------------------------
+  // SPEC-014 — helpers compartidos por REMISIONAR / GUARDAR REMISIÓN / FACTURAR desde REM
+  // ---------------------------------------------------------------------------
+  const validarBase = () => {
+    if (order.length === 0) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Debe agregar al menos un artículo al pedido.', confirmButtonColor: '#f58ea3' });
+      return null;
+    }
+    if (!selectedClient) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Debe seleccionar un cliente para el pedido.', confirmButtonColor: '#f58ea3' });
+      return null;
+    }
+    const fac_usu_cod = localStorage.getItem('user_pretty');
+    if (!fac_usu_cod) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'No se encontró el código de usuario. Por favor, inicie sesión nuevamente.', confirmButtonColor: '#f58ea3' });
+      return null;
+    }
+    return fac_usu_cod;
+  };
+
+  // Líneas para el backend. La naturaleza (kar_nat) NO se manda: la decide el backend por tipo y origen.
+  // conVinculos: al pasar COT → REM/VTA, cada línea apunta a la línea de origen (kar_kar_sec_ori / kar_fac_sec_ori).
+  const detallesPayload = ({ conVinculos }) => order.map((item) => {
+    const tieneOfertaReal = item.tiene_oferta === 'S' && (item.codigo_promocion || item.precio_oferta);
+    return {
+      art_sec: item.id,
+      kar_uni: item.quantity,
+      kar_pre_pub: precioTypeActual === 'detal' && item.price_detal ? item.price_detal : item.price,
+      kar_lis_pre_cod: precioTypeActual === 'detal' ? 1 : 2,
+      ...(conVinculos ? { kar_kar_sec_ori: item.kar_sec || null, kar_fac_sec_ori: item.fac_sec || null } : {}),
+      kar_tiene_oferta: tieneOfertaReal ? 'S' : 'N',
+      kar_precio_oferta: tieneOfertaReal ? (item.precio_oferta || null) : null,
+      kar_descuento_porcentaje: tieneOfertaReal ? (item.descuento_porcentaje || null) : null,
+      kar_codigo_promocion: tieneOfertaReal ? (item.codigo_promocion || null) : null,
+      kar_descripcion_promocion: tieneOfertaReal ? (item.descripcion_promocion || null) : null
+    };
+  });
+
+  const errorDe = (error, porDefecto) => error?.response?.data?.error || error?.response?.data?.message || error?.message || porDefecto;
+
+  // Modal de éxito con botón de impresión; al cerrar navega a /orders (documentos existentes) o limpia el POS.
+  const mostrarExito = ({ titulo, texto, numero, tipoImpresion, extraHtml = '', irAOrdenes }) => {
+    Swal.fire({
+      icon: 'success',
+      title: titulo,
+      html: `<p>${texto}: <b>${numero}</b></p>${extraHtml}
+             <button id="printOrder" class="swal2-styled" style="background-color: #f58ea3; border: none;">Imprimir PDF</button>`,
+      showConfirmButton: true, confirmButtonText: 'OK', confirmButtonColor: '#f58ea3', allowOutsideClick: false
+    }).then(() => { if (irAOrdenes) navigate('/orders'); });
+    const container = Swal.getHtmlContainer();
+    const printButton = container ? container.querySelector('#printOrder') : null;
+    if (printButton) printButton.addEventListener('click', (e) => { e.stopPropagation(); printCotizacion(numero, tipoImpresion); });
+    resetOrderState(!irAOrdenes);
+  };
+
+  const avisoSaldoHtml = (alerta) => alerta
+    ? `<div style="margin-top:10px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;text-align:left;font-size:12px;color:#991b1b"><b>⚠ ${alerta}</b><br/>Verifica el producto en bodega.</div>`
+    : '';
+
+  /**
+   * REMISIONAR (documento nuevo o COT cargada) → POST /order REM con vínculos a la COT.
+   * GUARDAR REMISIÓN (REM cargada) → PUT /order/:rem; si la REM es de un pedido web el backend
+   * actualiza primero el pedido en WooCommerce (spec §5.4).
+   */
+  const handleRemisionar = async () => {
+    const fac_usu_cod = validarBase();
+    if (!fac_usu_cod) return;
+    const esGuardarRem = isEditing && orderType === 'REM';
+    if (!esGuardarRem) {
+      const articulosSinStock = order.filter((item) => (item.existencia ?? 0) <= 0);
+      if (articulosSinStock.length > 0) {
+        const lista = articulosSinStock.map((item) => `• ${item.name} (${item.codigo}) — Sin existencia`).join('\n');
+        Swal.fire({ icon: 'error', title: 'No se puede remisionar', html: `<p>Los siguientes artículos no tienen existencia:</p><pre style="text-align:left;font-size:12px;margin-top:8px">${lista}</pre>`, confirmButtonColor: '#f58ea3' });
+        return;
+      }
+    }
+    const payload = {
+      nit_sec: selectedClient.nit_sec,
+      fac_usu_cod_cre: fac_usu_cod,
+      fac_tip_cod: 'REM',
+      fac_est_fac: 'A',
+      descuento: discountPercent,
+      fac_descuento_general: descuentoEventoFinal,
+      lis_pre_cod: precioTypeActual === 'detal' ? 1 : 2,
+      fac_nro_woo: selectedClient.fac_nro_woo || null,
+      detalles: detallesPayload({ conVinculos: !esGuardarRem && isEditing && orderType === 'COT' })
+    };
+    setIsSubmitting(true);
+    try {
+      if (esGuardarRem) {
+        const { data } = await axios.put(`${API_URL}/order/${facNroToEdit}`, payload, { headers: { 'x-access-token': localStorage.getItem('pedidos_pretty_token') } });
+        if (!data.success) throw new Error(data.error || data.message);
+        const detalle = data.sin_cambios ? '<p style="font-size:13px;color:#64748b">No había cambios en las líneas.</p>'
+          : (data.resumen ? `<p style="font-size:13px;color:#64748b">Cambios: ${data.resumen}<br/>El pedido en WooCommerce quedó igual que la remisión.</p>` : '');
+        mostrarExito({ titulo: 'Remisión guardada', texto: 'Número de remisión', numero: facNroToEdit, tipoImpresion: 'REM', extraHtml: detalle + avisoSaldoHtml(data.alerta), irAOrdenes: true });
+      } else {
+        const { data } = await axios.post(`${API_URL}/order`, payload);
+        if (!data.success) throw new Error(data.error || data.message);
+        mostrarExito({ titulo: 'Remisión creada', texto: 'Número de remisión', numero: data.fac_nro, tipoImpresion: 'REM', extraHtml: '<p style="font-size:13px;color:#64748b">La mercancía queda reservada; vence en 5 días si no se factura.</p>', irAOrdenes: isEditing });
+      }
+    } catch (error) {
+      console.error('Error al remisionar:', error);
+      Swal.fire({ icon: 'error', title: 'No se pudo guardar la remisión', text: errorDe(error, 'Error al remisionar, por favor intente nuevamente.'), confirmButtonColor: '#f58ea3' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * FACTURAR con una REM cargada: primero guarda los cambios de líneas (PUT, sin efecto si no hay
+   * cambios) y luego llama al relevo/respaldo (POST /pedidos-web/:rem/facturar) — nunca POST /order:
+   * la REM ya descontó kardex y la VTA nace sin volver a descontar (spec §4 / §9.2).
+   */
+  const facturarDesdeRemision = async (fac_usu_cod) => {
+    const headers = { 'x-access-token': localStorage.getItem('pedidos_pretty_token') };
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        nit_sec: selectedClient.nit_sec, fac_usu_cod_cre: fac_usu_cod, fac_tip_cod: 'REM', fac_est_fac: 'A',
+        descuento: discountPercent, fac_descuento_general: descuentoEventoFinal,
+        lis_pre_cod: precioTypeActual === 'detal' ? 1 : 2, fac_nro_woo: selectedClient.fac_nro_woo || null,
+        detalles: detallesPayload({ conVinculos: false })
+      };
+      const guardado = await axios.put(`${API_URL}/order/${facNroToEdit}`, payload, { headers });
+      if (!guardado.data.success) throw new Error(guardado.data.error || guardado.data.message);
+      const { data } = await axios.post(`${API_URL}/pedidos-web/${facNroToEdit}/facturar`, {}, { headers });
+      if (!data.success) throw new Error(data.error || data.message);
+      const aviso = data.estadoWoo && data.estadoWoo.ok === false ? `<p style="font-size:13px;color:#b45309">Atención: el pedido en WooCommerce no pasó a "Procesando" (${data.estadoWoo.error}).</p>` : '';
+      mostrarExito({ titulo: data.ya_facturada ? 'La remisión ya estaba facturada' : 'Factura creada exitosamente', texto: 'Número de factura', numero: data.fac_nro_vta, tipoImpresion: 'VTA', extraHtml: `<p style="font-size:13px;color:#64748b">Remisión ${facNroToEdit} facturada${selectedClient.fac_nro_woo ? ` · pedido web #${selectedClient.fac_nro_woo}` : ''}.</p>` + aviso + avisoSaldoHtml(guardado.data.alerta), irAOrdenes: true });
+    } catch (error) {
+      console.error('Error al facturar la remisión:', error);
+      Swal.fire({ icon: 'error', title: 'No se pudo facturar la remisión', text: errorDe(error, 'Error al facturar, por favor intente nuevamente.'), confirmButtonColor: '#f58ea3' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Facturar: documento nuevo o COT cargada → POST /order VTA (como siempre); VTA cargada → editar factura;
+  // REM cargada → facturarDesdeRemision (SPEC-014).
   const handleFacturarOrder = () => {
+    if (isEditing && orderType === 'REM') {
+      const fac_usu_cod = validarBase();
+      if (fac_usu_cod) facturarDesdeRemision(fac_usu_cod);
+      return;
+    }
     if (order.length === 0) {
       Swal.fire({
         icon: 'error',
@@ -682,7 +871,6 @@ const POS = () => {
           kar_uni: item.quantity,
           kar_pre_pub: precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price,
           kar_lis_pre_cod: precioTypeActual === "detal" ? 1 : 2,
-          kar_nat: "-",
           kar_kar_sec_ori: item.kar_sec || null,
           kar_fac_sec_ori: item.fac_sec || null,
           // Campos de oferta - solo enviar si realmente hay oferta activa
@@ -1000,7 +1188,7 @@ const POS = () => {
             <h2 className="text-xl font-bold text-center text-white">Resumen de Pedido</h2>
             {isEditing && order.length > 0 && (
               <p className="text-center text-sm text-white mt-2 bg-white/20 px-3 py-1 rounded-full inline-block">
-                Editando Pedido: {selectedClient.fac_nro || "N/A"}
+                {badgeDocumento}
               </p>
             )}
           </div>
@@ -1028,8 +1216,14 @@ const POS = () => {
                   Volver
                 </button>
               </div>
+              {bloqueo && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+                  <span className="font-semibold">Solo lectura.</span> {bloqueo.mensaje}
+                </div>
+              )}
 
               <OrderSummary
+                readOnly={!!bloqueo}
                 order={order}
                 onRemove={removeFromOrder}
                 onAdd={addToOrder}
@@ -1134,32 +1328,15 @@ const POS = () => {
                 )}
               </div>
               
-              {/* Sección de botones para realizar pedido y facturar */}
-              <div className="space-y-3">
-                <button 
-                  onClick={handlePlaceOrder}
-                  disabled={isEditing && orderType === "VTA"}
-                  className={`w-full px-4 py-3 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 ${
-                    isEditing && orderType === "VTA" 
-                      ? "bg-gray-300 cursor-not-allowed" 
-                      : "bg-[#f58ea3] text-white hover:bg-[#f7b3c2]"
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  {isEditing ? "Editar Pedido" : "Realizar Pedido"}
-                </button>
-                <button
-                  onClick={handleFacturarOrder}
-                  className="w-full bg-green-600 text-white px-4 py-3 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {isEditing && orderType === "VTA" ? "Editar Factura" : "Facturar"}
-                </button>
-              </div>
+              {/* Botones según el documento cargado (SPEC-014 §2.3) */}
+              <BotoneraDocumento
+                orderType={orderType}
+                isEditing={isEditing}
+                bloqueo={bloqueo}
+                onCotizar={handlePlaceOrder}
+                onRemisionar={handleRemisionar}
+                onFacturar={handleFacturarOrder}
+              />
             </div>
           </div>
         </aside>
@@ -1188,7 +1365,10 @@ const POS = () => {
             onShowClientModal={() => setShowClientModal(true)}
             onCreateClient={() => setShowCreateClientModal(true)}
             onPlaceOrder={handlePlaceOrder}
+            onRemisionar={handleRemisionar}
             onFacturarOrder={handleFacturarOrder}
+            bloqueo={bloqueo}
+            badgeDocumento={badgeDocumento}
             selectedPriceType={precioTypeActual}
             onPriceTypeChange={(e) => setSelectedPriceType(e.target.value)}
             isPriceTypeDisabled={isPriceTypeDisabled}

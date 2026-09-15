@@ -15,7 +15,8 @@ const AnularDocumentoModal = ({ isOpen, onClose, fac_nro, fac_tip_cod, onSuccess
             const response = await axios.post(`${API_URL}/ordenes/anular`, {
                 fac_nro,
                 fac_tip_cod,
-                fac_obs
+                fac_obs,
+                usuario: localStorage.getItem('user_pretty') || null // queda en el log del push y en la nota de Woo (SPEC-014)
             });
 
             if (response.data.success) {
@@ -35,7 +36,8 @@ const AnularDocumentoModal = ({ isOpen, onClose, fac_nro, fac_tip_cod, onSuccess
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.message || 'Error al anular el documento, por favor intente nuevamente.',
+                // El backend explica el bloqueo por vínculo (409): "está cruzada con VTAxxxx…" (SPEC-014)
+                text: error.response?.data?.error || error.message || 'Error al anular el documento, por favor intente nuevamente.',
                 confirmButtonColor: '#f58ea3'
             });
         } finally {

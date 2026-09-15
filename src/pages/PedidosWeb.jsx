@@ -5,9 +5,10 @@
 // Fuente: GET /api/pedidos-web (woo_pedidos + factura). Todas las llamadas llevan el token
 // vía axiosInstance (x-access-token).
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 import Swal from 'sweetalert2';
-import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle, FaSearch, FaBroom, FaRegClock } from 'react-icons/fa';
+import { FaSyncAlt, FaCheck, FaBan, FaEye, FaCloudDownloadAlt, FaExclamationTriangle, FaSearch, FaBroom, FaRegClock, FaEdit } from 'react-icons/fa';
 
 const fmtCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(v) || 0);
 const fmtFecha = (v) => (v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-');
@@ -47,6 +48,7 @@ const LOCAL_STORAGE_KEY = 'pedidos_web_filters';
 const FILTROS_VACIOS = { pedido: '', cliente: '', desde: '', hasta: '' };
 
 const PedidosWeb = () => {
+  const navigate = useNavigate();
   const [pedidos, setPedidos] = useState([]);
   const [conteos, setConteos] = useState({});
   const [salud, setSalud] = useState(null);
@@ -115,7 +117,7 @@ const PedidosWeb = () => {
     // Con alerta de saldo no se bloquea (el pago es un hecho), pero se obliga a leerla antes:
     // el procedimiento es contar físicamente y corregir/editar el pedido ANTES de facturar.
     const avisoSaldo = p.alerta
-      ? `<div style="margin-top:10px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;text-align:left;font-size:12px;color:#991b1b"><b>⚠ ${p.alerta}</b><br/>Verifica el producto en bodega antes de confirmar. Si no está, edita o cancela el pedido en WooCommerce en vez de facturarlo.</div>`
+      ? `<div style="margin-top:10px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;text-align:left;font-size:12px;color:#991b1b"><b>⚠ ${p.alerta}</b><br/>Verifica el producto en bodega antes de confirmar. Si no está, edita la remisión en el POS (el pedido en WooCommerce se actualiza solo) o anúlala.</div>`
       : '';
     const r = await Swal.fire({
       title: p.alerta ? '¿Confirmar pago con stock insuficiente?' : '¿Confirmar pago?',
@@ -421,6 +423,9 @@ const PedidosWeb = () => {
                           </button>
                           {p.estado_erp === 'REM_ACTIVA' && p.fac_nro_rem && (
                             <>
+                              <button onClick={() => navigate(`/pos?fac_nro=${p.fac_nro_rem}`)} disabled={ocupado} className="p-2 rounded-lg hover:bg-[#fff5f7] text-[#a5762f] disabled:opacity-40" title="Editar la remisión en el POS (actualiza el pedido en WooCommerce)">
+                                <FaEdit className="w-4 h-4" />
+                              </button>
                               <button onClick={() => confirmarPago(p)} disabled={ocupado} className="p-2 rounded-lg hover:bg-green-50 text-green-600 disabled:opacity-40" title="Confirmar pago (facturar)">
                                 <FaCheck className="w-4 h-4" />
                               </button>

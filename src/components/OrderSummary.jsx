@@ -4,7 +4,7 @@ import { FaPlus, FaMinus, FaBox, FaFire, FaEdit, FaCheck, FaTimes, FaCubes } fro
 import { formatValue, formatName } from '../utils';
 import PropTypes from 'prop-types';
 
-const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista, eventoPromocional, hayEventoActivo, cumpleUmbralMayorista, onUpdateMontoMayorista, onShowBundleDetails }) => {
+const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, discountValue, facDescuentoGeneral, porcentajeDescuentoEvento, finalTotal, montoMayorista, eventoPromocional, hayEventoActivo, cumpleUmbralMayorista, onUpdateMontoMayorista, onShowBundleDetails, readOnly = false }) => {
   const [isEditingMonto, setIsEditingMonto] = useState(false);
   const [nuevoMonto, setNuevoMonto] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -186,7 +186,7 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
 
                     <div className="mt-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <button
+                        {!readOnly && (<button
                           onClick={() => onRemove(item.id)}
                           className={`text-white p-1.5 rounded-full transition-colors cursor-pointer ${
                             tieneOferta
@@ -197,7 +197,7 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
                           }`}
                         >
                           <FaMinus className="w-3 h-3" />
-                        </button>
+                        </button>)}
                         <span className={`text-sm font-medium ${
                           tieneOferta
                             ? 'text-orange-700'
@@ -207,7 +207,7 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
                         }`}>
                           {item.quantity} x ${formatValue(precioAMostrar)}
                         </span>
-                        <button
+                        {!readOnly && (<button
                           onClick={() => onAdd(item)}
                           className={`text-white p-1.5 rounded-full transition-colors cursor-pointer ${
                             tieneOferta
@@ -218,7 +218,7 @@ const OrderSummary = ({ order, onRemove, onAdd, totalValue, selectedPriceType, d
                           }`}
                         >
                           <FaPlus className="w-3 h-3" />
-                        </button>
+                        </button>)}
                       </div>
                       {item.existencia <= 0 && (
                         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">

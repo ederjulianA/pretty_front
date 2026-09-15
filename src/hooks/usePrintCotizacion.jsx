@@ -72,6 +72,7 @@ const numberToWords = (n) => {
 // Retorna la Y de la línea divisoria para que el contenido se posicione dinámicamente
 const drawHeader = (doc, header, pageWidth, tipo) => {
   const esCotizacion = tipo === 'COT';
+  const esRemision = tipo === 'REM'; // SPEC-014: la remisión se imprime con el formato del comprobante
   const top = 8;
 
   // ── Bloque izquierdo: logo + datos fiscales ──────────────────────────────
@@ -96,7 +97,7 @@ const drawHeader = (doc, header, pageWidth, tipo) => {
   const rightX = pageWidth - MARGIN;
 
   // Título condicional según tipo
-  const tituloL1 = esCotizacion ? 'Cotización' : 'Comprobante';
+  const tituloL1 = esCotizacion ? 'Cotización' : (esRemision ? 'Remisión' : 'Comprobante');
   const tituloL2 = 'de venta';
   doc.setFont('helvetica', 'bolditalic');
   doc.setFontSize(22);
@@ -222,7 +223,7 @@ const drawClientSection = (doc, header, pageWidth, startY) => {
 // ─── Hook principal ────────────────────────────────────────────────────────────
 
 const usePrintCotizacion = () => {
-  // tipo: 'COT' → Cotización de venta | 'VTA' → Comprobante de venta
+  // tipo: 'COT' → Cotización de venta | 'REM' → Remisión de venta | 'VTA' → Comprobante de venta
   const printCotizacion = useCallback(async (fac_nro, tipo = 'COT') => {
     try {
       const esCotizacion = tipo === 'COT';
@@ -524,7 +525,7 @@ const usePrintCotizacion = () => {
       // ── Descarga ───────────────────────────────────────────────────────────
       const now    = new Date();
       const pad    = (n) => String(n).padStart(2, '0');
-      const prefix = esCotizacion ? 'cotizacion' : 'comprobante';
+      const prefix = esCotizacion ? 'cotizacion' : (tipo === 'REM' ? 'remision' : 'comprobante');
       doc.save(`${prefix}_prettymakeup_${fac_nro}_${pad(now.getDate())}_${pad(now.getMonth() + 1)}_${now.getFullYear()}.pdf`);
     } catch (error) {
       console.error('Error generando PDF:', error);

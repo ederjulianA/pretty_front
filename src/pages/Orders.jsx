@@ -68,8 +68,19 @@ const Orders = () => {
   const { printCotizacion } = usePrintCotizacion();
   const handlePrint = (order) => {
     if (order.fac_tip_cod === 'COT') return printCotizacion(order.fac_nro, 'COT');
+    if (order.fac_tip_cod === 'REM') return printCotizacion(order.fac_nro, 'REM'); // SPEC-014
     if (order.fac_tip_cod === 'VTA') return printCotizacion(order.fac_nro, 'VTA');
     return printOrder(order.fac_nro);
+  };
+
+  // SPEC-014: vencimiento de una remisión activa (factura.fac_vence_el, UTC)
+  const textoVence = (order) => {
+    if (order.fac_tip_cod !== 'REM' || order.fac_est_fac !== 'A' || !order.fac_vence_el) return null;
+    const d = new Date(order.fac_vence_el);
+    if (isNaN(d.getTime())) return null;
+    const horas = (d.getTime() - Date.now()) / 36e5;
+    const fecha = d.toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' });
+    return { texto: horas < 0 ? `venció ${fecha}` : `vence ${fecha}`, urgente: horas < 24 };
   };
 
   const [showAnularModal, setShowAnularModal] = useState(false);
@@ -239,8 +250,9 @@ const Orders = () => {
   };
 
   const canEditOrAnular = (estado, fac_tip_cod, documentos) => {
-    // Si es una cotización y tiene documentos, no permitir editar/anular
-    if (fac_tip_cod === 'COT' && documentos !== null) {
+    // SPEC-014 §2.2: una COT cruzada con una REM/VTA activa, o una REM cruzada con una VTA activa,
+    // está bloqueada (el backend también lo rechaza). `documentos` trae ese destino activo.
+    if ((fac_tip_cod === 'COT' || fac_tip_cod === 'REM') && documentos) {
       return false;
     }
     // Solo permitir editar/anular si está activo o pendiente
@@ -375,6 +387,7 @@ const Orders = () => {
               className="p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#f58ea3] focus:border-[#f58ea3] transition-colors"
             >
               <option value="4">COTIZACIONES</option>
+              <option value="6">REMISIONES</option>
               <option value="1">FACTURAS</option>
             </select>
           </div>
@@ -493,8 +506,11 @@ const Orders = () => {
                     <p className="text-xs text-gray-500">{order.nit_ide}</p>
                     {isFacturado && (
                       <p className="text-xs text-green-700 mt-1">
-                        Documentos: <span className="font-medium">{order.documentos}</span>
+                        Cruzada con: <span className="font-medium">{order.documentos}</span>
                       </p>
+                    )}
+                    {textoVence(order) && (
+                      <p className={`text-xs mt-1 ${textoVence(order).urgente ? 'text-red-600 font-medium' : 'text-amber-700'}`}>{textoVence(order).texto}</p>
                     )}
                     <p className="text-sm font-semibold text-gray-900 mt-1">
                       Total: ${parseFloat(order.total_pedido).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -563,7 +579,7 @@ const Orders = () => {
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rentab.</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documentos</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cruzada con</th>
                 <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario Creador</th>
                 <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">Acciones</th>
@@ -621,7 +637,11 @@ const Orders = () => {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           {order.documentos}
                         </span>
-                      ) : '-'}
+                      ) : (textoVence(order) ? (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${textoVence(order).urgente ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {textoVence(order).texto}
+                        </span>
+                      ) : '-')}
                     </td>
                     <td className="px-2 py-2 whitespace-nowrap text-center">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.fac_est_fac === 'A' ? 'bg-green-100 text-green-800' :

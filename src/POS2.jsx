@@ -100,6 +100,8 @@ const POS = () => {
   const [orderType, setOrderType] = useState(null);
   // SPEC-014: cabecera del documento cargado (bloqueo por vínculo, vencimiento, pedido web)
   const [docHeader, setDocHeader] = useState(null);
+  // SPEC-015 E1: cantidades con las que se cargó el documento, para saber si el usuario tocó las líneas
+  const lineasCargadasRef = useRef(new Map());
 
   // Load order for editing if facNroToEdit exists
   useEffect(() => {
@@ -199,6 +201,8 @@ const POS = () => {
               // SPEC-014 §5.10: lo que este documento ya descontó sigue disponible para él (REM/VTA)
               existencia: item.existencia_disponible ?? item.existencia ?? 0,
               kar_des_uno: item.kar_des_uno || 0,
+              // SPEC-015 E3: total cobrado de la línea (en un pedido web con cupón ya trae el descuento)
+              kar_total: item.kar_total != null ? Number(item.kar_total) : null,
               kar_sec: item.kar_sec,
               fac_sec: item.fac_sec,
               imgUrl: item.art_url_img_servi,
@@ -216,6 +220,9 @@ const POS = () => {
           });
           
           console.log("Detalles procesados:", mergedDetails);
+          lineasCargadasRef.current = new Map(mergedDetails.map((d) => [String(d.id), Number(d.quantity)]));
+          // SPEC-015 E3: en un pedido web el descuento va por línea (cupón de Woo), no como % global
+          if (orderData.header.fac_nro_woo) setDiscountPercent(0);
           setOrder(mergedDetails);
           setIsEditing(true);
         }
@@ -237,7 +244,12 @@ const POS = () => {
   let precioTypeForzado = selectedPriceType;
   let isPriceTypeDisabled = false;
   
-  if (montoMayoristaNum > 0) {
+  // SPEC-015 E4: un pedido web conserva la lista con la que se importó; recalcularla por umbral
+  // cambiaría los precios que pagó la clienta.
+  const esDocWeb = isEditing && !!docHeader?.fac_nro_woo;
+  if (esDocWeb) {
+    isPriceTypeDisabled = true;
+  } else if (montoMayoristaNum > 0) {
     if (cumpleUmbralMayorista) {
       precioTypeForzado = "mayor";
       isPriceTypeDisabled = true;
@@ -251,7 +263,22 @@ const POS = () => {
   const precioTypeActual = isPriceTypeDisabled ? precioTypeForzado : selectedPriceType;
   
   const totalValue = precioTypeActual === "detal" ? retailTotal : wholesaleTotal;
-  const discountValue = totalValue * (discountPercent / 100);
+  // SPEC-015 E3: en un pedido web cada línea trae su propio descuento (cupón: 5/10 % en las líneas
+  // normales, 0 % en las que están en oferta). Se usa el total guardado para que la pantalla muestre
+  // exactamente lo que cobró Woo.
+  const descuentoLinea = (item) => {
+    const base = (precioTypeActual === "detal" && item.price_detal ? item.price_detal : item.price) * item.quantity;
+    const des = Number(item.kar_des_uno) || 0;
+    if (des > 0 && item.kar_total != null) return base - item.kar_total;
+    return base * (des / 100);
+  };
+  const discountValue = esDocWeb
+    ? order.reduce((sum, item) => sum + descuentoLinea(item), 0)
+    : totalValue * (discountPercent / 100);
+  // SPEC-015 E2: pedido web con cupón → las líneas no se editan en el POS (el backend también lo rechaza)
+  const conDescuentoWeb = esDocWeb && order.some((item) => Number(item.kar_des_uno) > 0);
+  const lineasSoloLectura = conDescuentoWeb && !docHeader?.bloqueado;
+  const MENSAJE_CUPON_WEB = 'Este pedido web tiene un cupón de descuento. Para cambiar productos o cantidades, edítalo en WooCommerce (Recalcular) y el ERP actualizará la remisión solo. Puedes facturarlo tal cual.';
   
   // Calcular subtotal de artículos SIN descuento activo (para aplicar descuento evento)
   const subtotalSinDescuento = order.reduce((sum, item) => {
@@ -432,8 +459,11 @@ const POS = () => {
   const avisarBloqueo = () => Swal.fire({ icon: 'info', title: 'Documento en solo lectura', text: textoBloqueo(docHeader), confirmButtonColor: '#f58ea3' });
 
   // Function to add product to order
+  const avisarCuponWeb = () => Swal.fire({ icon: 'info', title: 'Pedido web con cupón', text: MENSAJE_CUPON_WEB, confirmButtonColor: '#f58ea3' });
+
   const addToOrder = (product) => {
     if (docHeader?.bloqueado) { avisarBloqueo(); return; }
+    if (lineasSoloLectura) { avisarCuponWeb(); return; }
     setOrder(prev => {
       const exists = prev.find(item => item.id === product.id);
       if (exists) {
@@ -447,6 +477,7 @@ const POS = () => {
 
   const removeFromOrder = (productId) => {
     if (docHeader?.bloqueado) { avisarBloqueo(); return; }
+    if (lineasSoloLectura) { avisarCuponWeb(); return; }
     setOrder(prev => prev
       .map(item => item.id === productId ? { ...item, quantity: item.quantity - 1 } : item)
       .filter(item => item.quantity > 0)
@@ -462,6 +493,7 @@ const POS = () => {
     setIsEditing(false);
     setOrderType(null);
     setDocHeader(null);
+    lineasCargadasRef.current = new Map();
     setShowOrderDrawer(false);
     // Reinicia la URL para eliminar el query param "fac_nro" solo si se solicita
     if (shouldNavigate) {
@@ -769,12 +801,19 @@ const POS = () => {
         lis_pre_cod: precioTypeActual === 'detal' ? 1 : 2, fac_nro_woo: selectedClient.fac_nro_woo || null,
         detalles: detallesPayload({ conVinculos: false })
       };
-      const guardado = await axios.put(`${API_URL}/order/${facNroToEdit}`, payload, { headers });
-      if (!guardado.data.success) throw new Error(guardado.data.error || guardado.data.message);
+      // SPEC-015 E1: si es un pedido web y no se tocaron las líneas, no se reenvían: el PUT armaría
+      // las líneas con los precios de la pantalla y podría reescribir el pedido. La factura copia la REM.
+      const cargadas = lineasCargadasRef.current;
+      const lineasSinCambios = order.length === cargadas.size && order.every((item) => cargadas.get(String(item.id)) === Number(item.quantity));
+      let guardado = null;
+      if (!(esDocWeb && lineasSinCambios)) {
+        guardado = await axios.put(`${API_URL}/order/${facNroToEdit}`, payload, { headers });
+        if (!guardado.data.success) throw new Error(guardado.data.error || guardado.data.message);
+      }
       const { data } = await axios.post(`${API_URL}/pedidos-web/${facNroToEdit}/facturar`, {}, { headers });
       if (!data.success) throw new Error(data.error || data.message);
       const aviso = data.estadoWoo && data.estadoWoo.ok === false ? `<p style="font-size:13px;color:#b45309">Atención: el pedido en WooCommerce no pasó a "Procesando" (${data.estadoWoo.error}).</p>` : '';
-      mostrarExito({ titulo: data.ya_facturada ? 'La remisión ya estaba facturada' : 'Factura creada exitosamente', texto: 'Número de factura', numero: data.fac_nro_vta, tipoImpresion: 'VTA', extraHtml: `<p style="font-size:13px;color:#64748b">Remisión ${facNroToEdit} facturada${selectedClient.fac_nro_woo ? ` · pedido web #${selectedClient.fac_nro_woo}` : ''}.</p>` + aviso + avisoSaldoHtml(guardado.data.alerta), irAOrdenes: true });
+      mostrarExito({ titulo: data.ya_facturada ? 'La remisión ya estaba facturada' : 'Factura creada exitosamente', texto: 'Número de factura', numero: data.fac_nro_vta, tipoImpresion: 'VTA', extraHtml: `<p style="font-size:13px;color:#64748b">Remisión ${facNroToEdit} facturada${selectedClient.fac_nro_woo ? ` · pedido web #${selectedClient.fac_nro_woo}` : ''}.</p>` + aviso + avisoSaldoHtml(guardado?.data?.alerta), irAOrdenes: true });
     } catch (error) {
       console.error('Error al facturar la remisión:', error);
       Swal.fire({ icon: 'error', title: 'No se pudo facturar la remisión', text: errorDe(error, 'Error al facturar, por favor intente nuevamente.'), confirmButtonColor: '#f58ea3' });
@@ -1222,8 +1261,14 @@ const POS = () => {
                 </div>
               )}
 
+              {lineasSoloLectura && (
+                <div className="rounded-lg border border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-900" role="status">
+                  <span className="font-semibold">Pedido web con cupón.</span> {MENSAJE_CUPON_WEB}
+                </div>
+              )}
+
               <OrderSummary
-                readOnly={!!bloqueo}
+                readOnly={!!bloqueo || lineasSoloLectura}
                 order={order}
                 onRemove={removeFromOrder}
                 onAdd={addToOrder}
@@ -1247,7 +1292,7 @@ const POS = () => {
                     Tipo de Precio
                     {isPriceTypeDisabled && (
                       <span className="ml-2 text-xs text-orange-600 font-normal">
-                        (Automático según umbral mayorista)
+                        {esDocWeb ? '(Lista con la que se importó el pedido web)' : '(Automático según umbral mayorista)'}
                       </span>
                     )}
                   </label>
@@ -1267,12 +1312,20 @@ const POS = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descuento (%)
+                    {esDocWeb && (
+                      <span className="ml-2 text-xs text-orange-600 font-normal">
+                        (Pedido web: descuento por línea)
+                      </span>
+                    )}
                   </label>
                   <input
                     type="number"
                     value={discountPercent}
                     onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                    className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200"
+                    disabled={esDocWeb}
+                    className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 ${
+                      esDocWeb ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                    }`}
                     min="0"
                     max="100"
                   />
@@ -1375,6 +1428,9 @@ const POS = () => {
             hayEventoActivo={hayEventoActivo}
             discountPercent={discountPercent}
             onDiscountChange={(e) => setDiscountPercent(Number(e.target.value))}
+            descuentoPorLinea={esDocWeb}
+            lineasSoloLectura={lineasSoloLectura}
+            mensajeLineasSoloLectura={MENSAJE_CUPON_WEB}
             facDescuentoGeneral={descuentoEventoFinal}
             porcentajeDescuentoEvento={porcentajeDescuentoEvento}
             discountValue={discountValue}

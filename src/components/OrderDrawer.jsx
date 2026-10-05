@@ -22,6 +22,9 @@ const OrderDrawer = ({
   onPriceTypeChange,
   discountPercent,
   onDiscountChange,
+  descuentoPorLinea = false,
+  lineasSoloLectura = false,
+  mensajeLineasSoloLectura = '',
   facDescuentoGeneral,
   porcentajeDescuentoEvento,
   discountValue,
@@ -117,7 +120,7 @@ const OrderDrawer = ({
                 Tipo de Precio
                 {isPriceTypeDisabled && (
                   <span className="ml-2 text-xs text-orange-600 font-normal">
-                    (Automático según umbral mayorista)
+                    {descuentoPorLinea ? '(Lista con la que se importó el pedido web)' : '(Automático según umbral mayorista)'}
                   </span>
                 )}
               </label>
@@ -142,7 +145,8 @@ const OrderDrawer = ({
                 type="number"
                 value={discountPercent}
                 onChange={onDiscountChange}
-                className="w-full p-4 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 bg-white/90 backdrop-blur-sm font-system"
+                disabled={descuentoPorLinea}
+                className={`w-full p-4 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#f58ea3] focus:border-transparent transition-all duration-200 bg-white/90 backdrop-blur-sm font-system ${descuentoPorLinea ? 'opacity-60 cursor-not-allowed' : ''}`}
                 min="0"
                 max="100"
               />
@@ -151,8 +155,13 @@ const OrderDrawer = ({
 
           {/* Resumen de pedido */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-white/50">
+            {lineasSoloLectura && (
+              <div className="mb-3 rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-xs text-sky-900" role="status">
+                <span className="font-semibold">Pedido web con cupón.</span> {mensajeLineasSoloLectura}
+              </div>
+            )}
             <OrderSummary
-              readOnly={!!bloqueo}
+              readOnly={!!bloqueo || lineasSoloLectura}
               order={order}
               onRemove={onRemove}
               onAdd={onAdd}

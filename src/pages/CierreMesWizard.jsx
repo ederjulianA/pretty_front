@@ -22,7 +22,6 @@ const CierreMesWizard = () => {
     anio, mes, setAnio, setMes,
     validacion, validando,
     preflight, loadingPreflight, errorPreflight, cargarPreflight,
-    sincronizarFaltantes, progresoSync,
     actualizarEstadoMasivo, facturarBloque, anularBloque, generarCierre,
     procesando, pasoActual, setPasoActual, avanzar, retroceder,
     puedeAvanzar, bloqueoCierre,
@@ -154,8 +153,6 @@ const CierreMesWizard = () => {
             pedidos={preflight?.pedidos}
             loading={loadingPreflight}
             procesando={procesando}
-            progresoSync={progresoSync}
-            onSincronizar={sincronizarFaltantes}
             onActualizarEstado={actualizarEstadoMasivo}
           />
         )}

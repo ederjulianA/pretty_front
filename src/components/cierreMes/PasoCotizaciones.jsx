@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import { toast } from 'react-toastify';
-import { FaCheckCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import TablaSeleccionable from './TablaSeleccionable';
 import ResultadoBloqueModal from './ResultadoBloqueModal';
 import ObservacionModal from './ObservacionModal';
@@ -14,6 +14,9 @@ const PasoCotizaciones = ({ cotizaciones, loading, procesando, onFacturar, onAnu
   const [resultado, setResultado] = useState(null);
 
   const items = cotizaciones?.items ?? [];
+  // COT de un pedido web que ya tiene REM/VTA (la creo el antiguo "Sincronizar faltantes"):
+  // facturarla falla porque el pedido ya tiene factura, la salida es cancelarla.
+  const duplicadas = items.filter((i) => i.duplicada_de);
 
   const toggle = (id) =>
     setSeleccionados((prev) => {
@@ -35,6 +38,17 @@ const PasoCotizaciones = ({ cotizaciones, loading, procesando, onFacturar, onAnu
 
   const facturar = async () => {
     const lista = Array.from(seleccionados);
+    const duplicadasSeleccionadas = duplicadas.filter((i) => seleccionados.has(i.fac_sec));
+    if (duplicadasSeleccionadas.length > 0) {
+      await Swal.fire({
+        title: 'Hay cotizaciones duplicadas en la seleccion',
+        html: `${duplicadasSeleccionadas.map((i) => `${i.fac_nro} (pedido ya facturado en ${i.duplicada_de})`).join('<br/>')}
+          <br/><br/>Esas no se facturan: cancelalas con la accion <b>Cancelar</b>.`,
+        icon: 'warning',
+        confirmButtonColor: '#f58ea3',
+      });
+      return;
+    }
     const confirmacion = await Swal.fire({
       title: `Facturar ${lista.length} cotizacion(es)`,
       text: `Se generaran ${lista.length} factura(s) de venta. Esta accion no se puede deshacer.`,
@@ -63,7 +77,20 @@ const PasoCotizaciones = ({ cotizaciones, loading, procesando, onFacturar, onAnu
   };
 
   const columnas = [
-    { key: 'cot', titulo: 'Cotizacion', render: (i) => <span className="font-medium text-gray-900">{i.fac_nro}</span> },
+    {
+      key: 'cot',
+      titulo: 'Cotizacion',
+      render: (i) => (
+        <div>
+          <span className="font-medium text-gray-900">{i.fac_nro}</span>
+          {i.duplicada_de && (
+            <span className="ml-2 px-2 py-0.5 rounded-lg text-xs font-medium bg-amber-100 text-amber-800">
+              Duplicada · ya facturado en {i.duplicada_de}
+            </span>
+          )}
+        </div>
+      ),
+    },
     { key: 'woo', titulo: 'Pedido Woo', render: (i) => (i.fac_nro_woo ? `#${i.fac_nro_woo}` : '—') },
     { key: 'cliente', titulo: 'Cliente', render: (i) => i.nit_nom || '—' },
     { key: 'fecha', titulo: 'Fecha', render: (i) => formatFecha(i.fac_fec) },
@@ -99,6 +126,16 @@ const PasoCotizaciones = ({ cotizaciones, loading, procesando, onFacturar, onAnu
         </div>
       ) : (
         <>
+          {duplicadas.length > 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <FaExclamationTriangle className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-amber-800">
+                {duplicadas.length} cotizacion(es) duplicada(s): su pedido web ya esta facturado. No se facturan;
+                seleccionalas y usa la accion <b>Cancelar</b>.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
             <label htmlFor="accion-cotizaciones" className="text-sm font-medium text-gray-700">
               Accion

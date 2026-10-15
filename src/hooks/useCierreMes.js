@@ -24,7 +24,6 @@ export const useCierreMes = () => {
 
   const [pasoActual, setPasoActual] = useState(1);
   const [procesando, setProcesando] = useState(false);
-  const [progresoSync, setProgresoSync] = useState(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -86,23 +85,6 @@ export const useCierreMes = () => {
     },
     [cargarPreflight]
   );
-
-  const sincronizarFaltantes = useCallback(async () => {
-    setProcesando(true);
-    setProgresoSync({ actual: 0, total: 0, estado: null });
-    try {
-      const estados = preflight?.pedidos?.woo_estados ?? [];
-      const reporte = await cierreMesService.sincronizarFaltantes(anio, mes, estados, setProgresoSync);
-      await cargarPreflight();
-      return reporte;
-    } catch (error) {
-      toast.error(mensajeError(error, 'Fallo la sincronizacion con WooCommerce'));
-      return null;
-    } finally {
-      setProgresoSync(null);
-      setProcesando(false);
-    }
-  }, [anio, mes, preflight, cargarPreflight]);
 
   const actualizarEstadoMasivo = useCallback(
     (facSecs, accion) =>
@@ -193,8 +175,6 @@ export const useCierreMes = () => {
     loadingPreflight,
     errorPreflight,
     cargarPreflight,
-    sincronizarFaltantes,
-    progresoSync,
     actualizarEstadoMasivo,
     facturarBloque,
     anularBloque,

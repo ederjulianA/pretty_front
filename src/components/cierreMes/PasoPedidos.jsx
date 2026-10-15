@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import { toast } from 'react-toastify';
-import { FaCheck, FaExclamationTriangle, FaSync, FaTimes } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaCheck, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 import TablaSeleccionable from './TablaSeleccionable';
 import ResultadoBloqueModal from './ResultadoBloqueModal';
 import { ESTADO_CANCELADO, esPedidoResuelto, etiquetaEstadoWoo, formatCurrency, formatFecha, formatNumber } from './formato';
@@ -27,7 +28,7 @@ const chipEstado = (item) => {
   return 'bg-amber-100 text-amber-800';
 };
 
-const PasoPedidos = ({ pedidos, loading, procesando, progresoSync, onSincronizar, onActualizarEstado }) => {
+const PasoPedidos = ({ pedidos, loading, procesando, onActualizarEstado }) => {
   const [seleccionados, setSeleccionados] = useState(new Set());
   const [resultado, setResultado] = useState(null);
 
@@ -71,16 +72,6 @@ const PasoPedidos = ({ pedidos, loading, procesando, progresoSync, onSincronizar
     setResultado({ titulo: config.titulo, accion, data });
     if (data.errorCount === 0) toast.success(`${data.successCount} pedido(s) actualizado(s)`);
     else toast.warn(`${data.successCount} de ${data.totalItems} pedido(s) actualizado(s)`);
-  };
-
-  const sincronizar = async () => {
-    const reporte = await onSincronizar();
-    if (!reporte) return;
-    if (reporte.conError > 0) {
-      toast.warn(`Sincronizacion terminada con ${reporte.conError} estado(s) con error`);
-    } else {
-      toast.success(`Sincronizacion completada (${reporte.estadosProcesados} estados)`);
-    }
   };
 
   const columnas = [
@@ -169,22 +160,18 @@ const PasoPedidos = ({ pedidos, loading, procesando, progresoSync, onSincronizar
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={sincronizar}
-          disabled={!wooDisponible || procesando}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#f58ea3] hover:bg-[#e57d92] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <FaSync className={procesando && progresoSync ? 'animate-spin' : ''} />
-          Sincronizar faltantes
-        </button>
-        {progresoSync?.estado && (
-          <span className="text-sm text-gray-600">
-            Sincronizando {progresoSync.actual} de {progresoSync.total}: {progresoSync.estado}
-          </span>
+      {/* Los pedidos web los registra el importador (SPEC-013) cada minuto como REM -> VTA. El antiguo
+          "Sincronizar faltantes" los bajaba como COT y duplicaba los ya remisionados (9/oct/2026). */}
+      <p className="text-sm text-gray-600">
+        Los pedidos web llegan solos al ERP cada minuto.
+        {faltantes > 0 && ' Si hay faltantes, revisa su estado en '}
+        {faltantes > 0 && (
+          <Link to="/pedidos-web" className="font-medium text-[#e57d92] underline">
+            Pedidos web
+          </Link>
         )}
-      </div>
+        {faltantes > 0 && '.'}
+      </p>
 
       {seleccionados.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f58ea3]/40 bg-[#fff5f7] p-3">

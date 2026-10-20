@@ -33,6 +33,18 @@ const handleAuthError = (error) => {
   return Promise.reject(error);
 };
 
+// Muchas pantallas llaman a la API con el axios global en vez de axiosInstance, y
+// varias olvidaban el header (SEC-11 a SEC-18). Este interceptor se lo pone a
+// toda llamada relativa a /api/ que no lo traiga, así ninguna nace sin token.
+// Solo rutas relativas: el token nunca sale hacia otros dominios.
+axios.interceptors.request.use((config) => {
+  const url = config.url || '';
+  if (url.startsWith(`${API_URL}/`) && !config.headers['x-access-token']) {
+    return addTokenInterceptor(config);
+  }
+  return config;
+});
+
 // Crea una instancia de axios para la API principal
 const axiosInstance = axios.create({
   baseURL: API_URL,
